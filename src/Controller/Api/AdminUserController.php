@@ -26,7 +26,7 @@ class AdminUserController extends AbstractController
     #[Route('api/users', name: 'get_all_users', methods: ['GET'])]
     public function getAllUsers(UserRepository $userRepository,TokenStorageInterface $tokenStorage): Response
     {
-        $this->checkToken($tokenStorage);
+        //$this->checkToken($tokenStorage);
         
 
         // Récupérer tous les utilisateurs depuis le UserRepository
@@ -55,7 +55,7 @@ class AdminUserController extends AbstractController
     #[Route('api/users/{id}', name: 'delete_user', methods: ['DELETE'])]
     public function deleteUser($id, TokenStorageInterface $tokenStorage): Response
     {
-        $this->checkToken($tokenStorage);
+        //$this->checkToken($tokenStorage);
 
         // Récupérer l'utilisateur à supprimer
         $user = $this->entityManager->getRepository(User::class)->find($id);

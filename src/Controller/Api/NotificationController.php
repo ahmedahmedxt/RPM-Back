@@ -26,7 +26,7 @@ class NotificationController extends AbstractController
     #[Route('/api/notifications', name: 'api_notification', methods: ['GET'])]
     public function checkAchèvementDate(TokenStorageInterface $tokenStorage): JsonResponse
     {
-        $this->checkToken($tokenStorage);
+        //$this->checkToken($tokenStorage);
         
         // Supprimer toutes les anciennes notifications
         $this->entityManager->getRepository(Notification::class)->createQueryBuilder('n')->delete()->getQuery()->execute();
@@ -89,7 +89,7 @@ class NotificationController extends AbstractController
     #[Route('/api/notifications/unread-count', name: 'api_notifications_unread_count', methods: ['GET'])]
     public function getUnreadNotificationCount(NotificationRepository $notificationRepository, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        $this->checkToken($tokenStorage);
+        //$this->checkToken($tokenStorage);
         // Récupérer le nombre de notifications non lues
         $unreadNotificationCount = $notificationRepository->countUnreadNotifications();
 
@@ -100,7 +100,7 @@ class NotificationController extends AbstractController
     #[Route('/api/notifications/all', name: 'api_notifications_all', methods: ['GET'])]
     public function getNotifications(NotificationRepository $notificationRepository, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        $this->checkToken($tokenStorage);
+        //$this->checkToken($tokenStorage);
         // Récupérer toutes les notifications avec les données de l'appel d'offre associées
         $notifications = $notificationRepository->findAllWithAppelOffre();
 

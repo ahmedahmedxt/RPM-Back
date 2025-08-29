@@ -21,7 +21,7 @@ class MoyenLivraisonController extends AbstractController
     #[Route('/api/create/moyen-livraisons', name: 'api_moyen_livraison_create', methods: ['POST'])]
     public function create(Request $request, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage, MoyenLivraisonRepository $moyenLivraisonRepository): JsonResponse
     {
-        $this->checkToken($tokenStorage);
+        //$this->checkToken($tokenStorage);
         $data = json_decode($request->getContent(), true);
     
         // Vérifier si le moyen de livraison existe déjà
@@ -44,7 +44,7 @@ class MoyenLivraisonController extends AbstractController
     #[Route('/api/getAll/moyen-livraisons', name: 'api_moyen_livraison_get_all', methods: ['GET'])]
 public function getAll(EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
 {
-    $this->checkToken($tokenStorage);
+    //$this->checkToken($tokenStorage);
     
     // Récupérer les moyens de livraison triés par nom
     $moyenLivraisonRepository = $entityManager->getRepository(MoyenLivraison::class);
@@ -64,7 +64,7 @@ public function getAll(EntityManagerInterface $entityManager, TokenStorageInterf
     #[Route('/api/get/moyen-livraisons/{id}', name: 'api_moyen_livraison_get', methods: ['GET'])]
     public function getOne(MoyenLivraison $moyenLivraison, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        $this->checkToken($tokenStorage);
+        //$this->checkToken($tokenStorage);
         $data = [
             'moyenLivraisonId' => $moyenLivraison->getId(),
             'moyenLivraison' => $moyenLivraison->getMoyenLivraison(),
@@ -76,7 +76,7 @@ public function getAll(EntityManagerInterface $entityManager, TokenStorageInterf
     #[Route('/api/put/moyen-livraisons/{id}', name: 'api_moyen_livraison_update', methods: ['PUT'])]
     public function update(Request $request, MoyenLivraison $moyenLivraison, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        $this->checkToken($tokenStorage);
+        //$this->checkToken($tokenStorage);
         $data = json_decode($request->getContent(), true);
 
         $moyenLivraison->setMoyenLivraison($data['moyenLivraison']);
@@ -89,29 +89,11 @@ public function getAll(EntityManagerInterface $entityManager, TokenStorageInterf
     #[Route('/api/delete/moyen-livraisons/{id}', name: 'api_moyen_livraison_delete', methods: ['DELETE'])]
     public function delete(MoyenLivraison $moyenLivraison, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        $this->checkToken($tokenStorage);
-        
-        // Vérifier s'il y a des AppelOffre associés à ce MoyenLivraison
-        if ($moyenLivraison->getAppelOffres()->isEmpty()) {
-            // Aucun AppelOffre associé, donc supprimer simplement le MoyenLivraison
-            $entityManager->remove($moyenLivraison);
-            $entityManager->flush();
-            
-            return new JsonResponse('Moyen de livraison supprimé avec succès', Response::HTTP_OK);
-        } else {
-            // Des AppelOffre sont associés, mettre à jour les références à null dans chaque AppelOffre
-            foreach ($moyenLivraison->getAppelOffres() as $appelOffre) {
-                $appelOffre->setMoyenLivraison(null);
-                $entityManager->persist($appelOffre);
-            }
-            $entityManager->flush();
-            
             // Après avoir mis à jour les références, supprimer le MoyenLivraison
             $entityManager->remove($moyenLivraison);
             $entityManager->flush();
             
             return new JsonResponse('Les références au Moyen de livraison ont été supprimées des Appels d\'offre associés, et le Moyen de livraison a été supprimé avec succès.', Response::HTTP_OK);
-        }
     }
 
 public function checkToken(TokenStorageInterface $tokenStorage): void

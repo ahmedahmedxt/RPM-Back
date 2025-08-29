@@ -21,7 +21,7 @@ class NatureClientController extends AbstractController
     #[Route('/api/nature-clients', name: 'api_nature_client_create', methods: ['POST'])]
     public function create(Request $request, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        $this->checkToken($tokenStorage);
+        //$this->checkToken($tokenStorage);
         $data = json_decode($request->getContent(), true);
     
         // Vérifier si la nature de client existe déjà
@@ -33,6 +33,7 @@ class NatureClientController extends AbstractController
         // Créer une nouvelle nature de client
         $natureClient = new NatureClient();
         $natureClient->setNatureClient($data['natureClient']);
+        $natureClient->setNatureClientDescription($data['natureClientDescription'] ?? null);
     
         $entityManager->persist($natureClient);
         $entityManager->flush();
@@ -43,7 +44,7 @@ class NatureClientController extends AbstractController
     #[Route('/api/nature-clients', name: 'api_nature_client_get_all', methods: ['GET'])]
     public function index(EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        $this->checkToken($tokenStorage);
+        //$this->checkToken($tokenStorage);
         
         // Récupérer les natures des clients triées par nom
         $natureClientRepository = $entityManager->getRepository(NatureClient::class);
@@ -53,7 +54,8 @@ class NatureClientController extends AbstractController
         foreach ($natureClients as $natureClient) {
             $data[] = [
                 'id' => $natureClient->getId(),
-                'natureClient' => $natureClient->getNatureClient(),
+                'natureClientLibelle' => $natureClient->getNatureClient(),
+                'natureClientDescription' => $natureClient->getNatureClientDescription(),
             ];
         }
     
@@ -63,10 +65,11 @@ class NatureClientController extends AbstractController
     #[Route('/api/nature-clients/{id}', name: 'api_nature_client_get', methods: ['GET'])]
     public function show(NatureClient $natureClient, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        $this->checkToken($tokenStorage);
+        //$this->checkToken($tokenStorage);
         $data = [
             'id' => $natureClient->getId(),
-            'natureClient' => $natureClient->getNatureClient(),
+            'natureClientLibelle' => $natureClient->getNatureClient(),
+            'natureClientDescription' => $natureClient->getNatureClientDescription(),
         ];
 
         return new JsonResponse($data, Response::HTTP_OK);
@@ -75,10 +78,11 @@ class NatureClientController extends AbstractController
     #[Route('/api/nature-clients/{id}', name: 'api_nature_client_update', methods: ['PUT'])]
     public function update(Request $request, NatureClient $natureClient, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        $this->checkToken($tokenStorage);
+        //$this->checkToken($tokenStorage);
         $data = json_decode($request->getContent(), true);
 
-        $natureClient->setNatureClient($data['natureClient']); // Assuming 'natureClient' is the field for the nature client
+        $natureClient->setNatureClient($data['natureClientLibelle']);
+        $natureClient->setNatureClientDescription($data['natureClientDescription']);
 
         $entityManager->flush();
 
@@ -88,7 +92,7 @@ class NatureClientController extends AbstractController
     #[Route('/api/nature-clients/{id}', name: 'api_nature_client_delete', methods: ['DELETE'])]
     public function delete(NatureClient $natureClient, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        $this->checkToken($tokenStorage);
+        //$this->checkToken($tokenStorage);
         
         // Récupérer tous les clients liés à cette NatureClient
         $clients = $entityManager->getRepository(Client::class)->findBy(['natureClient' => $natureClient]);

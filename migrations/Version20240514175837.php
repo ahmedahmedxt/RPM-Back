@@ -23,6 +23,8 @@ final class Version20240514175837 extends AbstractMigration
         $this->addSql('CREATE TABLE appel_offre (id INT AUTO_INCREMENT NOT NULL, appel_offre_type_id INT DEFAULT NULL, moyen_livraison_id INT DEFAULT NULL, lieu_id INT DEFAULT NULL, organisme_demandeur_id INT DEFAULT NULL, appel_offre_devis INT NOT NULL, appel_offre_objet LONGTEXT NOT NULL, appel_offre_date_remise DATE NOT NULL, appel_offre_retire INT NOT NULL, appel_offre_participation INT NOT NULL, appel_offre_etat INT NOT NULL, INDEX IDX_BC56FD479815F3FC (appel_offre_type_id), INDEX IDX_BC56FD472985EF25 (moyen_livraison_id), INDEX IDX_BC56FD476AB213CC (lieu_id), INDEX IDX_BC56FD47E4993DCE (organisme_demandeur_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
         $this->addSql('CREATE TABLE appel_offre_type (id INT AUTO_INCREMENT NOT NULL, appel_offre_type VARCHAR(255) NOT NULL, PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
         $this->addSql('CREATE TABLE categorie (id INT AUTO_INCREMENT NOT NULL, categorie VARCHAR(255) NOT NULL, PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('ALTER TABLE categorie ADD ordre INT NOT NULL DEFAULT 0');
+
         $this->addSql('CREATE TABLE client (id INT AUTO_INCREMENT NOT NULL, nature_client_id INT DEFAULT NULL, personne_contact VARCHAR(255) NOT NULL, client_raison_sociale VARCHAR(255) NOT NULL, client_adresse VARCHAR(255) NOT NULL, client_telephone VARCHAR(20) NOT NULL, client_email VARCHAR(255) NOT NULL, INDEX IDX_C74404554AAD8E0 (nature_client_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
         $this->addSql('CREATE TABLE employe (id INT AUTO_INCREMENT NOT NULL, nationalite_id INT DEFAULT NULL, situation_familiale_id INT DEFAULT NULL, poste_id INT DEFAULT NULL, personne_contact VARCHAR(255) NOT NULL, employe_date_naissance DATE NOT NULL, employe_adresse VARCHAR(255) NOT NULL, employe_principale_qualification LONGTEXT NOT NULL, employe_formation VARCHAR(255) NOT NULL, employe_affiliation_des_associations_group_pro VARCHAR(255) NOT NULL, INDEX IDX_F804D3B91B063272 (nationalite_id), INDEX IDX_F804D3B9F11CEA43 (situation_familiale_id), INDEX IDX_F804D3B9A0905086 (poste_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
         $this->addSql('CREATE TABLE employe_langue (employe_id INT NOT NULL, langue_id INT NOT NULL, INDEX IDX_FD716E771B65292 (employe_id), INDEX IDX_FD716E772AADBACD (langue_id), PRIMARY KEY(employe_id, langue_id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
@@ -65,6 +67,7 @@ final class Version20240514175837 extends AbstractMigration
         $this->addSql('ALTER TABLE projet_employe_poste ADD CONSTRAINT FK_1C574496A0905086 FOREIGN KEY (poste_id) REFERENCES poste (id)');
         $this->addSql('ALTER TABLE projet_preuve ADD CONSTRAINT FK_12449B6C18272 FOREIGN KEY (projet_id) REFERENCES projet (id)');
         $this->addSql('ALTER TABLE upload_file ADD CONSTRAINT FK_81BB169BA2A570E FOREIGN KEY (projet_preuve_id) REFERENCES projet_preuve (id)');
+
     }
 
     public function down(Schema $schema): void
@@ -95,6 +98,8 @@ final class Version20240514175837 extends AbstractMigration
         $this->addSql('DROP TABLE appel_offre');
         $this->addSql('DROP TABLE appel_offre_type');
         $this->addSql('DROP TABLE categorie');
+        $this->addSql('ALTER TABLE categorie DROP ordre');
+
         $this->addSql('DROP TABLE client');
         $this->addSql('DROP TABLE employe');
         $this->addSql('DROP TABLE employe_langue');
@@ -115,5 +120,6 @@ final class Version20240514175837 extends AbstractMigration
         $this->addSql('DROP TABLE situation_familiale');
         $this->addSql('DROP TABLE upload_file');
         $this->addSql('DROP TABLE `user`');
+
     }
 }

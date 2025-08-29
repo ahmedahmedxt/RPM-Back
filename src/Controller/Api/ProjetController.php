@@ -84,7 +84,7 @@ class ProjetController extends AbstractController
     #[Route('/api/getAll/projets', name: 'api_projet_get_all', methods: ['GET'])]
     public function getAll(EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        $this->checkToken($tokenStorage);
+        ////$this->checkToken($tokenStorage);
 
         $projetRepository = $entityManager->getRepository(Projet::class);
         $projets = $projetRepository->findBy([], ['projetLibelle' => 'ASC']);
@@ -100,7 +100,7 @@ class ProjetController extends AbstractController
     #[Route('/api/get/projet/{id}', name: 'api_projet_get_one_details', methods: ['GET'])]
     public function getProjetDetails($id, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        $this->checkToken($tokenStorage);
+        ////$this->checkToken($tokenStorage);
         $projet = $entityManager->getRepository(Projet::class)->find($id);
         if (!$projet) {
             return new JsonResponse(['message' => 'Projet non trouvé'], Response::HTTP_NOT_FOUND);
@@ -112,7 +112,7 @@ class ProjetController extends AbstractController
     #[Route('/api/getOne/projet/{id}', name: 'api_projet_get_one', methods: ['GET'])]
     public function getProjetOne($id, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        $this->checkToken($tokenStorage);
+        ////$this->checkToken($tokenStorage);
         $projet = $entityManager->getRepository(Projet::class)->find($id);
         if (!$projet) {
             return new JsonResponse(['message' => 'Projet non trouvé'], Response::HTTP_NOT_FOUND);
@@ -124,7 +124,7 @@ class ProjetController extends AbstractController
     #[Route('/api/delete/projet/{id}', name: 'api_projet_delete', methods: ['DELETE'])]
     public function delete($id, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        $this->checkToken($tokenStorage);
+        ////$this->checkToken($tokenStorage);
         $projet = $entityManager->getRepository(Projet::class)->find($id);
         if (!$projet) {
             return new JsonResponse(['message' => 'Projet non trouvé'], Response::HTTP_NOT_FOUND);
@@ -137,7 +137,7 @@ class ProjetController extends AbstractController
     #[Route('/api/edit/projet/{id}', name: 'api_projet_edit', methods: ['PUT'])]
     public function edit($id, Request $request, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        $this->checkToken($tokenStorage);
+        ////$this->checkToken($tokenStorage);
         $data = json_decode($request->getContent(), true);
         $projet = $entityManager->getRepository(Projet::class)->find($id);
         if (!$projet) {
@@ -256,8 +256,7 @@ class ProjetController extends AbstractController
             'lieu' => $projet->getLieu() ? $projet->getLieu()->getLieuNom() : null,
             'client' => $projet->getClient() ? $projet->getClient()->getPersonneContact() : null,
             'categories' => $categories,
-            // Ajoutez d'autres attributs si nécessaire
-            // Ajoutez d'autres attributs si nécessaire
+           
         ];
     }
 

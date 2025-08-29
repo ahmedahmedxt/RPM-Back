@@ -13,38 +13,39 @@ class Lieu
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column(type: 'integer')]
-    private ?int $id = null;
+    #[ORM\Column(type: 'integer',name:'lieuId')]
+    private ?int $lieuId;
 
-    #[ORM\Column(length: 255, unique: true)]
+    #[ORM\Column(length: 255, unique: true,name:'lieuLibelle')]
     #[Assert\NotBlank]
-    private ?string $lieuNom = null;
+    private ?string $lieuLibelle = null;
 
     #[ORM\ManyToOne(targetEntity: Pays::class)]
+    #[ORM\JoinColumn(name: "paysId", referencedColumnName: "paysId", nullable: true)]
     private ?Pays $pays = null;
 
-    // Ajout de la relation OneToMany avec Projet
-    #[ORM\OneToMany(targetEntity: Projet::class, mappedBy: "lieu")]
-    private $projets;
+    #[ORM\OneToMany(targetEntity: Reference::class, mappedBy: "lieu")]
+
+    private $references;
 
     public function __construct()
     {
-        $this->projets = new ArrayCollection();
+        $this->references = new ArrayCollection();
     }
 
-    public function getId(): ?int
+    public function getLieuId(): ?int
     {
-        return $this->id;
+        return $this->lieuId;
     }
 
-    public function getLieuNom(): ?string
+    public function getLieuLibelle(): ?string
     {
-        return $this->lieuNom;
+        return $this->lieuLibelle;
     }
 
-    public function setLieuNom(string $lieuNom): self
+    public function setLieuLibelle(string $lieuNom): self
     {
-        $this->lieuNom = $lieuNom;
+        $this->lieuLibelle = $lieuNom;
 
         return $this;
     }
@@ -62,29 +63,29 @@ class Lieu
     }
 
     /**
-     * @return Collection|Projet[]
+     * @return Collection|Reference[]
      */
-    public function getProjets(): Collection
+    public function getReferences(): Collection
     {
-        return $this->projets;
+        return $this->references;
     }
 
-    public function addProjet(Projet $projet): self
+    public function addReference(Reference $reference): self
     {
-        if (!$this->projets->contains($projet)) {
-            $this->projets[] = $projet;
-            $projet->setLieu($this);
+        if (!$this->references->contains($reference)) {
+            $this->references[] = $reference;
+            $reference->setLieu($this);
         }
 
         return $this;
     }
 
-    public function removeProjet(Projet $projet): self
+    public function removeReference(Reference $reference): self
     {
-        if ($this->projets->removeElement($projet)) {
+        if ($this->references->removeElement($reference)) {
             // set the owning side to null (unless already changed)
-            if ($projet->getLieu() === $this) {
-                $projet->setLieu(null);
+            if ($reference->getLieu() === $this) {
+                $reference->setLieu(null);
             }
         }
 

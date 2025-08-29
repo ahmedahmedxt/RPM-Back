@@ -23,7 +23,7 @@ class NationaliteController extends AbstractController
     #[Route('/api/create/nationalite', name: 'api_nationalite_create', methods: ['POST'])]
     public function create(Request $request, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        $this->checkToken($tokenStorage);
+        //$this->checkToken($tokenStorage);
         $data = json_decode($request->getContent(), true);
     
         // Vérifier si la nationalité existe déjà
@@ -45,7 +45,7 @@ class NationaliteController extends AbstractController
     #[Route('/api/get/nationalite/{id}', name: 'api_nationalite_show', methods: ['GET'])]
     public function show(Nationalite $nationalite, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        $this->checkToken($tokenStorage);
+        //$this->checkToken($tokenStorage);
         $data = [
             'id' => $nationalite->getId(),
             'nationaliteLibelle' => $nationalite->getNationaliteLibelle(),
@@ -57,7 +57,7 @@ class NationaliteController extends AbstractController
     #[Route('/api/getAll/nationalites', name: 'api_nationalite_index', methods: ['GET'])]
     public function index(EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        $this->checkToken($tokenStorage);
+        //$this->checkToken($tokenStorage);
         
         // Récupérer les nationalités triées par libellé
         $nationaliteRepository = $entityManager->getRepository(Nationalite::class);
@@ -78,7 +78,7 @@ class NationaliteController extends AbstractController
     #[Route('/api/put/nationalite/{id}', name: 'api_nationalite_update', methods: ['PUT'])]
     public function update(Request $request, Nationalite $nationalite, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        $this->checkToken($tokenStorage);
+        //$this->checkToken($tokenStorage);
         $data = json_decode($request->getContent(), true);
 
         $nationalite->setNationaliteLibelle($data['nationaliteLibelle']);
@@ -91,7 +91,7 @@ class NationaliteController extends AbstractController
     #[Route('/api/delete/nationalite/{id}', name: 'api_nationalite_delete', methods: ['DELETE'])]
     public function delete(Nationalite $nationalite, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        $this->checkToken($tokenStorage);
+        //$this->checkToken($tokenStorage);
         
         // Récupérer tous les employés liés à cette nationalité
         $employes = $entityManager->getRepository(Employe::class)->findBy(['nationalite' => $nationalite]);

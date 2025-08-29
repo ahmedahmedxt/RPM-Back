@@ -20,7 +20,7 @@ class AppelOffreTypeController extends AbstractController
     #[Route('/api/create/appeloffre/types', name: 'api_appel_offre_type_create', methods: ['POST'])]
     public function create(Request $request, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        $this->checkToken($tokenStorage);
+        //$this->checkToken($tokenStorage);
         $data = json_decode($request->getContent(), true);
     
         // Vérifier si un type d'appel d'offre avec le même nom existe déjà
@@ -41,7 +41,7 @@ class AppelOffreTypeController extends AbstractController
     #[Route('/api/getAll/appeloffre/types', name: 'api_appel_offre_types', methods: ['GET'])]
 public function index(EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
 {
-    $this->checkToken($tokenStorage);
+    //$this->checkToken($tokenStorage);
     
     // Récupérer les types d'appels d'offres triés par ordre alphabétique
     $appelOffreTypes = $entityManager->getRepository(AppelOffreType::class)->findBy([], ['appelOffreType' => 'ASC']);
@@ -61,7 +61,7 @@ public function index(EntityManagerInterface $entityManager, TokenStorageInterfa
     #[Route('/api/get/appeloffre/types/{id}', name: 'api_appel_offre_type_show', methods: ['GET'])]
     public function show(AppelOffreType $appelOffreType, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        $this->checkToken($tokenStorage);
+        //$this->checkToken($tokenStorage);
         $data = [
             'appelOffreTypeId' => $appelOffreType->getId(),
             'appelOffreType' => $appelOffreType->getAppelOffreType(),
@@ -74,7 +74,7 @@ public function index(EntityManagerInterface $entityManager, TokenStorageInterfa
     public function update(Request $request, AppelOffreType $appelOffreType, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
     {
         
-        $this->checkToken($tokenStorage);
+        //$this->checkToken($tokenStorage);
         $data = json_decode($request->getContent(), true);
 
         $appelOffreType->setAppelOffreType($data['appelOffreType']);
@@ -87,7 +87,7 @@ public function index(EntityManagerInterface $entityManager, TokenStorageInterfa
     #[Route('/api/delete/appeloffre/types/{id}', name: 'api_appel_offre_type_delete', methods: ['DELETE'])]
     public function delete(AppelOffreType $appelOffreType, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        $this->checkToken($tokenStorage);
+        //$this->checkToken($tokenStorage);
         
         // Vérifier s'il y a des AppelOffre associés
         if ($appelOffreType->getAppelOffres()->isEmpty()) {

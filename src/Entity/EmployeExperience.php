@@ -3,91 +3,67 @@
 namespace App\Entity;
 
 use App\Repository\EmployeExperienceRepository;
-use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
-use Doctrine\Common\Collections\ArrayCollection;
 use Symfony\Component\Validator\Constraints as Assert;
-use Doctrine\Common\Collections\Collection;
 
 #[ORM\Entity(repositoryClass: EmployeExperienceRepository::class)]
+#[ORM\Table(name: 'employeexperience')]
 class EmployeExperience
 {
-
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column]
-    private ?int $id = null;
+    #[ORM\Column(name: 'employeExperienceId')]
+    private ?int $employeExperienceId = null;
 
-      #[ORM\Column(length: 255, nullable: true)]
-      #[Assert\NotBlank]
-      private ?string $employeExperiencePoste = null;
-  
-    
-  
-      #[ORM\Column(length: 255, nullable: true)]
-      #[Assert\NotBlank]
-      private ?string $employeExperienceOragnismeEmployeur = null;
-  
-      #[ORM\Column(length: 255, nullable: true)]
-      #[Assert\NotBlank]
-      private ?string $employeExperiencePeriode = null;
-  
-      #[ORM\Column(length: 255, nullable: true)]
-      #[Assert\NotBlank]
-      private ?string $employeExperienceFonctionOccupe = null;
-  
-      #[ORM\ManyToOne(targetEntity: Employe::class)]
-      #[Assert\NotBlank]
-      private ?Employe $employe = null;
-  
-      public function __toString()
-      {
-          return $this->id;
-      }
-  
-      public function getId(): ?int
-      {
-          return $this->id;
-      }
+    #[ORM\Column(name: "employeExperienceOrganismeEmployeur", length: 254, nullable: true)]
+    #[Assert\NotBlank]
+    private ?string $employeExperienceOrganismeEmployeur = null;
 
-    public function getEmployeExperiencePoste(): ?string
+    #[ORM\Column(name: "employeExperiencePeriode", length: 254, nullable: true)]
+    #[Assert\NotBlank]
+    private ?string $employeExperiencePeriode = null;
+
+    #[ORM\Column(name: "employeExperienceFonctionOccupe", length: 254, nullable: true)]
+    #[Assert\NotBlank]
+    private ?string $employeExperienceFonctionOccupe = null;
+
+    #[ORM\ManyToOne(targetEntity: Employe::class, inversedBy: 'employeExperiences')]
+    #[ORM\JoinColumn(name: "employeId", referencedColumnName: "employeId", nullable: false)]
+    #[Assert\NotBlank]
+    private ?Employe $employe = null;
+
+    #[ORM\ManyToOne(targetEntity: Pays::class)]
+    #[ORM\JoinColumn(name: "paysId", referencedColumnName: "paysId", nullable: true)]
+    private ?Pays $pays = null;
+
+    public function getEmployeExperienceId(): ?int
     {
-        return $this->employeExperiencePoste;
+        return $this->employeExperienceId;
     }
 
-    public function setEmployeExperiencePoste(?string $employeExperiencePoste): static
+    public function getEmployeExperienceOrganismeEmployeur(): ?string
     {
-        $this->employeExperiencePoste = $employeExperiencePoste;
-
-        return $this;
+        return $this->employeExperienceOrganismeEmployeur;
     }
 
-   
-
-    public function getEmployeExperienceOragnismeEmployeur(): ?string
+    public function setEmployeExperienceOrganismeEmployeur(?string $employeExperienceOrganismeEmployeur): static
     {
-        return $this->employeExperienceOragnismeEmployeur;
-    }
-
-    public function setEmployeExperienceOragnismeEmployeur(?string $employeExperienceOragnismeEmployeur): static
-    {
-        $this->employeExperienceOragnismeEmployeur = $employeExperienceOragnismeEmployeur;
+        $this->employeExperienceOrganismeEmployeur = $employeExperienceOrganismeEmployeur;
 
         return $this;
     }
 
     public function getEmployeExperiencePeriode(): ?string
-{
-    return $this->employeExperiencePeriode;
-}
+    {
+        return $this->employeExperiencePeriode;
+    }
 
-public function setEmployeExperiencePeriode(?string $employeExperiencePeriode): static
-{
-    $this->employeExperiencePeriode = $employeExperiencePeriode;
+    public function setEmployeExperiencePeriode(?string $employeExperiencePeriode): static
+    {
+        $this->employeExperiencePeriode = $employeExperiencePeriode;
 
-    return $this;
-}
-
+        return $this;
+    }
 
     public function getEmployeExperienceFonctionOccupe(): ?string
     {
@@ -100,14 +76,27 @@ public function setEmployeExperiencePeriode(?string $employeExperiencePeriode): 
 
         return $this;
     }
+
     public function getEmploye(): ?Employe
     {
         return $this->employe;
     }
 
-    public function setEmploye(?Employe $employe): self
+    public function setEmploye(?Employe $employe): static
     {
         $this->employe = $employe;
+
+        return $this;
+    }
+
+    public function getPays(): ?Pays
+    {
+        return $this->pays;
+    }
+
+    public function setPays(?Pays $pays): static
+    {
+        $this->pays = $pays;
 
         return $this;
     }

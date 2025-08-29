@@ -21,7 +21,7 @@ class OrganismeDemandeurController extends AbstractController
     #[Route('/api/create/organisme-demandeurs', name: 'api_organisme_demandeur_create', methods: ['POST'])]
 public function create(Request $request, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
 {
-    $this->checkToken($tokenStorage);
+    //$this->checkToken($tokenStorage);
     $data = json_decode($request->getContent(), true);
 
     // Vérifier si l'organisme demandeur existe déjà
@@ -43,7 +43,7 @@ public function create(Request $request, EntityManagerInterface $entityManager, 
     #[Route('/api/getAll/organisme-demandeurs', name: 'api_organisme_demandeur_get_all', methods: ['GET'])]
     public function getAll(EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        $this->checkToken($tokenStorage);
+        //$this->checkToken($tokenStorage);
         
         // Récupérer les organismes demandeurs triés par libellé
         $organismeDemandeurRepository = $entityManager->getRepository(OrganismeDemandeur::class);
@@ -63,7 +63,7 @@ public function create(Request $request, EntityManagerInterface $entityManager, 
     #[Route('/api/get/organisme-demandeurs/{id}', name: 'api_organisme_demandeur_get', methods: ['GET'])]
     public function getOne(OrganismeDemandeur $organismeDemandeur, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        $this->checkToken($tokenStorage);
+        //$this->checkToken($tokenStorage);
         $data = [
             'organismeDemandeurId' => $organismeDemandeur->getId(),
             'organismeDemandeurLibelle' => $organismeDemandeur->getOrganismeDemandeurLibelle(),
@@ -75,7 +75,7 @@ public function create(Request $request, EntityManagerInterface $entityManager, 
     #[Route('/api/put/organisme-demandeurs/{id}', name: 'api_organisme_demandeur_update', methods: ['PUT'])]
     public function update(Request $request, OrganismeDemandeur $organismeDemandeur, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        $this->checkToken($tokenStorage);
+        //$this->checkToken($tokenStorage);
         $data = json_decode($request->getContent(), true);
 
         $organismeDemandeur->setOrganismeDemandeurLibelle($data['organismeDemandeurLibelle']);
@@ -88,7 +88,7 @@ public function create(Request $request, EntityManagerInterface $entityManager, 
     #[Route('/api/delete/organisme-demandeurs/{id}', name: 'api_organisme_demandeur_delete', methods: ['DELETE'])]
     public function delete(OrganismeDemandeur $organismeDemandeur, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        $this->checkToken($tokenStorage);
+        //$this->checkToken($tokenStorage);
         
         // Vérifier s'il y a des AppelOffre associés à cet OrganismeDemandeur
         if ($organismeDemandeur->getAppelOffres()->isEmpty()) {

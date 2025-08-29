@@ -7,7 +7,6 @@ use Doctrine\ORM\Mapping as ORM;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Symfony\Component\Validator\Constraints as Assert;
-use Doctrine\DBAL\Types\Types;
 
 #[ORM\Entity(repositoryClass: OrganismeDemandeurRepository::class)]
 class OrganismeDemandeur
@@ -29,9 +28,9 @@ class OrganismeDemandeur
         $this->appelOffres = new ArrayCollection();
     }
 
-    public function __toString()
+    public function __toString(): string
     {
-        return $this->id;
+        return (string) $this->id;
     }
 
     public function getId(): ?int
@@ -47,9 +46,9 @@ class OrganismeDemandeur
     public function setOrganismeDemandeurLibelle(?string $organismeDemandeurLibelle): static
     {
         $this->organismeDemandeurLibelle = $organismeDemandeurLibelle;
-
         return $this;
     }
+
     /**
      * @return Collection|AppelOffre[]
      */
@@ -62,7 +61,7 @@ class OrganismeDemandeur
     {
         if (!$this->appelOffres->contains($appelOffre)) {
             $this->appelOffres[] = $appelOffre;
-            $appelOffre->setAppelOffreType($this);
+            $appelOffre->setOrganismeDemandeur($this);
         }
 
         return $this;
@@ -72,8 +71,8 @@ class OrganismeDemandeur
     {
         if ($this->appelOffres->removeElement($appelOffre)) {
             // set the owning side to null (unless already changed)
-            if ($appelOffre->getAppelOffreType() === $this) {
-                $appelOffre->setAppelOffreType(null);
+            if ($appelOffre->getOrganismeDemandeur() === $this) {
+                $appelOffre->setOrganismeDemandeur(null);
             }
         }
 

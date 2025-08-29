@@ -33,7 +33,7 @@ class ProjetEmployePosteController extends AbstractController
     #[Route('/api/getAll/projet-employe-poste', name: 'api_projet_get', methods: ['GET'])]
     public function index(TokenStorageInterface $tokenStorage): JsonResponse
     {
-        $this->checkToken($tokenStorage);
+        //$this->checkToken($tokenStorage);
         $projetEmployePostes = $this->projetEmployePosteRepository->findAll();
         $serializedProjetEmployePostes = [];
         foreach ($projetEmployePostes as $projetEmployePoste) {
@@ -46,7 +46,7 @@ class ProjetEmployePosteController extends AbstractController
     #[Route('/api/getOne/projet-employe-poste/{id}', name: 'api_projet_get_one', methods: ['GET'])]
     public function getOne($id, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        $this->checkToken($tokenStorage);
+        //$this->checkToken($tokenStorage);
         $projetEmployePoste = $this->projetEmployePosteRepository->find($id);
         if (!$projetEmployePoste) {
             return new JsonResponse(['message' => 'Le ProjetEmployePoste spécifié n\'existe pas.'], JsonResponse::HTTP_NOT_FOUND);
@@ -58,7 +58,7 @@ class ProjetEmployePosteController extends AbstractController
     #[Route('/api/create/projet-employe-poste', name: 'api_projet_create', methods: ['POST'])]
     public function create(Request $request, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        $this->checkToken($tokenStorage);
+        //$this->checkToken($tokenStorage);
         $data = json_decode($request->getContent(), true);
 
         $projetEmployePoste = new ProjetEmployePoste();
@@ -117,7 +117,7 @@ class ProjetEmployePosteController extends AbstractController
     #[Route('/api/put/projet-employe-poste/{id}', name: 'api_projet_update', methods: ['PUT'])]
 public function update(Request $request, $id, TokenStorageInterface $tokenStorage, EntityManagerInterface $entityManager): JsonResponse
 {
-    $this->checkToken($tokenStorage);
+    //$this->checkToken($tokenStorage);
     $data = json_decode($request->getContent(), true);
     $projetEmployePoste = $this->projetEmployePosteRepository->find($id);
 

@@ -32,7 +32,7 @@ class PaysRepository extends ServiceEntityRepository
 
         // Vérifier si le pays existe
         if ($pays) {
-            return $pays->getPaysNom();
+            return $pays->getPaysLibelle();
         }
 
         return null;

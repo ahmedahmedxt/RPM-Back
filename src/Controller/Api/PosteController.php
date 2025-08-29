@@ -22,7 +22,7 @@ class PosteController extends AbstractController
     #[Route('/api/postes', name: 'api_poste_create', methods: ['POST'])]
 public function create(Request $request, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
 {
-    $this->checkToken($tokenStorage);
+    //$this->checkToken($tokenStorage);
     $data = json_decode($request->getContent(), true);
 
     // Recherche d'un poste existant avec le même nom
@@ -45,7 +45,7 @@ public function create(Request $request, EntityManagerInterface $entityManager, 
     #[Route('/api/postes/{id}', name: 'api_poste_get', methods: ['GET'])]
     public function show(int $id, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        $this->checkToken($tokenStorage);
+        //$this->checkToken($tokenStorage);
         $poste = $entityManager->getRepository(Poste::class)->find($id);
 
         if (!$poste) {
@@ -63,7 +63,7 @@ public function create(Request $request, EntityManagerInterface $entityManager, 
     #[Route('/api/postes/{id}', name: 'api_poste_update', methods: ['PUT'])]
     public function update(int $id, Request $request, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        $this->checkToken($tokenStorage);
+        //$this->checkToken($tokenStorage);
         $poste = $entityManager->getRepository(Poste::class)->find($id);
 
         if (!$poste) {
@@ -81,7 +81,7 @@ public function create(Request $request, EntityManagerInterface $entityManager, 
     #[Route('/api/postes/{id}', name: 'api_poste_delete', methods: ['DELETE'])]
     public function deletePoste(int $id, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        $this->checkToken($tokenStorage);
+        //$this->checkToken($tokenStorage);
         
         $poste = $entityManager->getRepository(Poste::class)->find($id);
 
@@ -89,6 +89,7 @@ public function create(Request $request, EntityManagerInterface $entityManager, 
             return new JsonResponse(['message' => 'Poste non trouvé'], Response::HTTP_NOT_FOUND);
         }
 
+        /*
         // Récupérer tous les employés qui ont ce poste
         $employes = $entityManager->getRepository(Employe::class)->findBy(['poste' => $poste]);
 
@@ -98,7 +99,7 @@ public function create(Request $request, EntityManagerInterface $entityManager, 
             $entityManager->persist($employe);
         }
         $entityManager->flush();
-
+        */
         // Supprimer le poste
         $entityManager->remove($poste);
         $entityManager->flush();
@@ -108,7 +109,7 @@ public function create(Request $request, EntityManagerInterface $entityManager, 
     #[Route('/api/postes', name: 'api_poste_list', methods: ['GET'])]
 public function list(EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
 {
-    $this->checkToken($tokenStorage);
+    //$this->checkToken($tokenStorage);
     
     // Récupérer les postes triés par nom
     $posteRepository = $entityManager->getRepository(Poste::class);

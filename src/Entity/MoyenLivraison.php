@@ -67,6 +67,7 @@ class MoyenLivraison
 
         return $this;
     }
+    
 
     public function removeAppelOffre(AppelOffre $appelOffre): self
     {

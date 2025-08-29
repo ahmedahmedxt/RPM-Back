@@ -3,171 +3,245 @@
 namespace App\Controller\Api;
 
 use App\Entity\Client;
+use App\Entity\Pays;
 use App\Entity\Projet;
 use App\Entity\NatureClient;
+use App\Entity\Reference;
+use App\Entity\SecteurActivite;
+use Doctrine\Common\Collections\ArrayCollection;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\Security\Core\Security;
-use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 class ClientController extends AbstractController
 {
     #[Route('/api/getAll/clients', name: 'api_client_index', methods: ['GET'])]
-public function index(EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
-{
-    $this->checkToken($tokenStorage);
-    
-    // Récupérer les clients triés par le nom de la personne de contact
-    $clients = $entityManager->getRepository(Client::class)->findBy([], ['personneContact' => 'ASC']);
-    
-    $data = [];
-
-    foreach ($clients as $client) {
-        $data[] = $this->serializeClientNom($client);
-    }
-
-    return new JsonResponse($data, Response::HTTP_OK);
-}
-
-    #[Route('/api/get/client/{id}', name: 'api_client_show', methods: ['GET'])]
-    public function show(Client $client, TokenStorageInterface $tokenStorage): JsonResponse
+    public function index(EntityManagerInterface $entityManager): JsonResponse
     {
-        $this->checkToken($tokenStorage);
-        $data = $this->serializeClient($client);
+        $clients = $entityManager->getRepository(Client::class)->findBy([], ['clientPersonneContact1' => 'ASC']);
+
+        $data = [];
+        foreach ($clients as $client) {
+            $data[] = $this->serializeClientNom($client);
+        }
 
         return new JsonResponse($data, Response::HTTP_OK);
     }
-    #[Route('/api/getOne/client/{id}', name: 'api_client_Nom', methods: ['GET'])]
-    public function getByNom(Client $client, TokenStorageInterface $tokenStorage): JsonResponse
-    {
-        $this->checkToken($tokenStorage);
-        $data = $this->serializeClientNom($client);
 
+    #[Route('/api/get/client/{id}', name: 'api_client_show', methods: ['GET'])]
+    public function show(Client $client): JsonResponse
+    {
+        $data = $this->serializeClient($client);
+        return new JsonResponse($data, Response::HTTP_OK);
+    }
+
+    #[Route('/api/getOne/client/{id}', name: 'api_client_info', methods: ['GET'])]
+    public function getClientInfo(Client $client): JsonResponse
+    {
+        $data = $this->serializeClientInfo($client);
         return new JsonResponse($data, Response::HTTP_OK);
     }
 
     #[Route('/api/create/clients', name: 'api_client_create', methods: ['POST'])]
-    public function create(Request $request, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
+    public function create(Request $request, EntityManagerInterface $entityManager): JsonResponse
     {
-        $this->checkToken($tokenStorage);
         $data = json_decode($request->getContent(), true);
 
         $client = new Client();
-        $client->setPersonneContact($data['personneContact']);
-        $client->setClientRaisonSociale($data['clientRaisonSociale']);
+        $client->setClientRaisonSocial($data['clientRaisonSocial']);
+        $client->setClientRaisonSocialShort($data['clientRaisonSocialShort']);
+        $client->setClientPersonneContact1($data['clientPersonneContact1']);
+        $client->setClientPersonneContact2($data['clientPersonneContact2']);
+        $client->setClientPersonneContact3($data['clientPersonneContact3']);
         $client->setClientAdresse($data['clientAdresse']);
-        $client->setClientTelephone($data['clientTelephone']);
+        $client->setClientTelephone1($data['clientTelephone1']);
+        $client->setClientTelephone2($data['clientTelephone2']);
+        $client->setClientTelephone3($data['clientTelephone3']);
         $client->setClientEmail($data['clientEmail']);
 
-        // Récupérer la nature du client associée
-        $natureClientId = $data['natureClientId'];
-        $natureClient = $entityManager->getRepository(NatureClient::class)->find($natureClientId);
+        // Ajouter plusieurs pays
+        foreach ($data['paysIds'] as $paysId) {
+            $pays = $entityManager->getRepository(Pays::class)->find($paysId);
+            if ($pays) {
+                $client->addPays($pays);
+            }
+        }
+
+        // Nature du client
+        $natureClient = $entityManager->getRepository(NatureClient::class)->find($data['natureClientId']);
         if (!$natureClient) {
-            return new JsonResponse(['message' => 'Nature du client introuvable'], Response::HTTP_NOT_FOUND);
+            return new JsonResponse(['message' => 'Nature client non trouvé.'], Response::HTTP_NOT_FOUND);
         }
         $client->setNatureClient($natureClient);
+
+        // Secteurs
+        foreach ($data['secteurs'] as $secteurId) {
+            $secteur = $entityManager->getRepository(SecteurActivite::class)->find($secteurId);
+            if ($secteur) {
+                $client->addSecteurActivite($secteur);
+            }
+        }
 
         $entityManager->persist($client);
         $entityManager->flush();
 
-        $responseData = $this->serializeClient($client);
-        return new JsonResponse($responseData, Response::HTTP_CREATED);
+        return new JsonResponse($this->serializeClient($client), Response::HTTP_CREATED);
     }
+
     #[Route('/api/update/client/{id}', name: 'api_client_update', methods: ['PUT'])]
-    public function update(Request $request, Client $client, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
+    public function update(Request $request, Client $client, EntityManagerInterface $entityManager): JsonResponse
     {
-        $this->checkToken($tokenStorage);
         $data = json_decode($request->getContent(), true);
-    
-        // Mettre à jour les propriétés du client
-        $client->setPersonneContact($data['personneContact']);
-        $client->setClientRaisonSociale($data['clientRaisonSociale']);
+
+        $client->setClientRaisonSocial($data['clientRaisonSocial']);
+        $client->setClientRaisonSocialShort($data['clientRaisonSocialShort']);
+        $client->setClientPersonneContact1($data['clientPersonneContact1']);
+        $client->setClientPersonneContact2($data['clientPersonneContact2']);
+        $client->setClientPersonneContact3($data['clientPersonneContact3']);
         $client->setClientAdresse($data['clientAdresse']);
-        $client->setClientTelephone($data['clientTelephone']);
+        $client->setClientTelephone1($data['clientTelephone1']);
+        $client->setClientTelephone2($data['clientTelephone2']);
+        $client->setClientTelephone3($data['clientTelephone3']);
         $client->setClientEmail($data['clientEmail']);
-    
-        // Récupérer la nature du client associée et la mettre à jour si elle a changé
-        $natureClientId = $data['natureClientId'];
-        $natureClient = $entityManager->getRepository(NatureClient::class)->find($natureClientId);
+
+        // Mettre à jour les pays
+        $client->getPays()->clear();
+        foreach ($data['paysIds'] as $paysId) {
+            $pays = $entityManager->getRepository(Pays::class)->find($paysId);
+            if ($pays) {
+                $client->addPays($pays);
+            }
+        }
+
+        // Nature du client
+        $natureClient = $entityManager->getRepository(NatureClient::class)->find($data['natureClientId']);
         if (!$natureClient) {
-            return new JsonResponse(['message' => 'Nature du client introuvable'], Response::HTTP_NOT_FOUND);
+            return new JsonResponse(['message' => 'Nature client non trouvé.'], Response::HTTP_NOT_FOUND);
         }
         $client->setNatureClient($natureClient);
-    
-        $entityManager->flush();
-    
-        $responseData = $this->serializeClient($client);
-        return new JsonResponse($responseData, Response::HTTP_OK);
-    }
-    
-    #[Route('/api/delete/client/{id}', name: 'api_client_delete', methods: ['DELETE'])]
-    public function deleteClient(Client $client, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
-    {
-        $this->checkToken($tokenStorage);
-        
-        // Récupérer tous les projets qui ont ce client
-        $projets = $entityManager->getRepository(Projet::class)->findBy(['client' => $client]);
 
-        // Mettre à jour les références à null dans tous les projets liés
-        foreach ($projets as $projet) {
-            $projet->setClient(null);
-            $entityManager->persist($projet);
+        // Secteurs
+        $client->getSecteurActivites()->clear();
+        foreach ($data['secteurs'] as $secteurId) {
+            $secteur = $entityManager->getRepository(SecteurActivite::class)->find($secteurId);
+            if ($secteur) {
+                $client->addSecteurActivite($secteur);
+            }
         }
+
         $entityManager->flush();
 
-        // Supprimer le client
+        return new JsonResponse($this->serializeClient($client), Response::HTTP_OK);
+    }
+
+    #[Route('/api/delete/client/{id}', name: 'api_client_delete', methods: ['DELETE'])]
+    public function deleteClient(Client $client, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $references = $entityManager->getRepository(Reference::class)->findBy(['client' => $client]);
+
+        if ($references) {
+            foreach ($references as $reference) {
+                $reference->setClient(null);
+                $entityManager->persist($reference);
+            }
+        }
+
         $entityManager->remove($client);
         $entityManager->flush();
 
         return new JsonResponse('Client supprimé avec succès', Response::HTTP_OK);
     }
-    /**
-     * Serialize Client entity to array.
-     */
+
+    // ===================== Sérialisation =====================
+
     private function serializeClient(Client $client): array
     {
+        $secteurs = [];
+        foreach ($client->getSecteurActivites() as $secteurActivite) {
+            $secteurs[] = ['id' => $secteurActivite->getId()];
+        }
+
+        $paysList = [];
+        foreach ($client->getPays() as $pays) {
+            $paysList[] = ['id' => $pays->getId(), 'libelle' => $pays->getPaysLibelle()];
+        }
+
         return [
-            'clientId' => $client->getId(),
-            'personneContact' => $client->getPersonneContact(),
-            'clientRaisonSociale' => $client->getClientRaisonSociale(),
+            'clientId' => $client->getClientId(),
+            'natureClientId' => $client->getNatureClient() ? $client->getNatureClient()->getId() : null,
+            'pays' => $paysList,
+            'clientRaisonSocial' => $client->getClientRaisonSocial(),
+            'clientRaisonSocialShort' => $client->getClientRaisonSocialShort(),
             'clientAdresse' => $client->getClientAdresse(),
-            'clientTelephone' => $client->getClientTelephone(),
+            'clientTelephone1' => $client->getClientTelephone1(),
+            'clientTelephone2' => $client->getClientTelephone2(),
+            'clientTelephone3' => $client->getClientTelephone3(),
             'clientEmail' => $client->getClientEmail(),
-            'natureClientId' => $client->getNatureClient() ? $client->getNatureClient()->getId() : null
-            // Ajoutez d'autres attributs de l'entité que vous souhaitez inclure dans la réponse JSON
+            'clientPersonneContact1' => $client->getClientPersonneContact1(),
+            'clientPersonneContact2' => $client->getClientPersonneContact2(),
+            'clientPersonneContact3' => $client->getClientPersonneContact3(),
+            'secteurs' => $secteurs,
         ];
     }
-     /**
-     * Serialize Client entity to array.
-     */
+
+    private function serializeClientInfo(Client $client): array
+    {
+        $secteurs = [];
+        foreach ($client->getSecteurActivites() as $secteurActivite) {
+            $secteurs[] = ['secteur' => $secteurActivite->getSecteurActiviteLibelle()];
+        }
+
+        $paysList = [];
+        foreach ($client->getPays() as $pays) {
+            $paysList[] = $pays->getPaysLibelle();
+        }
+
+        return [
+            'natureClient' => $client->getNatureClient() ? $client->getNatureClient()->getNatureClient() : null,
+            'paysClient' => $paysList,
+            'clientRaisonSocial' => $client->getClientRaisonSocial(),
+            'clientRaisonSocialShort' => $client->getClientRaisonSocialShort(),
+            'clientAdresse' => $client->getClientAdresse(),
+            'clientTelephone1' => $client->getClientTelephone1(),
+            'clientTelephone2' => $client->getClientTelephone2(),
+            'clientTelephone3' => $client->getClientTelephone3(),
+            'clientEmail' => $client->getClientEmail(),
+            'clientPersonneContact1' => $client->getClientPersonneContact1(),
+            'clientPersonneContact2' => $client->getClientPersonneContact2(),
+            'clientPersonneContact3' => $client->getClientPersonneContact3(),
+            'secteurs' => $secteurs,
+        ];
+    }
+
     private function serializeClientNom(Client $client): array
     {
+        $paysList = [];
+        foreach ($client->getPays() as $pays) {
+            $paysList[] = $pays->getPaysLibelle();
+        }
+
         return [
-            'clientId' => $client->getId(),
-            'personneContact' => $client->getPersonneContact(),
-            'clientRaisonSociale' => $client->getClientRaisonSociale(),
+            'clientId' => $client->getClientId(),
+            'personneContact' => $client->getClientPersonneContact1(),
+            'clientRaisonSociale' => $client->getClientRaisonSocial(),
             'clientAdresse' => $client->getClientAdresse(),
-            'clientTelephone' => $client->getClientTelephone(),
             'clientEmail' => $client->getClientEmail(),
-            'natureClientId' => $client->getNatureClient() ? $client->getNatureClient()->getNatureClient() : null
-            // Ajoutez d'autres attributs de l'entité que vous souhaitez inclure dans la réponse JSON
+            'natureClient' => $client->getNatureClient() ? $client->getNatureClient()->getNatureClient() : null,
+            'paysClient' => $paysList,
         ];
     }
+
     public function checkToken(TokenStorageInterface $tokenStorage): void
     {
-        // Récupérer le token d'authentification de Symfony
         $token = $tokenStorage->getToken();
-
-        // Vérifier si le token d'authentification est présent et est de type TokenInterface
         if (!$token instanceof TokenInterface) {
             throw new AccessDeniedHttpException('Token d\'authentification manquant ou invalide');
         }
-}
+    }
 }

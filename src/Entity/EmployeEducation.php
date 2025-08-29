@@ -4,47 +4,42 @@ namespace App\Entity;
 
 use App\Repository\EmployeEducationRepository;
 use Doctrine\ORM\Mapping as ORM;
-use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\Common\Collections\Collection;
 use Symfony\Component\Validator\Constraints as Assert;
-use Doctrine\DBAL\Types\Types;
 
 #[ORM\Entity(repositoryClass: EmployeEducationRepository::class)]
+#[ORM\Table(name: "employeeducation")]
 class EmployeEducation
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column]
-    private ?int $id;
+    #[ORM\Column(name: "employeEducationId")]
+    private ?int $employeEducationId = null;
 
-    #[ORM\Column(length: 255)]
+    #[ORM\Column(name: "employeEducationNatureEtudes", length: 254)]
     #[Assert\NotBlank]
     private ?string $employeEducationNatureEtudes = null;
 
-    #[ORM\Column(length: 255)]
+    #[ORM\Column(name: "employeEducationEtablissement", length: 254)]
     #[Assert\NotBlank]
     private ?string $employeEducationEtablissement = null;
 
-    #[ORM\Column(length: 255)]
-    #[Assert\NotBlank]
-    private ?string $employeEducationDiplomes = null;
-
-    #[ORM\Column(type: "date")]
+    #[ORM\Column(name: "employeEducationAnneeObtention", type: "date")]
     #[Assert\NotBlank]
     private  ?\DateTimeInterface  $employeEducationAnneeObtention = null;
 
     #[ORM\ManyToOne(targetEntity: Employe::class)]
     #[Assert\NotBlank]
+    #[ORM\JoinColumn(name: "employeId", referencedColumnName: "employeId")]
     private ?Employe $employe;
 
-    public function __toString()
-    {
-        return $this->id;
-    }
+    #[ORM\ManyToOne(inversedBy: 'employeEducation')]
+    #[ORM\JoinColumn(name: "typeDiplomeId", referencedColumnName: "typeDiplomeId")]
+    private ?TypeDiplome $typeDiplome = null;
 
-    public function getId(): ?int
+
+    public function getEmployeEducationId(): ?int
     {
-        return $this->id;
+        return $this->employeEducationId;
     }
 
     public function getEmployeEducationNatureEtudes(): ?string
@@ -71,18 +66,6 @@ class EmployeEducation
         return $this;
     }
 
-    public function getEmployeEducationDiplomes(): ?string
-    {
-        return $this->employeEducationDiplomes;
-    }
-
-    public function setEmployeEducationDiplomes(?string $employeEducationDiplomes): static
-    {
-        $this->employeEducationDiplomes = $employeEducationDiplomes;
-
-        return $this;
-    }
-
     public function getEmployeEducationAnneeObtention(): ?\DateTimeInterface
     {
         return $this->employeEducationAnneeObtention;
@@ -103,6 +86,18 @@ class EmployeEducation
     public function setEmploye(?Employe $employe): self
     {
         $this->employe = $employe;
+
+        return $this;
+    }
+
+    public function getTypeDiplome(): ?TypeDiplome
+    {
+        return $this->typeDiplome;
+    }
+
+    public function setTypeDiplome(?TypeDiplome $typeDiplome): static
+    {
+        $this->typeDiplome = $typeDiplome;
 
         return $this;
     }

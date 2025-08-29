@@ -22,19 +22,20 @@ class RapportController extends AbstractController
         $this->projetRepository = $projetRepository;
     }
 
-    #[Route('', name: 'serve_image', requirements: ['imageName' => '.+'])]
+    #[Route('/image/{imageName}', name: 'serve_image', requirements: ['imageName' => '.+'])]
     public function serveImageAction(string $imageName): Response
     {
         $imagePath = $this->getParameter('kernel.project_dir') . '/public/images/' . $imageName;
-
+   
         if (!file_exists($imagePath) || !is_readable($imagePath)) {
             throw $this->createNotFoundException('L\'image demandée n\'existe pas.');
         }
-
+   
         return new Response(file_get_contents($imagePath), 200, [
             'Content-Type' => mime_content_type($imagePath),
         ]);
     }
+   
 
     #[Route('/css/{cssName}', name: 'serve_css', requirements: ['cssName' => '.+'])]
     public function serveCssAction(string $cssName): Response
@@ -96,7 +97,7 @@ class RapportController extends AbstractController
                         font-family: Arial, sans-serif;
                         margin: 20px;
                     }
-                    
+                   
                     h1 {
                         color:#358DCC;
                         text-align: center;
@@ -104,13 +105,13 @@ class RapportController extends AbstractController
                         border-bottom: 2px solid #333;
                         padding-bottom: 10px;
                     }
-                    
+                   
                     p {
                         font-size: 14px;
                         color: #555;
                         margin: 5px 0;
                     }
-                    
+                   
                     .field {
                         border: 1px solid #ddd;
                         padding: 10px;
@@ -121,12 +122,12 @@ class RapportController extends AbstractController
                         justify-content: space-between;
                         align-items: center;
                     }
-                    
+                   
                     .field-label {
                         flex: 1;
                         font-weight: bold;
                     }
-                
+               
                     .field-value {
                         flex: 2;
                         text-align: center;
@@ -138,27 +139,27 @@ class RapportController extends AbstractController
                         text-align: right;
                         margin-top: -15px;
                     }
-                
+               
                     .line {
                         border-bottom: 1px solid #ddd;
                         margin: 10px 0;
                     }
-                    
+                   
                     /* Autres styles */
                 </style>
             </head>
             <body>
                 <p><strong>Date de création du rapport : </strong>' . $dateCreationPDF->format('Y-m-d H:i:s') . '</p>
                 <p><strong>Status Projet : </strong>' . ($projetTermine ? 'terminé' : 'en cours') . '</p>
-        
+       
                 <h1>Rapport du projet ' . $projet->getProjetLibelle() . '</h1>
-                
+               
                 <div class="line"></div>
                 <div class="field">
                     <div class="field-label">Référence du projet:</div>
                     <div class="field-value">' . $projet->getProjetReference() . '</div>
                 </div>
-                
+               
                 <div class="line"></div>
                 <div class="field">
                     <div class="field-label">Client du projet:</div>
@@ -169,7 +170,7 @@ class RapportController extends AbstractController
                     <div class="field-label">Description du projet:</div>
                     <div class="field-value1">' . $projet->getProjetDescription() . '</div>
                 </div>
-                
+               
                 <div class="line"></div>
                 <div class="field">
                     <div class="field-label">Date de démarrage:</div>
@@ -236,3 +237,5 @@ class RapportController extends AbstractController
         ]);
     }
 }
+
+

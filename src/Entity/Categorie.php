@@ -13,19 +13,36 @@ class Categorie
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column(type: 'integer')]
+    #[ORM\Column(name: "categorieId", type: 'integer')]
     private ?int $id;
 
-    #[ORM\Column(length: 255,unique: true)]
+    #[ORM\Column(name: "categorieLibelle", length: 255,unique: true)]
     #[Assert\NotBlank]
-    private ?string $categorie;
+    private ?string $categorieLibelle;
 
-    #[ORM\OneToMany(targetEntity: Projet::class, mappedBy: "client")]
-    private $projets;
+    #[ORM\Column(name: "categorieShort", length: 255,unique: true)]
+    #[Assert\NotBlank]
+    private ?string $categorieShort;
+
+    #[ORM\Column(name: "categorieCodeRef", length: 255,unique: true)]
+    #[Assert\NotBlank]
+    private ?int $categorieCodeRef; 
+
+
+    
+   
+
+   
+    #[ORM\Column(name: "categorieCodeCouleur", length: 255,unique: true)]
+    #[Assert\NotBlank]
+    private ?string $categorieCodeCouleur;
+
+    #[ORM\OneToMany(targetEntity: Reference::class, mappedBy: "client")]
+    private $references;
 
     public function __construct()
     {
-        $this->projets = new ArrayCollection();
+        $this->references = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -33,65 +50,77 @@ class Categorie
         return $this->id;
     }
 
-    public function getCategorieNom(): ?string
+    public function getCategorieLibelle(): ?string
     {
-        return $this->categorie;
+        return $this->categorieLibelle;
     }
 
-    public function setCategorie(string $categorie): self
+    public function setCategorieLibelle(string $categorieLibelle): self
     {
-        $this->categorie = $categorie;
+        $this->categorieLibelle = $categorieLibelle;
 
         return $this;
     }
 
-  
+
+    public function getCategorieShort(): ?string
+    {
+        return $this->categorieShort;
+    }
+
+    public function setCategorieShort(string $categorieShort): self
+    {
+        $this->categorieShort = $categorieShort;
+
+        return $this;
+    }
+
+    public function getCategorieCodeRef(): ?int
+    {
+        return $this->categorieCodeRef;
+    }
+
+    public function setCategorieCodeRef(int $categorieCodeRef): self
+    {
+        $this->categorieCodeRef = $categorieCodeRef;
+
+        return $this;
+    }
+
+    public function getCategorieCodeCouleur(): ?string
+    {
+        return $this->categorieCodeCouleur;
+    }
+
+    public function setCategorieCodeCouleur(string $categorieCodeCouleur): self
+    {
+        $this->categorieCodeCouleur = $categorieCodeCouleur;
+
+        return $this;
+    }
+
     /**
-     * @return Collection|Projet[]
+     * @return Collection|Reference[]
      */
-    public function getProjets(): Collection
+    public function getReferences(): Collection
     {
-        return $this->projets;
+        return $this->references;
     }
 
-    public function addProjet(Projet $projet): self
+    public function addReference(Reference $reference): self
     {
-        if (!$this->projets->contains($projet)) {
-            $this->projets[] = $projet;
-            $projet->setClient($this);
+        if (!$this->references->contains($reference)) {
+            $this->references[] = $reference;
+            $reference->setClient($this);
         }
 
         return $this;
     }
 
-    public function removeProjet(Projet $projet): self
+    public function removeReference(Reference $reference): self
     {
-        if ($this->projets->removeElement($projet)) {
-            // set the owning side to null (unless already changed)
-            if ($projet->getClient() === $this) {
-                $projet->setClient(null);
-            }
-        }
-
-        return $this;
-    }
-    public function addCategorie(ProjetCategorie $categorie): self
-    {
-        if (!$this->categorie->contains($categorie)) {
-            $this->categories[] = $categorie;
-            $categorie->setProjet($this);
-        }
-
-        return $this;
-    }
-
-    public function removeCategorie(ProjetCategorie $categorie): self
-    {
-        if ($this->langues->removeElement($categorie)) {
-            // set the owning side to null (unless already changed)
-            if ($langue->getProjet() === $this) {
-                $langue->setProjet(null);
-            }
+        if ($this->references->removeElement($reference)) {
+            $reference->removeCategory($this);
         }
 
         return $this;

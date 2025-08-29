@@ -9,17 +9,22 @@ use Doctrine\Common\Collections\Collection;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: NatureClientRepository::class)]
+#[ORM\Table(name: 'natureclient')]
 class NatureClient
 {
     
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column]
+    #[ORM\Column(name: 'natureClientId', type: 'integer')]
     private ?int $id;
 
-    #[ORM\Column(length: 255, unique: true)] // Ajout de 'unique: true' pour garantir l'unicité
+    #[ORM\Column(name: 'natureClientLibelle', length: 254, unique: true)]
     #[Assert\NotBlank]
-    private ?string  $natureClient;
+    private ?string  $natureClient = null;
+
+    #[ORM\Column(name: 'natureClientDescription', length: 254, nullable: true)]
+    #[Assert\NotBlank]
+    private ?string  $natureClientDescription = null;
 
     #[ORM\OneToMany(targetEntity: Client::class, mappedBy: "natureClient")]
     private $clients;
@@ -27,11 +32,6 @@ class NatureClient
     public function __construct()
     {
         $this->clients = new ArrayCollection();
-    }
-
-    public function __toString()
-    {
-        return $this->id;
     }
 
     public function getId(): ?int
@@ -46,6 +46,18 @@ class NatureClient
     public function setNatureClient(string $natureClient): self
     {
         $this->natureClient = $natureClient;
+
+        return $this;
+    }
+
+    public function getNatureClientDescription(): ?string
+    {
+        return $this->natureClientDescription;
+    }
+
+    public function setNatureClientDescription(?string $natureClientDescription): static
+    {
+        $this->natureClientDescription = $natureClientDescription;
 
         return $this;
     }

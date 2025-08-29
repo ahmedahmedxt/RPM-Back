@@ -25,18 +25,15 @@ class Poste
     #[ORM\OneToMany(targetEntity: Employe::class, mappedBy: 'poste',cascade: ["persist","remove"])]
     private Collection $employes;
 
+    /*
     #[ORM\OneToMany(targetEntity: ProjetEmployePoste::class, mappedBy: 'poste',cascade: ["persist","remove"])]
     private Collection $projetsEmployePostes ;
+    */
 
     public function __construct()
     {
         $this->employes = new ArrayCollection();
-        $this->projetsEmployePostes = new ArrayCollection();
-    }
-
-    public function __toString()
-    {
-        return $this->id;
+        //$this->projetsEmployePostes = new ArrayCollection();
     }
 
     public function getId(): ?int

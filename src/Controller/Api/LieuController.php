@@ -5,6 +5,7 @@ namespace App\Controller\Api;
 use App\Entity\Lieu;
 use App\Entity\Pays;
 use App\Entity\Projet;
+use App\Entity\Reference;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -23,17 +24,17 @@ class LieuController extends AbstractController
     #[Route('/api/create/lieu', name: 'api_lieu_create', methods: ['POST'])]
     public function create(Request $request, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        $this->checkToken($tokenStorage);
+        //$this->checkToken($tokenStorage);
         $requestData = json_decode($request->getContent(), true);
 
            // Vérifier si le lieu existe déjà
-        $existingLieu = $entityManager->getRepository(Lieu::class)->findOneBy(['lieuNom' => $requestData['lieuNom']]);
+        $existingLieu = $entityManager->getRepository(Lieu::class)->findOneBy(['lieuLibelle' => $requestData['lieuLibelle']]);
         if ($existingLieu) {
             return new JsonResponse(['message' => 'Ce lieu existe déjà.'], Response::HTTP_CONFLICT);
         }
         // Créer une nouvelle instance de Lieu
         $lieu = new Lieu();
-        $lieu->setLieuNom($requestData['lieuNom']);
+        $lieu->setLieuLibelle($requestData['lieuLibelle']);
 
         // Récupérer l'objet Pays en fonction de l'ID fourni dans la requête
         $pays = $entityManager->getRepository(Pays::class)->find($requestData['paysId']);
@@ -64,21 +65,21 @@ class LieuController extends AbstractController
     #[Route('/api/getAll/lieux', name: 'api_lieux_get_all', methods: ['GET'])]
     public function getAll(EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        $this->checkToken($tokenStorage);
+        //$this->checkToken($tokenStorage);
         
         // Récupérer les lieux triés par nom
         $lieuxRepository = $entityManager->getRepository(Lieu::class);
-        $lieux = $lieuxRepository->findBy([], ['lieuNom' => 'ASC']);
+        $lieux = $lieuxRepository->findBy([], ['lieuLibelle' => 'ASC']);
         
         $lieuxData = [];
         foreach ($lieux as $lieu) {
             $pays = $lieu->getPays();
-            $paysNom = ($pays) ? $pays->getPaysNom() : 'Pays non spécifié';
+            $paysLibelle = ($pays) ? $pays->getPaysLibelle() : 'Pays non spécifié';
         
             $lieuxData[] = [
-                'lieuId' => $lieu->getId(),
-                'lieuNom' => $lieu->getLieuNom(),
-                'paysNom' => $paysNom,
+                'lieuId' => $lieu->getLieuId(),
+                'lieuLibelle' => $lieu->getLieuLibelle(),
+                'paysLibelle' => $paysLibelle,
             ];
         }
     
@@ -87,10 +88,10 @@ class LieuController extends AbstractController
     #[Route('/api/get/lieux/{id}', name: 'api_lieu_show', methods: ['GET'])]
     public function show(Lieu $lieu, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        $this->checkToken($tokenStorage);
+        //$this->checkToken($tokenStorage);
         $data = [
-            'lieuId' => $lieu->getId(),
-            'lieuNom' => $lieu->getLieuNom(),
+            'lieuId' => $lieu->getLieuId(),
+            'lieuLibelle' => $lieu->getLieuLibelle(),
             'paysId' => $lieu->getPays()->getId(),
                
         ];
@@ -101,10 +102,10 @@ class LieuController extends AbstractController
     #[Route('/api/put/lieu/{id}', name: 'api_lieu_update', methods: ['PUT'])]
     public function update(Request $request, Lieu $lieu, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        $this->checkToken($tokenStorage);
+        //$this->checkToken($tokenStorage);
         $requestData = json_decode($request->getContent(), true);
 
-        $lieu->setLieuNom($requestData['lieuNom']);
+        $lieu->setLieuLibelle($requestData['lieuLibelle']);
 
         // Récupérer l'objet Pays en fonction de l'ID fourni dans la requête
         $pays = $entityManager->getRepository(Pays::class)->find($requestData['paysId']);
@@ -125,17 +126,17 @@ class LieuController extends AbstractController
     #[Route('/api/delete/lieu/{id}', name: 'api_lieu_delete', methods: ['DELETE'])]
     public function deleteLieu(Lieu $lieu, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        $this->checkToken($tokenStorage);
-        
-        // Récupérer tous les projets qui ont ce lieu
-        $projets = $entityManager->getRepository(Projet::class)->findBy(['lieu' => $lieu]);
+        //$this->checkToken($tokenStorage);
 
-        // Mettre à jour les références à null dans tous les projets liés pour les dissocier du lieu
-        foreach ($projets as $projet) {
-            $projet->setLieu(null);
-            $entityManager->persist($projet);
+        $references = $entityManager->getRepository(Reference::class)->findBy(['lieu' => $lieu]);
+
+        if ($references != null) {
+            foreach ($references as $reference) {
+                $reference->setLieu(null);
+                $entityManager->persist($reference);
+            }
+            $entityManager->flush();
         }
-        $entityManager->flush();
 
         // Supprimer le lieu
         $entityManager->remove($lieu);

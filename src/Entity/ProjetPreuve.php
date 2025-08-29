@@ -21,9 +21,11 @@ class ProjetPreuve
     #[Assert\NotBlank]
     private ?string $projetPreuveLibelle = null;
 
+    /*
     #[ORM\ManyToOne(targetEntity: Projet::class)]
     #[Assert\NotBlank]
-    private ?Projet $projet ; 
+    private ?Projet $projet ;
+    */
 
     #[ORM\OneToMany(mappedBy: 'projetPreuve', targetEntity: UploadFile::class,cascade: ["persist","remove"])]
     private Collection $uploadFiles;

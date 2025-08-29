@@ -50,7 +50,7 @@ class AppelOffreType
 
         return $this;
     }
-   
+
     /**
      * @return Collection|AppelOffre[]
      */

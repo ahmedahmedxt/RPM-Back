@@ -21,7 +21,7 @@ class ProjetPreuveController extends AbstractController
     #[Route('/api/getAll/projet-preuves', name: 'api_projet_preuve_index', methods: ['GET'])]
     public function index(EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        $this->checkToken($tokenStorage);
+        //$this->checkToken($tokenStorage);
         
         // Récupérer les preuves de projet
         $projetPreuves = $entityManager->getRepository(ProjetPreuve::class)->findBy([], ['projetPreuveLibelle' => 'ASC']);
@@ -37,14 +37,14 @@ class ProjetPreuveController extends AbstractController
     #[Route('/api/get/projet-preuves/{id}', name: 'api_projet_preuve_show', methods: ['GET'])]
     public function show(ProjetPreuve $projetPreuve, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        $this->checkToken($tokenStorage);
+        //$this->checkToken($tokenStorage);
         return new JsonResponse($this->serializeProjetPreuve($projetPreuve), Response::HTTP_OK);
     }
 
     #[Route('/api/create/projet-preuves', name: 'api_projet_preuve_create', methods: ['POST'])]
     public function create(Request $request, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        $this->checkToken($tokenStorage);
+        //$this->checkToken($tokenStorage);
         $data = json_decode($request->getContent(), true);
 
         $projetPreuve = new ProjetPreuve();
@@ -66,7 +66,7 @@ class ProjetPreuveController extends AbstractController
     #[Route('/api/put/projet-preuves/{id}', name: 'api_projet_preuve_update', methods: ['PUT'])]
     public function update(Request $request, ProjetPreuve $projetPreuve, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        $this->checkToken($tokenStorage);
+        //$this->checkToken($tokenStorage);
         $data = json_decode($request->getContent(), true);
 
         $projetPreuve->setProjetPreuveLibelle($data['projetPreuveLibelle']);
@@ -88,7 +88,7 @@ class ProjetPreuveController extends AbstractController
     #[Route('/api/delete/projet-preuves/{id}', name: 'api_projet_preuve_delete', methods: ['DELETE'])]
     public function delete(ProjetPreuve $projetPreuve, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        $this->checkToken($tokenStorage);
+        //$this->checkToken($tokenStorage);
         $entityManager->remove($projetPreuve);
         $entityManager->flush();
 

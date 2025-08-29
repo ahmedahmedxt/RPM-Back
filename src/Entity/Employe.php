@@ -6,7 +6,7 @@ use App\Repository\EmployeRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Doctrine\Common\Collections\Collection;
-use Doctrine\Common\Collections\ArrayCollection; // Add this line
+use Doctrine\Common\Collections\ArrayCollection;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: EmployeRepository::class)]
@@ -14,44 +14,45 @@ class Employe
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column]
-    private ?int $id = null;
+    #[ORM\Column(name: "employeId")]
+    private ?int $employeId = null;
 
-    #[ORM\Column(length: 255)]
-    #[Assert\NotBlank]
-    private ?string $personneContact = null;
+    #[ORM\Column(name: "employeNom", length: 254, nullable: true)]
+    private ?string $employeNom = null;
 
-    #[ORM\Column(type: Types::DATE_MUTABLE)]
+    #[ORM\Column(name: "employePrenom", length: 254, nullable: true)]
+    private ?string $employePrenom = null;
+
+    #[ORM\Column(name : "employeDateNaissance", type: Types::DATE_MUTABLE)]
     #[Assert\NotBlank]
     private ?\DateTimeInterface $employeDateNaissance = null;
 
-    #[ORM\Column(length: 255)]
+    #[ORM\Column(name: "employeLieuNaissance", length: 254)]
+    private ?string $employeLieuNaissance = null;
+
+    #[ORM\Column(name : "employeAdresse",length: 254)]
     #[Assert\NotBlank]
     private ?string $employeAdresse = null;
 
-    #[ORM\Column(type: Types::TEXT)]
+    #[ORM\Column(name: "employePrincipaleQualification", length: 254)]
     #[Assert\NotBlank]
     private ?string $employePrincipaleQualification = null;
 
-    #[ORM\Column(length: 255)]
+    #[ORM\Column(name : "employeFormationAutre", length: 254)]
     #[Assert\NotBlank]
-    private ?string $employeFormation = null;
+    private ?string $employeFormationAutre = null;
 
-    #[ORM\Column(length: 255)]
+    #[ORM\Column(name : "employeAffiliationDesAssociationGroupePro", length: 254)]
     #[Assert\NotBlank]
     private ?string $employeAffiliationDesAssociationsGroupPro = null;
 
-    #[ORM\ManyToOne(targetEntity: Nationalite::class)]
-    #[Assert\NotBlank]
-    private ?Nationalite $nationalite;
+    #[ORM\Column(name: "employeRemarque", length: 254, nullable: true)]
+    private ?string $employeRemarque = null;
 
     #[ORM\ManyToOne(targetEntity: SituationFamiliale::class)]
+    #[ORM\JoinColumn(name: "situationFamilialeId", referencedColumnName: "situationFamilialeId")]
     #[Assert\NotBlank]
     private ?SituationFamiliale $situationFamiliale;
-
-    #[ORM\ManyToOne(targetEntity: Poste::class)]
-    #[Assert\NotBlank]
-    private ?Poste $poste;
 
     #[ORM\OneToMany(targetEntity: EmployeExperience::class, mappedBy: 'employe',cascade: ["persist","remove"])]
     private Collection $experiences;
@@ -59,42 +60,28 @@ class Employe
     #[ORM\OneToMany(targetEntity: EmployeEducation::class, mappedBy: 'employe',cascade: ["persist","remove"])]
     private Collection $educations;
 
- 
-    #[ORM\ManyToMany(targetEntity: Langue::class, inversedBy: 'employe')]
-    #[Assert\NotBlank]
-    private Collection $langues;
-   
-    #[ORM\OneToMany(targetEntity: ProjetEmployePoste::class, mappedBy: 'employe',cascade: ["persist","remove"])]
-    private Collection $projetsEmployePostes ;
+    #[ORM\OneToMany(targetEntity: EmployeDocuments::class, mappedBy: 'employeId')]
+    private Collection $employeDocuments;
+
+    #[ORM\ManyToOne(inversedBy: 'employes')]
+    #[ORM\JoinColumn(name: "employePosteId", referencedColumnName: "employePosteId")]
+    private ?EmployePoste $employePoste = null;
+
+    #[ORM\ManyToOne(inversedBy: 'employes')]
+    #[ORM\JoinColumn(name: "employeLangueId", referencedColumnName: "employeLangueId")]
+    private ?EmployeLangue $employeLangue = null;
+
 
     public function __construct()
     {
         $this->experiences = new ArrayCollection();
         $this->educations = new ArrayCollection();
-        $this->langues = new ArrayCollection();
-        $this->projetsEmployePostes = new ArrayCollection();
-      
-    }
-    public function __toString()
-    {
-        return $this->id;
+        $this->employeDocuments = new ArrayCollection();
     }
 
-    public function getId(): ?int
+    public function getEmployeId(): ?int
     {
-        return $this->id;
-    }
-
-    public function getPersonneContact(): ?string
-    {
-        return $this->personneContact;
-    }
-
-    public function setPersonneContact(string $personneContact): static
-    {
-        $this->personneContact = $personneContact;
-
-        return $this;
+        return $this->employeId;
     }
     public function getEmployeDateNaissance(): ?\DateTimeInterface
     {
@@ -132,14 +119,14 @@ class Employe
         return $this;
     }
 
-    public function getEmployeFormation(): ?string
+    public function getEmployeFormationAutre(): ?string
     {
-        return $this->employeFormation;
+        return $this->employeFormationAutre;
     }
 
-    public function setEmployeFormation(?string $employeFormation): static
+    public function setEmployeFormationAutre(?string $employeFormation): static
     {
-        $this->employeFormation = $employeFormation;
+        $this->employeFormationAutre = $employeFormation;
 
         return $this;
     }
@@ -152,17 +139,6 @@ class Employe
     public function setEmployeAffiliationDesAssociationsGroupPro(?string $employeAffiliationDesAssociationsGroupPro): static
     {
         $this->employeAffiliationDesAssociationsGroupPro = $employeAffiliationDesAssociationsGroupPro;
-
-        return $this;
-    }
-    public function getNationalite(): ?Nationalite
-    {
-        return $this->nationalite;
-    }
-
-    public function setNationalite(?Nationalite $nationalite): self
-    {
-        $this->nationalite = $nationalite;
 
         return $this;
     }
@@ -236,70 +212,106 @@ class Employe
 
         return $this;
     }
-      /**
- * @return Collection|Langue[]
- */
-public function getLangues(): Collection
-{
-    return $this->langues;
-}
 
-public function addLangue(Langue $langue): self
-{
-    if (!$this->langues->contains($langue)) {
-        $this->langues[] = $langue;
-        // Vous n'avez pas besoin de setter l'employé sur la langue car il n'y a pas d'entité intermédiaire
+
+    /**
+     * @return Collection<int, EmployeDocuments>
+     */
+    public function getEmployeDocuments(): Collection
+    {
+        return $this->employeDocuments;
     }
 
-    return $this;
-}
-
-public function removeLangue(Langue $langue): self
-{
-    $this->langues->removeElement($langue);
-    // Vous n'avez pas besoin de setter l'employé sur la langue car il n'y a pas d'entité intermédiaire
-
-    return $this;
-}
-
-    public function getPoste(): ?Poste
-{
-    return $this->poste;
-}
-
-public function setPoste(?Poste $poste): self
-{
-    $this->poste = $poste;
-
-    return $this;
-}
-
-    public function getProjetsEmployePostes(): Collection
+    public function addEmployeDocument(EmployeDocuments $employeDocument): static
     {
-        return $this->projetsEmployePostes;
-    }
-
-    // Méthode pour ajouter un ProjetEmployePoste à la collection
-    public function addProjetEmployePoste(ProjetEmployePoste $projetEmployePoste): self
-    {
-        if (!$this->projetsEmployePostes->contains($projetEmployePoste)) {
-            $this->projetsEmployePostes[] = $projetEmployePoste;
-            $projetEmployePoste->setProjet($this); // Assurez-vous que le projet est défini pour le projetEmployePoste ajouté
+        if (!$this->employeDocuments->contains($employeDocument)) {
+            $this->employeDocuments->add($employeDocument);
+            $employeDocument->setEmploye($this);
         }
 
         return $this;
     }
 
-    // Méthode pour retirer un ProjetEmployePoste de la collection
-    public function removeProjetEmployePoste(ProjetEmployePoste $projetEmployePoste): self
+    public function removeEmployeDocument(EmployeDocuments $employeDocument): static
     {
-        if ($this->projetsEmployePostes->contains($projetEmployePoste)) {
-            $this->projetsEmployePostes->removeElement($projetEmployePoste);
-            // Mise à jour de la relation de ProjetEmployePoste avec le projet à NULL lorsqu'il est retiré
-            if ($projetEmployePoste->getProjet() === $this) {
-                $projetEmployePoste->setProjet(null);
+        if ($this->employeDocuments->removeElement($employeDocument)) {
+            // set the owning side to null (unless already changed)
+            if ($employeDocument->getEmploye() === $this) {
+                $employeDocument->setEmploye(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getEmployeNom(): ?string
+    {
+        return $this->employeNom;
+    }
+
+    public function setEmployeNom(?string $employeNom): static
+    {
+        $this->employeNom = $employeNom;
+
+        return $this;
+    }
+
+    public function getEmployePrenom(): ?string
+    {
+        return $this->employePrenom;
+    }
+
+    public function setEmployePrenom(?string $employePrenom): static
+    {
+        $this->employePrenom = $employePrenom;
+
+        return $this;
+    }
+
+    public function getEmployeRemarque(): ?string
+    {
+        return $this->employeRemarque;
+    }
+
+    public function setEmployeRemarque(?string $employeRemarque): static
+    {
+        $this->employeRemarque = $employeRemarque;
+
+        return $this;
+    }
+
+    public function getEmployeLieuNaissance(): ?string
+    {
+        return $this->employeLieuNaissance;
+    }
+
+    public function setEmployeLieuNaissance(string $employeLieuNaissance): static
+    {
+        $this->employeLieuNaissance = $employeLieuNaissance;
+
+        return $this;
+    }
+
+    public function getEmployePoste(): ?EmployePoste
+    {
+        return $this->employePoste;
+    }
+
+    public function setEmployePoste(?EmployePoste $employePoste): static
+    {
+        $this->employePoste = $employePoste;
+
+        return $this;
+    }
+
+    public function getEmployeLangue(): ?EmployeLangue
+    {
+        return $this->employeLangue;
+    }
+
+    public function setEmployeLangue(?EmployeLangue $employeLangue): static
+    {
+        $this->employeLangue = $employeLangue;
 
         return $this;
     }
