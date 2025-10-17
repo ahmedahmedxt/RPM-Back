@@ -20,6 +20,9 @@ class Client
     #[ORM\JoinColumn(name: "natureClientId", referencedColumnName: "natureClientId")]
     #[Assert\NotBlank]
     private ?NatureClient $natureClient;
+    
+ #[ORM\OneToMany(targetEntity: Projet::class, mappedBy: "client")]
+private Collection $projets;
 
     #[ORM\Column(name: "clientRaisonSocial", length: 254)]
     private ?string $clientRaisonSocial;
@@ -75,6 +78,7 @@ private Collection $pays;
         $this->references = new ArrayCollection();
         $this->secteurActivites = new ArrayCollection();
         $this->pays = new ArrayCollection();
+        $this->projets = new ArrayCollection();
 
     }
 
@@ -281,6 +285,31 @@ public function removePays(Pays $pays): self
     $this->pays->removeElement($pays);
     return $this;
 }
+/**
+ * @return Collection|Projet[]
+ */
+public function getProjets(): Collection
+{
+    return $this->projets;
+}
 
+public function addProjet(Projet $projet): self
+{
+    if (!$this->projets->contains($projet)) {
+        $this->projets[] = $projet;
+        $projet->setClient($this);
+    }
+    return $this;
+}
+
+public function removeProjet(Projet $projet): self
+{
+    if ($this->projets->removeElement($projet)) {
+        if ($projet->getClient() === $this) {
+            $projet->setClient(null);
+        }
+    }
+    return $this;
+}
 
 }

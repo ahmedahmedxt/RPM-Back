@@ -45,4 +45,39 @@ class ReferenceRepository extends ServiceEntityRepository
 //            ->getOneOrNullResult()
 //        ;
 //    }
+
+
+/**
+ * Compte le nombre total de références
+ */
+public function countAllReferences(): int
+{
+    return $this->createQueryBuilder('r')
+        ->select('COUNT(r.referenceID)')
+        ->getQuery()
+        ->getSingleScalarResult();
+}
+
+/**
+ * Génère la prochaine référence automatiquement (REF01, REF02, etc.)
+ */
+public function generateNextReferenceRef(): string
+{
+    $count = $this->countAllReferences();
+    $nextNumber = $count + 1;
+    return 'REF' . str_pad($nextNumber, 2, '0', STR_PAD_LEFT);
+}
+
+/**
+ * Vérifie si une référence existe déjà
+ */
+public function referenceRefExists(string $referenceRef): bool
+{
+    return $this->createQueryBuilder('r')
+        ->select('COUNT(r.referenceID)')
+        ->where('r.referenceRef = :ref')
+        ->setParameter('ref', $referenceRef)
+        ->getQuery()
+        ->getSingleScalarResult() > 0;
+}
 }

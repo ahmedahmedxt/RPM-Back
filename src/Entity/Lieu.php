@@ -25,12 +25,15 @@ class Lieu
     private ?Pays $pays = null;
 
     #[ORM\OneToMany(targetEntity: Reference::class, mappedBy: "lieu")]
-
-    private $references;
+    private Collection $references;
+    
+    #[ORM\OneToMany(targetEntity: Projet::class, mappedBy: "lieu")]
+    private Collection $projets;
 
     public function __construct()
     {
         $this->references = new ArrayCollection();
+        $this->projets = new ArrayCollection();
     }
 
     public function getLieuId(): ?int
@@ -91,4 +94,35 @@ class Lieu
 
         return $this;
     }
+
+
+    /**
+ * @return Collection|Projet[]
+ */
+public function getProjets(): Collection
+{
+    return $this->projets;
+}
+
+public function addProjet(Projet $projet): self
+{
+    if (!$this->projets->contains($projet)) {
+        $this->projets[] = $projet;
+        $projet->setLieu($this);
+    }
+
+    return $this;
+}
+
+public function removeProjet(Projet $projet): self
+{
+    if ($this->projets->removeElement($projet)) {
+        // set the owning side to null (unless already changed)
+        if ($projet->getLieu() === $this) {
+            $projet->setLieu(null);
+        }
+    }
+
+    return $this;
+}
 }

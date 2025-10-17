@@ -44,6 +44,9 @@ class AppelOffre
     #[ORM\Column(type: "date")]
     private ?\DateTimeInterface $appelOffreDateRemise = null;
 
+    #[ORM\Column(type: "string", length: 50, nullable: true, name: "appelOffreDevis")]
+    private ?string $appelOffreDevis = null;
+
     #[ORM\Column(type: "integer")]
     private ?int $appelOffreRetire = null;
 
@@ -69,7 +72,8 @@ class AppelOffre
     #[ORM\Column(type: "date", nullable: true)]
     private ?\DateTimeInterface $dateParticipation = null;
 
-    #[ORM\Column(type: "string", length: 50, nullable: true)]
+    // ✅ CORRIGÉ : Ajout du name explicite pour la colonne
+    #[ORM\Column(type: "string", length: 50, nullable: true, name: "numero_devis_participation")]
     private ?string $numeroDevisParticipation = null;
 
     #[ORM\Column(type: "string", length: 20, nullable: true)]
@@ -113,6 +117,17 @@ class AppelOffre
     public function setDevises(?Devises $devises): self
     {
         $this->devises = $devises;
+        return $this;
+    }
+
+    public function getAppelOffreDevis(): ?string
+    {
+        return $this->appelOffreDevis;
+    }
+
+    public function setAppelOffreDevis(?string $appelOffreDevis): self
+    {
+        $this->appelOffreDevis = $appelOffreDevis;
         return $this;
     }
 
@@ -223,14 +238,14 @@ class AppelOffre
     public function setAppelOffreEtat(string $etat): self
     {
         $key = array_search($etat, self::ETATS);
-    if ($key === false) {
-        if (!in_array($etat, array_keys(self::ETATS))) {
-            throw new \InvalidArgumentException("État invalide: $etat");
+        if ($key === false) {
+            if (!in_array($etat, array_keys(self::ETATS))) {
+                throw new \InvalidArgumentException("État invalide: $etat");
+            }
+            $key = $etat;
         }
-        $key = $etat;
-    }
-    $this->appelOffreEtat = $key;
-    return $this;
+        $this->appelOffreEtat = $key;
+        return $this;
     }
 
     public function getRemarque(): ?string

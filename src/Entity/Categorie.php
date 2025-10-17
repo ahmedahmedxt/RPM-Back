@@ -27,6 +27,9 @@ class Categorie
     #[ORM\Column(name: "categorieCodeRef", length: 255,unique: true)]
     #[Assert\NotBlank]
     private ?int $categorieCodeRef; 
+// Ajouter cette relation (Many-to-Many inverse)
+#[ORM\ManyToMany(targetEntity: Projet::class, mappedBy: "categories")]
+private Collection $projets;
 
 
     
@@ -43,6 +46,7 @@ class Categorie
     public function __construct()
     {
         $this->references = new ArrayCollection();
+        $this->projets = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -125,4 +129,31 @@ class Categorie
 
         return $this;
     }
+
+    /**
+ * @return Collection|Projet[]
+ */
+public function getProjets(): Collection
+{
+    return $this->projets;
+}
+
+public function addProjet(Projet $projet): self
+{
+    if (!$this->projets->contains($projet)) {
+        $this->projets[] = $projet;
+        $projet->addCategory($this);
+    }
+
+    return $this;
+}
+
+public function removeProjet(Projet $projet): self
+{
+    if ($this->projets->removeElement($projet)) {
+        $projet->removeCategory($this);
+    }
+
+    return $this;
+}
 }

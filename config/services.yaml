@@ -34,3 +34,9 @@ services:
     App\Command\CreateAdminUserCommand:
         tags:
             - { name: 'console.command' }
+
+    # Listener pour les erreurs JWT
+    App\EventListener\JWTInvalidListener:
+        tags:
+            - { name: kernel.event_listener, event: lexik_jwt_authentication.on_jwt_invalid, method: onJWTInvalid }
+            - { name: kernel.event_listener, event: lexik_jwt_authentication.on_jwt_expired, method: onJWTExpired }

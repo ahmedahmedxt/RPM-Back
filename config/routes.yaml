@@ -1,157 +1,211 @@
 controllers:
-    resource:
-        path: ../src/Controller/
-        namespace: App\Controller
-    type: attribute
+  resource: ../src/Controller/
+  type: attribute
+
 api_login_check:
-    path: /api/login_check
+  path: /api/login_check
+
 reset_password:
-    path: /api/reset-password/{token}
-    controller: App\Controller\Api\ResetPasswordController::resetPassword
-    methods: [POST]
+  path: /api/reset-password/{token}
+  controller: App\Controller\Api\ResetPasswordController::resetPassword
+  methods: [POST]
+
 file_upload:
-    path: /api/upload
-    controller: App\Controller\Api\UploadFileController::upload
-    methods: [POST]
+  path: /api/upload
+  controller: App\Controller\Api\UploadFileController::upload
+  methods: [POST]
+
 api_appel_offres_create:
-    path: '/api/create/appel-offres'
-    controller: 'App\Controller\Api\AppelOffreController::create'
-    methods: ['POST']
+  path: /api/create/appel-offres
+  controller: App\Controller\Api\AppelOffreController::create
+  methods: [POST]
 
 api_appel_offres_get:
-    path: '/api/get/appel-offres/{id}'
-    controller: 'App\Controller\Api\AppelOffreController::getOne'
-    methods: ['GET']
+  path: /api/get/appel-offres/{id}
+  controller: App\Controller\Api\AppelOffreController::getOne
+  methods: [GET]
 
 api_appel_offres_get_by_name:
-    path: '/api/getOne/appel-offres/{id}'
-    controller: 'App\Controller\Api\AppelOffreController::getOneByName'
-    methods: ['GET']
+  path: /api/getOne/appel-offres/{id}
+  controller: App\Controller\Api\AppelOffreController::getOneByName
+  methods: [GET]
 
 api_appel_offres_update:
-    path: '/api/put/appel-offres/{id}'
-    controller: 'App\Controller\Api\AppelOffreController::update'
-    methods: ['PUT']
+  path: /api/put/appel-offres/{id}
+  controller: App\Controller\Api\AppelOffreController::update
+  methods: [PUT]
 
 api_appel_offres_delete:
-    path: '/api/delete/appel-offres/{id}'
-    controller: 'App\Controller\Api\AppelOffreController::delete'
-    methods: ['DELETE']
+  path: /api/delete/appel-offres/{id}
+  controller: App\Controller\Api\AppelOffreController::delete
+  methods: [DELETE]
 
 api_appel_offres_index:
-    path: '/api/getAll/appelOffres'
-    controller: 'App\Controller\Api\AppelOffreController::index'
-    methods: ['GET']
+  path: /api/getAll/appelOffres
+  controller: App\Controller\Api\AppelOffreController::index
+  methods: [GET]
+
 api_employe_create:
-    path: '/api/create/employe'
-    controller: 'App\Controller\Api\EmployeController::create'
-    methods: ['POST']
+  path: /api/create/employe
+  controller: App\Controller\Api\EmployeController::create
+  methods: [POST]
 
 api_employe_get_all:
-    path: '/api/getAll/employes'
-    controller: 'App\Controller\Api\EmployeController::getAll'
-    methods: ['GET']
+  path: /api/getAll/employes
+  controller: App\Controller\Api\EmployeController::getAll
+  methods: [GET]
 
 api_employe_update:
-    path: '/api/put/employe/{id}'
-    controller: 'App\Controller\Api\EmployeController::update'
-    methods: ['PUT']
+  path: /api/put/employe/{id}
+  controller: App\Controller\Api\EmployeController::update
+  methods: [PUT]
 
 api_employe_delete:
-    path: '/api/delete/employe/{id}'
-    controller: 'App\Controller\Api\EmployeController::delete'
-    methods: ['DELETE']
+  path: /api/delete/employe/{id}
+  controller: App\Controller\Api\EmployeController::delete
+  methods: [DELETE]
 
 api_employe_get_one:
-    path: '/api/get/employe/{id}'
-    controller: 'App\Controller\Api\EmployeController::getOne'
-    methods: ['GET']
+  path: /api/get/employe/{id}
+  controller: App\Controller\Api\EmployeController::getOne
+  methods: [GET]
 
 api_employe_get_one_by_name:
-    path: '/api/getOne/employe/{id}'
-    controller: 'App\Controller\Api\EmployeController::getOneByNOM'
-    methods: ['GET']
+  path: /api/getOne/employe/{id}
+  controller: App\Controller\Api\EmployeController::getOneByNOM
+  methods: [GET]
 
 api_projet_create:
   path: /api/create/projet
-  controller: 'App\Controller\Api\ProjetController::create'
+  controller: App\Controller\Api\ProjetController::create
   methods: [POST]
 
 api_projet_get_all:
   path: /api/getAll/projets
+  controller: App\Controller\Api\ProjetController::getAll
   methods: [GET]
-  controller: 'App\Controller\Api\ProjetController::getAll'
 
 api_projet_get_one:
   path: /api/get/projet/{id}
+  controller: App\Controller\Api\ProjetController::getProjetDetails
   methods: [GET]
-  controller: 'App\Controller\Api\ProjetController::getProjetDetails'
 
 api_projet_get_one_by_id:
   path: /api/getOne/projet/{id}
+  controller: App\Controller\Api\ProjetController::getProjetOne
   methods: [GET]
-  controller: 'App\Controller\Api\ProjetController::getProjetOne'
 
 api_projet_delete:
   path: /api/delete/projet/{id}
+  controller: App\Controller\Api\ProjetController::delete
   methods: [DELETE]
-  controller: 'App\Controller\Api\ProjetController::delete'
 
 api_projet_update:
   path: /api/update/projet/{id}
+  controller: App\Controller\Api\ProjetController::update
   methods: [PUT]
-  controller: 'App\Controller\Api\ProjetController::update'
+
 api_projet-employe-poste_get:
-    path: '/api/getAll/projet-employe-poste'
-    controller: 'App\Controller\Api\ProjetEmployePosteController::index'
-    methods: ['GET']
+  path: /api/getAll/projet-employe-poste
+  controller: App\Controller\Api\ProjetEmployePosteController::index
+  methods: [GET]
 
 api_projet-employe-poste_get_one:
-    path: '/api/getOne/projet-employe-poste/{id}'
-    controller: 'App\Controller\Api\ProjetEmployePosteController::getOne'
-    methods: ['GET']
+  path: /api/getOne/projet-employe-poste/{id}
+  controller: App\Controller\Api\ProjetEmployePosteController::getOne
+  methods: [GET]
 
 api_projet-employe-poste_create:
-    path: '/api/create/projet-employe-poste'
-    controller: 'App\Controller\Api\ProjetEmployePosteController::create'
-    methods: ['POST']
+  path: /api/create/projet-employe-poste
+  controller: App\Controller\Api\ProjetEmployePosteController::create
+  methods: [POST]
 
 api_projet-employe-poste_update:
-    path: '/api/put/projet-employe-poste/{id}'
-    controller: 'App\Controller\Api\ProjetEmployePosteController::update'
-    methods: ['PUT']
+  path: /api/put/projet-employe-poste/{id}
+  controller: App\Controller\Api\ProjetEmployePosteController::update
+  methods: [PUT]
 
 api_projet-employe-poste_delete:
-    path: '/api/delete/projet-employe-poste/{id}'
-    controller: 'App\Controller\Api\ProjetEmployePosteController::delete'
-    methods: ['DELETE']
-public_images:
-    path: /images/{imageName}
-    controller: App\Controller\Api\RapportController::serveImageAction
-app_rapport_id:
-    path: /rapport/{id}
-    controller: 'App\Controller\Api\RapportController::index'
-    requirements:
-        id: '\d+' # Ce requirement permet de s'assurer que l'ID est un nombre entier
-    methods: ['GET']
+  path: /api/delete/projet-employe-poste/{id}
+  controller: App\Controller\Api\ProjetEmployePosteController::delete
+  methods: [DELETE]
 
+public_images:
+  path: /images/{imageName}
+  controller: App\Controller\Api\RapportController::serveImageAction
+
+app_rapport_id:
+  path: /rapport/{id}
+  controller: App\Controller\Api\RapportController::index
+  requirements:
+    id: '\d+'
+  methods: [GET]
 
 api_statistics_employees:
-    path: /api/statistics/employees
-    controller: App\Controller\Api\StatstiqueController::getEmployeesStatistics
-    methods: GET
+  path: /api/statistics/employees
+  controller: App\Controller\Api\StatstiqueController::getEmployeesStatistics
+  methods: [GET]
 
 api_statistics_projects:
-    path: /api/statistics/projects
-    controller: App\Controller\Api\StatstiqueController::getProjectsStatistics
-    methods: GET
+  path: /api/statistics/projects
+  controller: App\Controller\Api\StatstiqueController::getProjectsStatistics
+  methods: [GET]
 
 api_statistics_clients:
-    path: /api/statistics/clients
-    controller: App\Controller\Api\StatstiqueController::getClientsStatistics
-    methods: GET
+  path: /api/statistics/clients
+  controller: App\Controller\Api\StatstiqueController::getClientsStatistics
+  methods: [GET]
 
 api_statistics_appesl_offres:
-    path: /api/statistics/AppeslOffres
-    controller: App\Controller\Api\StatstiqueController::getAppeslOffresStatistics
-    methods: GET
+  path: /api/statistics/AppeslOffres
+  controller: App\Controller\Api\StatstiqueController::getAppeslOffresStatistics
+  methods: [GET]
+
+# Routes pour les templates
+api_templates_available_fields:
+  path: /api/templates/available-fields
+  controller: App\Controller\Api\Template\TemplateController::getAvailableFields
+  methods: [GET]
+
+api_templates_system:
+  path: /api/templates/system
+  controller: App\Controller\Api\Template\TemplateController::getSystemTemplates
+  methods: [GET]
+
+# (Ces 3 routes ci-dessous ne sont utiles que si tu implémentes les méthodes correspondantes dans TemplateController)
+api_templates_user:
+  path: /api/templates/user
+  controller: App\Controller\Api\Template\TemplateController::getUserTemplates
+  methods: [GET]
+
+api_templates_all:
+  path: /api/templates/all
+  controller: App\Controller\Api\Template\TemplateController::getAllTemplates
+  methods: [GET]
+
+api_templates_get:
+  path: /api/templates/{templateId}
+  controller: App\Controller\Api\Template\TemplateController::getTemplate
+  methods: [GET]
+
+# Application d’un template sur une référence (si méthode implémentée)
+api_reference_apply_template:
+  path: /api/templates/references/{id}/apply/{templateId}
+  controller: App\Controller\Api\Template\TemplateController::applyTemplateToReference
+  methods: [GET]
+
+api_reference_custom_template:
+  path: /api/templates/references/{id}/custom
+  controller: App\Controller\Api\Template\TemplateController::applyCustomTemplate
+  methods: [POST]
+
+# Routes pour l'extraction de résumé
+api_summary_extract:
+  path: /api/summary/extract
+  controller: App\Controller\Api\Template\SummaryController::extractSummary
+  methods: [POST]
+
+api_summary_generate_project:
+  path: /api/summary/generate-project
+  controller: App\Controller\Api\Template\SummaryController::generateProjectSummary
+  methods: [POST]

@@ -45,21 +45,26 @@ class Projet
     private ?string $projetDescriptionServiceEffectivementRendus = null;
 
     #[ORM\ManyToOne(targetEntity: Lieu::class)]
+    #[ORM\JoinColumn(name: "lieu_id", referencedColumnName: "lieuId", nullable: true)]
     private ?Lieu $lieu;
-
+    
     #[ORM\ManyToOne(targetEntity: Client::class)]
+    #[ORM\JoinColumn(name: "client_id", referencedColumnName: "clientId", nullable: true)]
     private ?Client $client;
 
-    #[ORM\ManyToMany(targetEntity:  Categorie::class, inversedBy: 'projet')]
-    #[Assert\NotBlank]
+    #[ORM\ManyToMany(targetEntity: Categorie::class, inversedBy: 'projets')]
+    #[ORM\JoinTable(
+        name: 'projet_categorie',
+        joinColumns: [new ORM\JoinColumn(name: 'projet_id', referencedColumnName: 'id')],
+        inverseJoinColumns: [new ORM\JoinColumn(name: 'categorie_id', referencedColumnName: 'categorieId')]
+    )]
     private Collection $categories;
 
     public function __construct()
     {
-        $this->categories= new ArrayCollection();
-      
-      
+        $this->categories = new ArrayCollection();
     }
+
     public function getId(): ?int
     {
         return $this->id;
@@ -73,7 +78,6 @@ class Projet
     public function setProjetLibelle(string $projetLibelle): self
     {
         $this->projetLibelle = $projetLibelle;
-
         return $this;
     }
 
@@ -85,7 +89,6 @@ class Projet
     public function setProjetDescription(?string $projetDescription): self
     {
         $this->projetDescription = $projetDescription;
-
         return $this;
     }
 
@@ -97,7 +100,6 @@ class Projet
     public function setProjetReference(string $projetReference): self
     {
         $this->projetReference = $projetReference;
-
         return $this;
     }
 
@@ -109,7 +111,6 @@ class Projet
     public function setProjetDateDemarrage(\DateTimeInterface $projetDateDemarrage): self
     {
         $this->projetDateDemarrage = $projetDateDemarrage;
-
         return $this;
     }
 
@@ -121,7 +122,6 @@ class Projet
     public function setProjetDateAchevement(\DateTimeInterface $projetDateAchevement): self
     {
         $this->projetDateAchevement = $projetDateAchevement;
-
         return $this;
     }
 
@@ -133,7 +133,6 @@ class Projet
     public function setProjetUrlFonctionnel(string $projetUrlFonctionnel): self
     {
         $this->projetUrlFonctionnel = $projetUrlFonctionnel;
-
         return $this;
     }
 
@@ -145,7 +144,6 @@ class Projet
     public function setProjetDescriptionServiceEffectivementRendus(string $projetDescriptionServiceEffectivementRendus): self
     {
         $this->projetDescriptionServiceEffectivementRendus = $projetDescriptionServiceEffectivementRendus;
-
         return $this;
     }
 
@@ -157,7 +155,6 @@ class Projet
     public function setLieu(?Lieu $lieu): self
     {
         $this->lieu = $lieu;
-
         return $this;
     }
 
@@ -169,32 +166,28 @@ class Projet
     public function setClient(?Client $client): self
     {
         $this->client = $client;
-
         return $this;
     }
 
-      /**
- * @return Collection|Categorie[]
- */
+    /**
+     * @return Collection|Categorie[]
+     */
     public function getCategories(): Collection
-{
-    return $this->categories;
-}
-
-public function addCategory(Categorie $category): self
-{
-    if (!$this->categories->contains($category)) {
-        $this->categories[] = $category;
+    {
+        return $this->categories;
     }
 
-    return $this;
-}
+    public function addCategory(Categorie $category): self
+    {
+        if (!$this->categories->contains($category)) {
+            $this->categories[] = $category;
+        }
+        return $this;
+    }
 
-public function removeCategory(Categorie $category): self
-{
-    $this->categories->removeElement($category);
-
-    return $this;
-}
-
+    public function removeCategory(Categorie $category): self
+    {
+        $this->categories->removeElement($category);
+        return $this;
+    }
 }

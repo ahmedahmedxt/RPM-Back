@@ -280,80 +280,105 @@ class ReferenceController extends AbstractController
         return new JsonResponse(['message' => 'Reference supprimée avec succès'], Response::HTTP_OK);
     }
 
-    #[Route('/api/create/reference', name: 'api_reference_create', methods: ['POST'])]
-    public function createReference(Request $request, EntityManagerInterface $entityManager): JsonResponse
-    {
-        // Get JSON data from the request
-        $data = json_decode($request->getContent(), true);
-        //dd($data);
+   #[Route('/api/create/reference', name: 'api_reference_create', methods: ['POST'])]
+public function createReference(Request $request, EntityManagerInterface $entityManager): JsonResponse
+{
+    // Get JSON data from the request
+    $data = json_decode($request->getContent(), true);
 
-        $reference = new Reference();
-        $reference->setReferenceRef($data['referenceRef'] ?? null);
-        $reference->setReferenceTitre($data['referenceTitre'] ?? null);
-        $reference->setReferenceLibelle($data['referenceLibelle'] ?? null);
-        $reference->setReferenceUrlFonctionnel($data['referenceUrlFonctionnel'] ?? null);
-        $reference->setReferenceDuree($data['referenceDuree'] ?? null);
-        $reference->setReferenceDateDemarrage(isset($data['referenceDateDemarrage']) ? new \DateTime($data['referenceDateDemarrage']) : null);
-        $reference->setReferenceDateAchevement(isset($data['referenceDateAchevement']) ? new \DateTime($data['referenceDateAchevement']) : null);
-        if ($reference->getReferenceDateAchevement()) {
-            $reference->setReferenceAnneeAchevement($reference->getReferenceDateAchevement()->format('Y'));
-        } else {
-            $reference->setReferenceAnneeAchevement(null);
+    $reference = new Reference();
+    
+    // Auto-generate referenceRef if not provided or empty
+    if (empty($data['referenceRef'])) {
+        $referenceRef = $entityManager->getRepository(Reference::class)->generateNextReferenceRef();
+        $reference->setReferenceRef($referenceRef);
+    } else {
+        // Vérifier si la référence fournie existe déjà
+        if ($entityManager->getRepository(Reference::class)->referenceRefExists($data['referenceRef'])) {
+            return new JsonResponse(['message' => 'Cette référence existe déjà'], Response::HTTP_CONFLICT);
         }
-        $reference->setReferenceDateReceptionProvisoire(isset($data['referenceDateReceptionProvisoire']) ? new \DateTime($data['referenceDateReceptionProvisoire']) : null);
-        $reference->setReferenceDateReceptionDefinitive(isset($data['referenceDateReceptionDefinitive']) ? new \DateTime($data['referenceDateReceptionDefinitive']) : null);
-        $reference->setReferenceCaracteristiques($data['referenceCaracteristiques'] ?? null);
-        $reference->setReferenceDescription($data['referenceDescription'] ?? null);
-        $reference->setReferenceDescriptionServiceEffectivemenetRendus($data['referenceDescriptionServiceEffectivemenetRendus'] ?? null);
-        $reference->setReferenceDureeGarantie($data['referenceDureeGarantie'] ?? null);
-        $reference->setReferenceBudget($data['referenceBudget'] ?? null);
-        $reference->setReferencePartBudgetGroupement($data['referencePartBudgetGroupement'] ?? null);
-        $reference->setReferenceRemarque($data['referenceRemarque'] ?? null);
-
-        // Associate Lieu
-        if (isset($data['lieuId'])) {
-            $lieu = $entityManager->getRepository(Lieu::class)->find($data['lieuId']);
-            if (!$lieu) {
-                return new JsonResponse(['message' => 'Lieu not found'], Response::HTTP_NOT_FOUND);
-            }
-            $reference->setLieu($lieu);
-        }
-
-        // Associate Client
-        if (isset($data['clientId'])) {
-            $client = $entityManager->getRepository(Client::class)->find($data['clientId']);
-            if (!$client) {
-                return new JsonResponse(['message' => 'Client not found'], Response::HTTP_NOT_FOUND);
-            }
-            $reference->setClient($client);
-        }
-
-        // Associate Categorie
-        if (isset($data['categorieId'])) {
-            $categorie = $entityManager->getRepository(Categorie::class)->find($data['categorieId']);
-            if (!$categorie) {
-                return new JsonResponse(['message' => 'Categorie not found'], Response::HTTP_NOT_FOUND);
-            }
-            $reference->setCategorie($categorie);
-        }
-
-        // Associate Devises
-        if (isset($data['devisesId'])) {
-            $devises = $entityManager->getRepository(Devises::class)->find($data['devisesId']);
-            if (!$devises) {
-                return new JsonResponse(['message' => 'Devises not found'], Response::HTTP_NOT_FOUND);
-            }
-            $reference->setDevises($devises);
-        }
-
-        // Associate many-to-many relationships
-        $this->addManyToManyRelationships($data, $reference, $entityManager);
-
-        $entityManager->persist($reference);
-        $entityManager->flush();
-
-        return new JsonResponse(['message' => 'Reference created successfully'], Response::HTTP_CREATED);
+        $reference->setReferenceRef($data['referenceRef']);
     }
+    
+    $reference->setReferenceTitre($data['referenceTitre'] ?? null);
+    $reference->setReferenceLibelle($data['referenceLibelle'] ?? null);
+    $reference->setReferenceUrlFonctionnel($data['referenceUrlFonctionnel'] ?? null);
+    $reference->setReferenceDuree($data['referenceDuree'] ?? null);
+    $reference->setReferenceDateDemarrage(isset($data['referenceDateDemarrage']) ? new \DateTime($data['referenceDateDemarrage']) : null);
+    $reference->setReferenceDateAchevement(isset($data['referenceDateAchevement']) ? new \DateTime($data['referenceDateAchevement']) : null);
+    if ($reference->getReferenceDateAchevement()) {
+        $reference->setReferenceAnneeAchevement($reference->getReferenceDateAchevement()->format('Y'));
+    } else {
+        $reference->setReferenceAnneeAchevement(null);
+    }
+    $reference->setReferenceDateReceptionProvisoire(isset($data['referenceDateReceptionProvisoire']) ? new \DateTime($data['referenceDateReceptionProvisoire']) : null);
+    $reference->setReferenceDateReceptionDefinitive(isset($data['referenceDateReceptionDefinitive']) ? new \DateTime($data['referenceDateReceptionDefinitive']) : null);
+    $reference->setReferenceCaracteristiques($data['referenceCaracteristiques'] ?? null);
+    $reference->setReferenceDescription($data['referenceDescription'] ?? null);
+    $reference->setReferenceDescriptionServiceEffectivemenetRendus($data['referenceDescriptionServiceEffectivemenetRendus'] ?? null);
+    $reference->setReferenceDureeGarantie($data['referenceDureeGarantie'] ?? null);
+    $reference->setReferenceBudget($data['referenceBudget'] ?? null);
+    $reference->setReferencePartBudgetGroupement($data['referencePartBudgetGroupement'] ?? null);
+    $reference->setReferenceRemarque($data['referenceRemarque'] ?? null);
+
+    // Associate Lieu
+    if (isset($data['lieuId'])) {
+        $lieu = $entityManager->getRepository(Lieu::class)->find($data['lieuId']);
+        if (!$lieu) {
+            return new JsonResponse(['message' => 'Lieu not found'], Response::HTTP_NOT_FOUND);
+        }
+        $reference->setLieu($lieu);
+    }
+
+    // Associate Client
+    if (isset($data['clientId'])) {
+        $client = $entityManager->getRepository(Client::class)->find($data['clientId']);
+        if (!$client) {
+            return new JsonResponse(['message' => 'Client not found'], Response::HTTP_NOT_FOUND);
+        }
+        $reference->setClient($client);
+    }
+
+    // Associate Categorie
+    if (isset($data['categorieId'])) {
+        $categorie = $entityManager->getRepository(Categorie::class)->find($data['categorieId']);
+        if (!$categorie) {
+            return new JsonResponse(['message' => 'Categorie not found'], Response::HTTP_NOT_FOUND);
+        }
+        $reference->setCategorie($categorie);
+    }
+
+    // Associate Devises
+    if (isset($data['devisesId'])) {
+        $devises = $entityManager->getRepository(Devises::class)->find($data['devisesId']);
+        if (!$devises) {
+            return new JsonResponse(['message' => 'Devises not found'], Response::HTTP_NOT_FOUND);
+        }
+        $reference->setDevises($devises);
+    }
+
+    // Associate many-to-many relationships
+    $this->addManyToManyRelationships($data, $reference, $entityManager);
+
+    $entityManager->persist($reference);
+    $entityManager->flush();
+
+    return new JsonResponse([
+        'message' => 'Reference created successfully',
+        'referenceRef' => $reference->getReferenceRef()
+    ], Response::HTTP_CREATED);
+}
+
+// Nouvelle route pour récupérer la prochaine référence
+#[Route('/api/get/next-reference-ref', name: 'api_reference_next_ref', methods: ['GET'])]
+public function getNextReferenceRef(EntityManagerInterface $entityManager): JsonResponse
+{
+    $nextRef = $entityManager->getRepository(Reference::class)->generateNextReferenceRef();
+    return new JsonResponse(['nextReferenceRef' => $nextRef], Response::HTTP_OK);
+} 
+
+
+
 
     private function addManyToManyRelationships(array $data, Reference $reference, EntityManagerInterface $entityManager): void
     {
