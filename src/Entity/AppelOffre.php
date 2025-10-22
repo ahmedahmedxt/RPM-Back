@@ -16,7 +16,6 @@ class AppelOffre
     #[ORM\Column]
     private ?int $id = null;
 
-    // ✅ CORRIGÉ : Chaque relation a sa propre colonne unique
     #[ORM\ManyToOne(targetEntity: AppelOffreType::class)]
     #[ORM\JoinColumn(name: "appel_offre_type_id", referencedColumnName: "id", nullable: false)]
     private $appelOffreType;
@@ -36,6 +35,13 @@ class AppelOffre
     #[ORM\ManyToOne(targetEntity: Devises::class)]
     #[ORM\JoinColumn(name: "devisesId", referencedColumnName: "devisesId", nullable: false)]
     private $devises;
+
+    // ✅ NOUVELLE RELATION : Many-to-Many avec Partenaire
+    #[ORM\ManyToMany(targetEntity: Partenaire::class, inversedBy: 'appelOffres')]
+    #[ORM\JoinTable(name: 'appel_offre_partenaire')]
+    #[ORM\JoinColumn(name: 'appel_offre_id', referencedColumnName: 'id')]
+    #[ORM\InverseJoinColumn(name: 'partenaire_id', referencedColumnName: 'partenaireId')]
+    private Collection $partenaires;
 
     #[ORM\Column(type: "string", length: 255)]
     #[Assert\NotBlank]
@@ -72,7 +78,6 @@ class AppelOffre
     #[ORM\Column(type: "date", nullable: true)]
     private ?\DateTimeInterface $dateParticipation = null;
 
-    // ✅ CORRIGÉ : Ajout du name explicite pour la colonne
     #[ORM\Column(type: "string", length: 50, nullable: true, name: "numero_devis_participation")]
     private ?string $numeroDevisParticipation = null;
 
@@ -84,12 +89,22 @@ class AppelOffre
 
     #[ORM\Column(type: "integer", nullable: true)]
     private ?int $appelOffreCautionBancaire = null;
-
+    #[ORM\Column(type: 'integer', nullable: true)]
+    private ?int $resultatRang = null;
+    
+    #[ORM\Column(type: 'integer', nullable: true)]
+    private ?int $resultatRangTotal = null;
     #[ORM\Column(type: 'date', nullable: true)]
     private ?\DateTimeInterface $dateLimiteRemise = null;
 
     #[ORM\Column(type: 'string', length: 255, nullable: true)]
     private ?string $lienAnnonce = null;
+
+    // ✅ CONSTRUCTEUR avec initialisation de la collection partenaires
+    public function __construct()
+    {
+        $this->partenaires = new ArrayCollection();
+    }
 
     // ===================== GETTERS & SETTERS =====================
     
@@ -185,7 +200,27 @@ class AppelOffre
         $this->organismeDemandeur = $organismeDemandeur;
         return $this;
     }
-
+    public function getResultatRang(): ?int
+    {
+        return $this->resultatRang;
+    }
+    
+    public function setResultatRang(?int $resultatRang): self
+    {
+        $this->resultatRang = $resultatRang;
+        return $this;
+    }
+    
+    public function getResultatRangTotal(): ?int
+    {
+        return $this->resultatRangTotal;
+    }
+    
+    public function setResultatRangTotal(?int $resultatRangTotal): self
+    {
+        $this->resultatRangTotal = $resultatRangTotal;
+        return $this;
+    }
     public function getAppelOffreObjet(): ?string
     {
         return $this->appelOffreObjet;
@@ -322,6 +357,35 @@ class AppelOffre
     public function setAppelOffreCautionBancaire(?int $appelOffreCautionBancaire): self
     {
         $this->appelOffreCautionBancaire = $appelOffreCautionBancaire;
+        return $this;
+    }
+
+    // ✅ NOUVELLES MÉTHODES pour gérer les Partenaires
+    /**
+     * @return Collection<int, Partenaire>
+     */
+    public function getPartenaires(): Collection
+    {
+        return $this->partenaires;
+    }
+
+    public function addPartenaire(Partenaire $partenaire): self
+    {
+        if (!$this->partenaires->contains($partenaire)) {
+            $this->partenaires->add($partenaire);
+        }
+        return $this;
+    }
+
+    public function removePartenaire(Partenaire $partenaire): self
+    {
+        $this->partenaires->removeElement($partenaire);
+        return $this;
+    }
+
+    public function clearPartenaires(): self
+    {
+        $this->partenaires->clear();
         return $this;
     }
 }

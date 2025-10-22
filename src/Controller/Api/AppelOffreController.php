@@ -8,6 +8,7 @@ use App\Entity\MoyenLivraison;
 use App\Entity\Pays;
 use App\Entity\Devises;
 use App\Entity\OrganismeDemandeur;
+use App\Entity\Partenaire;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -42,26 +43,25 @@ class AppelOffreController extends AbstractController
         try {
             $data = json_decode($request->getContent(), true);
 
-            // ✅ VALIDATION des données requises
+            // Validation des données requises
             if (!isset($data['appelOffreObjet']) || !isset($data['appelOffreDateRemise'])) {
                 return new JsonResponse(['error' => 'Données manquantes: objet et date de remise requis'], Response::HTTP_BAD_REQUEST);
             }
 
             $appel = new AppelOffre();
             
-            // ✅ AUTO-GÉNÉRATION de la référence si pas fournie
+            // AUTO-GÉNÉRATION de la référence si pas fournie
             if (empty($data['appelOffreDevis'])) {
                 $reference = $em->getRepository(AppelOffre::class)->generateNextAppelOffreRef();
                 $appel->setAppelOffreDevis($reference);
             } else {
-                // Vérifier si la référence fournie existe déjà
                 if ($em->getRepository(AppelOffre::class)->appelOffreRefExists($data['appelOffreDevis'])) {
                     return new JsonResponse(['error' => 'Cette référence existe déjà'], Response::HTTP_CONFLICT);
                 }
                 $appel->setAppelOffreDevis($data['appelOffreDevis']);
             }
             
-            // ✅ AUTO-GÉNÉRATION du numéro de devis si participation = oui et date fournie
+            // AUTO-GÉNÉRATION du numéro de devis si participation = oui
             if (isset($data['appelOffreParticipation']) && $data['appelOffreParticipation'] == 1) {
                 if (!empty($data['dateParticipation'])) {
                     $numeroDevis = $em->getRepository(AppelOffre::class)->generateNumeroDevis($data['dateParticipation']);
@@ -69,7 +69,7 @@ class AppelOffreController extends AbstractController
                 }
             }
             
-            // ✅ Assignation des champs avec validation
+            // Assignation des champs
             $appel->setAppelOffreObjet($data['appelOffreObjet']);
             $appel->setAppelOffreDateRemise(new \DateTime($data['appelOffreDateRemise']));
             $appel->setAppelOffreRetire($data['appelOffreRetire'] ?? 0);
@@ -78,17 +78,19 @@ class AppelOffreController extends AbstractController
             $appel->setRemarque($data['remarque'] ?? null);
             $appel->setHeureRemis(isset($data['heureRemis']) ? new \DateTime($data['heureRemis']) : null);
             $appel->setDateParticipation(isset($data['dateParticipation']) ? new \DateTime($data['dateParticipation']) : null);
-            // Le numéro de devis est déjà défini ci-dessus si participation = oui
+            
             if (!isset($data['appelOffreParticipation']) || $data['appelOffreParticipation'] != 1) {
                 $appel->setNumeroDevisParticipation($data['numeroDevisParticipation'] ?? null);
             }
+            
             $appel->setTypeParticipation($data['typeParticipation'] ?? null);
             $appel->setAppelOffreAnnee($data['appelOffreAnnee'] ?? null);
             $appel->setAppelOffreCautionBancaire($data['appelOffreCautionBancaire'] ?? null);
             $appel->setDateLimiteRemise(isset($data['dateLimiteRemise']) ? new \DateTime($data['dateLimiteRemise']) : null);
             $appel->setLienAnnonce($data['lienAnnonce'] ?? null);
-
-            // ✅ Relations avec validation stricte
+            $appel->setResultatRang($data['resultatRang'] ?? null);
+            $appel->setResultatRangTotal($data['resultatRangTotal'] ?? null);
+            // Relations avec validation stricte
             if (isset($data['appelOffreTypeId'])) {
                 $type = $em->getRepository(AppelOffreType::class)->find($data['appelOffreTypeId']);
                 if (!$type) {
@@ -129,6 +131,26 @@ class AppelOffreController extends AbstractController
                 $appel->setOrganismeDemandeur($organisme);
             }
 
+            // ✅ GESTION DES PARTENAIRES (accepte "Groupement" OU "Avec Partenaires")
+            if (isset($data['partenaireIds']) && is_array($data['partenaireIds']) && 
+                isset($data['typeParticipation']) && 
+                (strtolower($data['typeParticipation']) === 'groupement' || 
+                 strtolower($data['typeParticipation']) === 'avec partenaires')) {
+                
+                $partenaireRepo = $em->getRepository(Partenaire::class);
+                
+                foreach ($data['partenaireIds'] as $partenaireId) {
+                    $partenaire = $partenaireRepo->find($partenaireId);
+                    if ($partenaire) {
+                        $appel->addPartenaire($partenaire);
+                    } else {
+                        return new JsonResponse([
+                            'error' => "Partenaire avec l'ID $partenaireId introuvable"
+                        ], Response::HTTP_BAD_REQUEST);
+                    }
+                }
+            }
+
             $em->persist($appel);
             $em->flush();
 
@@ -144,7 +166,6 @@ class AppelOffreController extends AbstractController
         }
     }
 
-    // Nouvelle route pour récupérer la prochaine référence
     #[Route('/api/get/next-appel-offre-ref', name: 'api_appel_offre_next_ref', methods: ['GET'])]
     public function getNextAppelOffreRef(EntityManagerInterface $em): JsonResponse
     {
@@ -156,7 +177,6 @@ class AppelOffreController extends AbstractController
         }
     }
 
-    // Nouvelle route pour générer le numéro de devis
     #[Route('/api/generate/numero-devis', name: 'api_generate_numero_devis', methods: ['POST'])]
     public function generateNumeroDevis(Request $request, EntityManagerInterface $em): JsonResponse
     {
@@ -181,7 +201,7 @@ class AppelOffreController extends AbstractController
         try {
             $data = json_decode($request->getContent(), true);
 
-            // ✅ Validation des données
+            // Validation
             if (!isset($data['appelOffreObjet']) || !isset($data['appelOffreDateRemise'])) {
                 return new JsonResponse(['error' => 'Données manquantes'], Response::HTTP_BAD_REQUEST);
             }
@@ -197,11 +217,13 @@ class AppelOffreController extends AbstractController
             $appelOffre->setNumeroDevisParticipation($data['numeroDevisParticipation'] ?? null);
             $appelOffre->setTypeParticipation($data['typeParticipation'] ?? null);
             $appelOffre->setAppelOffreAnnee($data['appelOffreAnnee'] ?? null);
+            $appelOffre->setResultatRang($data['resultatRang'] ?? null);
+$appelOffre->setResultatRangTotal($data['resultatRangTotal'] ?? null);
             $appelOffre->setAppelOffreCautionBancaire($data['appelOffreCautionBancaire'] ?? null);
             $appelOffre->setDateLimiteRemise(isset($data['dateLimiteRemise']) ? new \DateTime($data['dateLimiteRemise']) : null);
             $appelOffre->setLienAnnonce($data['lienAnnonce'] ?? null);
 
-            // ✅ Relations avec validation
+            // Relations
             if (isset($data['appelOffreTypeId'])) {
                 $type = $em->getRepository(AppelOffreType::class)->find($data['appelOffreTypeId']);
                 if ($type) $appelOffre->setAppelOffreType($type);
@@ -225,6 +247,28 @@ class AppelOffreController extends AbstractController
             if (isset($data['organismeDemandeurId'])) {
                 $organisme = $em->getRepository(OrganismeDemandeur::class)->find($data['organismeDemandeurId']);
                 if ($organisme) $appelOffre->setOrganismeDemandeur($organisme);
+            }
+
+            // ✅ Mise à jour des Partenaires (accepte "Groupement" OU "Avec Partenaires")
+            if (isset($data['partenaireIds']) && is_array($data['partenaireIds']) && 
+                isset($data['typeParticipation']) && 
+                (strtolower($data['typeParticipation']) === 'groupement' || 
+                 strtolower($data['typeParticipation']) === 'avec partenaires')) {
+                
+                // Supprimer tous les partenaires existants
+                $appelOffre->clearPartenaires();
+                
+                // Ajouter les nouveaux partenaires
+                $partenaireRepo = $em->getRepository(Partenaire::class);
+                foreach ($data['partenaireIds'] as $partenaireId) {
+                    $partenaire = $partenaireRepo->find($partenaireId);
+                    if ($partenaire) {
+                        $appelOffre->addPartenaire($partenaire);
+                    }
+                }
+            } elseif (isset($data['typeParticipation']) && strtolower($data['typeParticipation']) === 'seul') {
+                // Si le type change à "Seul", supprimer tous les partenaires
+                $appelOffre->clearPartenaires();
             }
 
             $em->flush();
@@ -251,9 +295,20 @@ class AppelOffreController extends AbstractController
 
     private function serializeAppelOffre(AppelOffre $appel): array
     {
+        // Sérialiser les partenaires
+        $partenaires = [];
+        foreach ($appel->getPartenaires() as $partenaire) {
+            $partenaires[] = [
+                'partenaireId' => $partenaire->getPartenaireId(),
+                'partenaireLibelle' => $partenaire->getPartenaireLibelle(),
+                'partenaireAcronyme' => $partenaire->getPartenaireAcronyme(),
+                'partenaireRole' => $partenaire->getPartenaireRole(),
+            ];
+        }
+
         return [
             'id' => $appel->getId(),
-            'appelOffreDevis' => $appel->getAppelOffreDevis(), // ✅ AJOUTÉ: Champ N° Réf
+            'appelOffreDevis' => $appel->getAppelOffreDevis(),
             'appelOffreObjet' => $appel->getAppelOffreObjet(),
             'appelOffreDateRemise' => $appel->getAppelOffreDateRemise()?->format('Y-m-d'),
             'appelOffreRetire' => $appel->getAppelOffreRetire(),
@@ -261,6 +316,8 @@ class AppelOffreController extends AbstractController
             'appelOffreEtat' => $appel->getAppelOffreEtat(),
             'remarque' => $appel->getRemarque(),
             'heureRemis' => $appel->getHeureRemis()?->format('H:i:s'),
+            'resultatRang' => $appel->getResultatRang(),
+            'resultatRangTotal' => $appel->getResultatRangTotal(),
             'dateParticipation' => $appel->getDateParticipation()?->format('Y-m-d'),
             'numeroDevisParticipation' => $appel->getNumeroDevisParticipation(),
             'typeParticipation' => $appel->getTypeParticipation(),
@@ -269,7 +326,7 @@ class AppelOffreController extends AbstractController
             'dateLimiteRemise' => $appel->getDateLimiteRemise()?->format('Y-m-d'),
             'lienAnnonce' => $appel->getLienAnnonce(),
 
-            // ✅ Relations avec ID et libellé
+            // Relations
             'appelOffreTypeId' => $appel->getAppelOffreType()?->getId(),
             'appelOffreTypeLibelle' => $appel->getAppelOffreType()?->getAppelOffreType(),
 
@@ -284,6 +341,9 @@ class AppelOffreController extends AbstractController
 
             'organismeDemandeurId' => $appel->getOrganismeDemandeur()?->getId(),
             'organismeDemandeurLibelle' => $appel->getOrganismeDemandeur()?->getOrganismeDemandeurLibelle(),
+
+            // ✅ Partenaires
+            'partenaires' => $partenaires,
         ];
     }
 }
