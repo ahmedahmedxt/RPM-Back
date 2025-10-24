@@ -105,8 +105,36 @@ class PartenaireController extends AbstractController
                 $partenaire->setPartenaireAcronyme($data['partenaireAcronyme']);
             }
             
-            if (isset($data['partenaireRole'])) {
-                $partenaire->setPartenaireRole($data['partenaireRole']);
+            // ✅ NOUVEAUX CHAMPS (sans partenaireRole)
+            if (isset($data['premierResponsable'])) {
+                $partenaire->setPremierResponsable($data['premierResponsable']);
+            }
+            if (isset($data['prEmail'])) {
+                $partenaire->setPrEmail($data['prEmail']);
+            }
+            if (isset($data['prTel'])) {
+                $partenaire->setPrTel($data['prTel']);
+            }
+            if (isset($data['adresse'])) {
+                $partenaire->setAdresse($data['adresse']);
+            }
+            if (isset($data['pays'])) {
+                $partenaire->setPays($data['pays']);
+            }
+            if (isset($data['email'])) {
+                $partenaire->setEmail($data['email']);
+            }
+            if (isset($data['tel1'])) {
+                $partenaire->setTel1($data['tel1']);
+            }
+            if (isset($data['tel2'])) {
+                $partenaire->setTel2($data['tel2']);
+            }
+            if (isset($data['siteWeb'])) {
+                $partenaire->setSiteWeb($data['siteWeb']);
+            }
+            if (isset($data['linkedIn'])) {
+                $partenaire->setLinkedIn($data['linkedIn']);
             }
 
             $this->entityManager->persist($partenaire);
@@ -152,8 +180,36 @@ class PartenaireController extends AbstractController
                 $partenaire->setPartenaireAcronyme($data['partenaireAcronyme']);
             }
             
-            if (isset($data['partenaireRole'])) {
-                $partenaire->setPartenaireRole($data['partenaireRole']);
+            // ✅ NOUVEAUX CHAMPS (sans partenaireRole)
+            if (isset($data['premierResponsable'])) {
+                $partenaire->setPremierResponsable($data['premierResponsable']);
+            }
+            if (isset($data['prEmail'])) {
+                $partenaire->setPrEmail($data['prEmail']);
+            }
+            if (isset($data['prTel'])) {
+                $partenaire->setPrTel($data['prTel']);
+            }
+            if (isset($data['adresse'])) {
+                $partenaire->setAdresse($data['adresse']);
+            }
+            if (isset($data['pays'])) {
+                $partenaire->setPays($data['pays']);
+            }
+            if (isset($data['email'])) {
+                $partenaire->setEmail($data['email']);
+            }
+            if (isset($data['tel1'])) {
+                $partenaire->setTel1($data['tel1']);
+            }
+            if (isset($data['tel2'])) {
+                $partenaire->setTel2($data['tel2']);
+            }
+            if (isset($data['siteWeb'])) {
+                $partenaire->setSiteWeb($data['siteWeb']);
+            }
+            if (isset($data['linkedIn'])) {
+                $partenaire->setLinkedIn($data['linkedIn']);
             }
 
             $this->entityManager->flush();

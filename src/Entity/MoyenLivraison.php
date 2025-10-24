@@ -19,7 +19,8 @@ class MoyenLivraison
     #[ORM\Column(length: 255, unique: true)]
     #[Assert\NotBlank]
     private ?string $moyenLivraison = null;
-
+    #[ORM\Column(length: 10, nullable: false)]
+    private ?string $moyenLivraisonShort = '';
   
     #[ORM\OneToMany(targetEntity: AppelOffre::class, mappedBy: 'moyenLivraison')]
     private Collection $appelOffres;
@@ -49,7 +50,16 @@ class MoyenLivraison
 
         return $this;
     }
-
+    public function getMoyenLivraisonShort(): ?string
+    {
+        return $this->moyenLivraisonShort;
+    }
+    
+    public function setMoyenLivraisonShort(string $moyenLivraisonShort): static
+    {
+        $this->moyenLivraisonShort = $moyenLivraisonShort;
+        return $this;
+    }
     /**
      * @return Collection|AppelOffre[]
      */

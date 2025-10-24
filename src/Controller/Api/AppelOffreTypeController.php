@@ -32,31 +32,34 @@ class AppelOffreTypeController extends AbstractController
         // Créer un nouveau type d'appel d'offre
         $appelOffreType = new AppelOffreType();
         $appelOffreType->setAppelOffreType($data['appelOffreType']);
+        $appelOffreType->setAppelOffresTypeShort($data['appelOffresTypeShort'] ?? null); // ✅ AJOUTÉ
     
         $entityManager->persist($appelOffreType);
         $entityManager->flush();
     
         return new JsonResponse('Type d\'appel d\'offre créé avec succès', Response::HTTP_CREATED);
     }
+    
     #[Route('/api/getAll/appeloffre/types', name: 'api_appel_offre_types', methods: ['GET'])]
-public function index(EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
-{
-    //$this->checkToken($tokenStorage);
-    
-    // Récupérer les types d'appels d'offres triés par ordre alphabétique
-    $appelOffreTypes = $entityManager->getRepository(AppelOffreType::class)->findBy([], ['appelOffreType' => 'ASC']);
-    
-    $data = [];
+    public function index(EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
+    {
+        //$this->checkToken($tokenStorage);
+        
+        // Récupérer les types d'appels d'offres triés par ordre alphabétique
+        $appelOffreTypes = $entityManager->getRepository(AppelOffreType::class)->findBy([], ['appelOffreType' => 'ASC']);
+        
+        $data = [];
 
-    foreach ($appelOffreTypes as $appelOffreType) {
-        $data[] = [
-            'appelOffreTypeId' => $appelOffreType->getId(),
-            'appelOffreType' => $appelOffreType->getAppelOffreType(),
-        ];
+        foreach ($appelOffreTypes as $appelOffreType) {
+            $data[] = [
+                'appelOffreTypeId' => $appelOffreType->getId(),
+                'appelOffreType' => $appelOffreType->getAppelOffreType(),
+                'appelOffresTypeShort' => $appelOffreType->getAppelOffresTypeShort(), // ✅ AJOUTÉ
+            ];
+        }
+
+        return new JsonResponse($data, Response::HTTP_OK);
     }
-
-    return new JsonResponse($data, Response::HTTP_OK);
-}
 
     #[Route('/api/get/appeloffre/types/{id}', name: 'api_appel_offre_type_show', methods: ['GET'])]
     public function show(AppelOffreType $appelOffreType, TokenStorageInterface $tokenStorage): JsonResponse
@@ -65,6 +68,7 @@ public function index(EntityManagerInterface $entityManager, TokenStorageInterfa
         $data = [
             'appelOffreTypeId' => $appelOffreType->getId(),
             'appelOffreType' => $appelOffreType->getAppelOffreType(),
+            'appelOffresTypeShort' => $appelOffreType->getAppelOffresTypeShort(), // ✅ AJOUTÉ
         ];
 
         return new JsonResponse($data, Response::HTTP_OK);
@@ -78,6 +82,7 @@ public function index(EntityManagerInterface $entityManager, TokenStorageInterfa
         $data = json_decode($request->getContent(), true);
 
         $appelOffreType->setAppelOffreType($data['appelOffreType']);
+        $appelOffreType->setAppelOffresTypeShort($data['appelOffresTypeShort'] ?? null); // ✅ AJOUTÉ
 
         $entityManager->flush();
 
@@ -111,6 +116,7 @@ public function index(EntityManagerInterface $entityManager, TokenStorageInterfa
             return new JsonResponse('Les références à l\'Appel d\'offre type ont été supprimées des Appels d\'offre associés, et l\'Appel d\'offre type a été supprimé avec succès.', Response::HTTP_OK);
         }
     }
+    
     public function checkToken(TokenStorageInterface $tokenStorage): void
     {
         // Récupérer le token d'authentification de Symfony
@@ -120,5 +126,5 @@ public function index(EntityManagerInterface $entityManager, TokenStorageInterfa
         if (!$token instanceof TokenInterface) {
             throw new AccessDeniedHttpException('Token d\'authentification manquant ou invalide');
         }
-}
+    }
 }

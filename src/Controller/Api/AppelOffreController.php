@@ -21,20 +21,34 @@ class AppelOffreController extends AbstractController
     #[Route('/api/getAll/appelsOffre', name: 'api_appel_offre_index', methods: ['GET'])]
     public function index(EntityManagerInterface $em): JsonResponse
     {
-        $appels = $em->getRepository(AppelOffre::class)->findAll();
-        $data = [];
+        try {
+            $appels = $em->getRepository(AppelOffre::class)->findAll();
+            $data = [];
 
-        foreach ($appels as $appel) {
-            $data[] = $this->serializeAppelOffre($appel);
+            foreach ($appels as $appel) {
+                $data[] = $this->serializeAppelOffre($appel);
+            }
+
+            return new JsonResponse($data, Response::HTTP_OK);
+        } catch (\Exception $e) {
+            return new JsonResponse([
+                'error' => 'Erreur lors de la récupération des appels d\'offre',
+                'message' => $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
-
-        return new JsonResponse($data, Response::HTTP_OK);
     }
 
     #[Route('/api/get/appelOffre/{id}', name: 'api_appel_offre_show', methods: ['GET'])]
     public function show(AppelOffre $appelOffre): JsonResponse
     {
-        return new JsonResponse($this->serializeAppelOffre($appelOffre), Response::HTTP_OK);
+        try {
+            return new JsonResponse($this->serializeAppelOffre($appelOffre), Response::HTTP_OK);
+        } catch (\Exception $e) {
+            return new JsonResponse([
+                'error' => 'Erreur lors de la récupération de l\'appel d\'offre',
+                'message' => $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
 
     #[Route('/api/create/appelOffre', name: 'api_appel_offre_create', methods: ['POST'])]
@@ -45,7 +59,9 @@ class AppelOffreController extends AbstractController
 
             // Validation des données requises
             if (!isset($data['appelOffreObjet']) || !isset($data['appelOffreDateRemise'])) {
-                return new JsonResponse(['error' => 'Données manquantes: objet et date de remise requis'], Response::HTTP_BAD_REQUEST);
+                return new JsonResponse([
+                    'error' => 'Données manquantes: objet et date de remise requis'
+                ], Response::HTTP_BAD_REQUEST);
             }
 
             $appel = new AppelOffre();
@@ -56,7 +72,9 @@ class AppelOffreController extends AbstractController
                 $appel->setAppelOffreDevis($reference);
             } else {
                 if ($em->getRepository(AppelOffre::class)->appelOffreRefExists($data['appelOffreDevis'])) {
-                    return new JsonResponse(['error' => 'Cette référence existe déjà'], Response::HTTP_CONFLICT);
+                    return new JsonResponse([
+                        'error' => 'Cette référence existe déjà'
+                    ], Response::HTTP_CONFLICT);
                 }
                 $appel->setAppelOffreDevis($data['appelOffreDevis']);
             }
@@ -69,20 +87,17 @@ class AppelOffreController extends AbstractController
                 }
             }
             
-            // Assignation des champs
+            // Assignation des champs obligatoires
             $appel->setAppelOffreObjet($data['appelOffreObjet']);
             $appel->setAppelOffreDateRemise(new \DateTime($data['appelOffreDateRemise']));
             $appel->setAppelOffreRetire($data['appelOffreRetire'] ?? 0);
             $appel->setAppelOffreParticipation($data['appelOffreParticipation'] ?? 0);
             $appel->setAppelOffreEtat($data['appelOffreEtat'] ?? 'EN_ATTENTE');
+            
+            // Champs optionnels
             $appel->setRemarque($data['remarque'] ?? null);
             $appel->setHeureRemis(isset($data['heureRemis']) ? new \DateTime($data['heureRemis']) : null);
             $appel->setDateParticipation(isset($data['dateParticipation']) ? new \DateTime($data['dateParticipation']) : null);
-            
-            if (!isset($data['appelOffreParticipation']) || $data['appelOffreParticipation'] != 1) {
-                $appel->setNumeroDevisParticipation($data['numeroDevisParticipation'] ?? null);
-            }
-            
             $appel->setTypeParticipation($data['typeParticipation'] ?? null);
             $appel->setAppelOffreAnnee($data['appelOffreAnnee'] ?? null);
             $appel->setAppelOffreCautionBancaire($data['appelOffreCautionBancaire'] ?? null);
@@ -90,7 +105,8 @@ class AppelOffreController extends AbstractController
             $appel->setLienAnnonce($data['lienAnnonce'] ?? null);
             $appel->setResultatRang($data['resultatRang'] ?? null);
             $appel->setResultatRangTotal($data['resultatRangTotal'] ?? null);
-            // Relations avec validation stricte
+
+            // Relations avec validation
             if (isset($data['appelOffreTypeId'])) {
                 $type = $em->getRepository(AppelOffreType::class)->find($data['appelOffreTypeId']);
                 if (!$type) {
@@ -101,18 +117,16 @@ class AppelOffreController extends AbstractController
 
             if (isset($data['moyenLivraisonId'])) {
                 $moyen = $em->getRepository(MoyenLivraison::class)->find($data['moyenLivraisonId']);
-                if (!$moyen) {
-                    return new JsonResponse(['error' => 'Moyen de livraison invalide'], Response::HTTP_BAD_REQUEST);
+                if ($moyen) {
+                    $appel->setMoyenLivraison($moyen);
                 }
-                $appel->setMoyenLivraison($moyen);
             }
 
             if (isset($data['devisesId'])) {
                 $devises = $em->getRepository(Devises::class)->find($data['devisesId']);
-                if (!$devises) {
-                    return new JsonResponse(['error' => 'Devise invalide'], Response::HTTP_BAD_REQUEST);
+                if ($devises) {
+                    $appel->setDevises($devises);
                 }
-                $appel->setDevises($devises);
             }
 
             if (isset($data['paysId'])) {
@@ -131,38 +145,22 @@ class AppelOffreController extends AbstractController
                 $appel->setOrganismeDemandeur($organisme);
             }
 
-            // ✅ GESTION DES PARTENAIRES (accepte "Groupement" OU "Avec Partenaires")
-            if (isset($data['partenaireIds']) && is_array($data['partenaireIds']) && 
-                isset($data['typeParticipation']) && 
-                (strtolower($data['typeParticipation']) === 'groupement' || 
-                 strtolower($data['typeParticipation']) === 'avec partenaires')) {
-                
-                $partenaireRepo = $em->getRepository(Partenaire::class);
-                
-                foreach ($data['partenaireIds'] as $partenaireId) {
-                    $partenaire = $partenaireRepo->find($partenaireId);
-                    if ($partenaire) {
-                        $appel->addPartenaire($partenaire);
-                    } else {
-                        return new JsonResponse([
-                            'error' => "Partenaire avec l'ID $partenaireId introuvable"
-                        ], Response::HTTP_BAD_REQUEST);
-                    }
-                }
-            }
-
             $em->persist($appel);
             $em->flush();
 
             return new JsonResponse([
                 'message' => 'Appel d\'offre créé avec succès',
+                'id' => $appel->getId(),
                 'appelOffreDevis' => $appel->getAppelOffreDevis(),
                 'numeroDevisParticipation' => $appel->getNumeroDevisParticipation(),
                 'data' => $this->serializeAppelOffre($appel)
             ], Response::HTTP_CREATED);
 
         } catch (\Exception $e) {
-            return new JsonResponse(['error' => 'Erreur lors de la création: ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
+            return new JsonResponse([
+                'error' => 'Erreur lors de la création de l\'appel d\'offre',
+                'message' => $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -173,7 +171,10 @@ class AppelOffreController extends AbstractController
             $nextRef = $em->getRepository(AppelOffre::class)->generateNextAppelOffreRef();
             return new JsonResponse(['nextAppelOffreRef' => $nextRef], Response::HTTP_OK);
         } catch (\Exception $e) {
-            return new JsonResponse(['error' => 'Erreur lors de la génération de la référence: ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
+            return new JsonResponse([
+                'error' => 'Erreur lors de la génération de la référence',
+                'message' => $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -184,14 +185,19 @@ class AppelOffreController extends AbstractController
             $data = json_decode($request->getContent(), true);
             
             if (empty($data['dateParticipation'])) {
-                return new JsonResponse(['error' => 'Date de participation requise'], Response::HTTP_BAD_REQUEST);
+                return new JsonResponse([
+                    'error' => 'Date de participation requise'
+                ], Response::HTTP_BAD_REQUEST);
             }
             
             $numeroDevis = $em->getRepository(AppelOffre::class)->generateNumeroDevis($data['dateParticipation']);
             
             return new JsonResponse(['numeroDevis' => $numeroDevis], Response::HTTP_OK);
         } catch (\Exception $e) {
-            return new JsonResponse(['error' => 'Erreur lors de la génération du numéro de devis: ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
+            return new JsonResponse([
+                'error' => 'Erreur lors de la génération du numéro de devis',
+                'message' => $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -203,9 +209,12 @@ class AppelOffreController extends AbstractController
 
             // Validation
             if (!isset($data['appelOffreObjet']) || !isset($data['appelOffreDateRemise'])) {
-                return new JsonResponse(['error' => 'Données manquantes'], Response::HTTP_BAD_REQUEST);
+                return new JsonResponse([
+                    'error' => 'Données manquantes: objet et date de remise requis'
+                ], Response::HTTP_BAD_REQUEST);
             }
 
+            // Mise à jour des champs
             $appelOffre->setAppelOffreObjet($data['appelOffreObjet']);
             $appelOffre->setAppelOffreDateRemise(new \DateTime($data['appelOffreDateRemise']));
             $appelOffre->setAppelOffreRetire($data['appelOffreRetire'] ?? 0);
@@ -218,65 +227,59 @@ class AppelOffreController extends AbstractController
             $appelOffre->setTypeParticipation($data['typeParticipation'] ?? null);
             $appelOffre->setAppelOffreAnnee($data['appelOffreAnnee'] ?? null);
             $appelOffre->setResultatRang($data['resultatRang'] ?? null);
-$appelOffre->setResultatRangTotal($data['resultatRangTotal'] ?? null);
+            $appelOffre->setResultatRangTotal($data['resultatRangTotal'] ?? null);
             $appelOffre->setAppelOffreCautionBancaire($data['appelOffreCautionBancaire'] ?? null);
             $appelOffre->setDateLimiteRemise(isset($data['dateLimiteRemise']) ? new \DateTime($data['dateLimiteRemise']) : null);
             $appelOffre->setLienAnnonce($data['lienAnnonce'] ?? null);
 
-            // Relations
+            // Mise à jour des relations
             if (isset($data['appelOffreTypeId'])) {
                 $type = $em->getRepository(AppelOffreType::class)->find($data['appelOffreTypeId']);
-                if ($type) $appelOffre->setAppelOffreType($type);
+                if ($type) {
+                    $appelOffre->setAppelOffreType($type);
+                }
             }
 
             if (isset($data['moyenLivraisonId'])) {
                 $moyen = $em->getRepository(MoyenLivraison::class)->find($data['moyenLivraisonId']);
-                if ($moyen) $appelOffre->setMoyenLivraison($moyen);
+                if ($moyen) {
+                    $appelOffre->setMoyenLivraison($moyen);
+                }
             }
 
             if (isset($data['paysId'])) {
                 $pays = $em->getRepository(Pays::class)->find($data['paysId']);
-                if ($pays) $appelOffre->setPays($pays);
+                if ($pays) {
+                    $appelOffre->setPays($pays);
+                }
             }
 
             if (isset($data['devisesId'])) {
                 $devises = $em->getRepository(Devises::class)->find($data['devisesId']);
-                if ($devises) $appelOffre->setDevises($devises);
+                if ($devises) {
+                    $appelOffre->setDevises($devises);
+                }
             }
 
             if (isset($data['organismeDemandeurId'])) {
                 $organisme = $em->getRepository(OrganismeDemandeur::class)->find($data['organismeDemandeurId']);
-                if ($organisme) $appelOffre->setOrganismeDemandeur($organisme);
-            }
-
-            // ✅ Mise à jour des Partenaires (accepte "Groupement" OU "Avec Partenaires")
-            if (isset($data['partenaireIds']) && is_array($data['partenaireIds']) && 
-                isset($data['typeParticipation']) && 
-                (strtolower($data['typeParticipation']) === 'groupement' || 
-                 strtolower($data['typeParticipation']) === 'avec partenaires')) {
-                
-                // Supprimer tous les partenaires existants
-                $appelOffre->clearPartenaires();
-                
-                // Ajouter les nouveaux partenaires
-                $partenaireRepo = $em->getRepository(Partenaire::class);
-                foreach ($data['partenaireIds'] as $partenaireId) {
-                    $partenaire = $partenaireRepo->find($partenaireId);
-                    if ($partenaire) {
-                        $appelOffre->addPartenaire($partenaire);
-                    }
+                if ($organisme) {
+                    $appelOffre->setOrganismeDemandeur($organisme);
                 }
-            } elseif (isset($data['typeParticipation']) && strtolower($data['typeParticipation']) === 'seul') {
-                // Si le type change à "Seul", supprimer tous les partenaires
-                $appelOffre->clearPartenaires();
             }
 
             $em->flush();
 
-            return new JsonResponse($this->serializeAppelOffre($appelOffre), Response::HTTP_OK);
+            return new JsonResponse([
+                'message' => 'Appel d\'offre modifié avec succès',
+                'data' => $this->serializeAppelOffre($appelOffre)
+            ], Response::HTTP_OK);
 
         } catch (\Exception $e) {
-            return new JsonResponse(['error' => 'Erreur lors de la mise à jour: ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
+            return new JsonResponse([
+                'error' => 'Erreur lors de la mise à jour de l\'appel d\'offre',
+                'message' => $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -287,25 +290,35 @@ $appelOffre->setResultatRangTotal($data['resultatRangTotal'] ?? null);
             $em->remove($appelOffre);
             $em->flush();
 
-            return new JsonResponse(['message' => 'Appel d\'offre supprimé avec succès'], Response::HTTP_OK);
+            return new JsonResponse([
+                'message' => 'Appel d\'offre supprimé avec succès'
+            ], Response::HTTP_OK);
         } catch (\Exception $e) {
-            return new JsonResponse(['error' => 'Erreur lors de la suppression: ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
+            return new JsonResponse([
+                'error' => 'Erreur lors de la suppression de l\'appel d\'offre',
+                'message' => $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
+    // ✅ MÉTHODE DE SÉRIALISATION - COMPLÈTE ET CORRIGÉE
     private function serializeAppelOffre(AppelOffre $appel): array
     {
-        // Sérialiser les partenaires
+        // Sérialiser les partenaires AVEC leurs rôles
         $partenaires = [];
-        foreach ($appel->getPartenaires() as $partenaire) {
-            $partenaires[] = [
-                'partenaireId' => $partenaire->getPartenaireId(),
-                'partenaireLibelle' => $partenaire->getPartenaireLibelle(),
-                'partenaireAcronyme' => $partenaire->getPartenaireAcronyme(),
-                'partenaireRole' => $partenaire->getPartenaireRole(),
-            ];
+        foreach ($appel->getAppelOffrePartenaires() as $appelOffrePartenaire) {
+            $partenaire = $appelOffrePartenaire->getPartenaire();
+            if ($partenaire) {
+                $partenaires[] = [
+                    'id' => $appelOffrePartenaire->getId(),
+                    'partenaireId' => $partenaire->getPartenaireId(),
+                    'partenaireLibelle' => $partenaire->getPartenaireLibelle(),
+                    'partenaireAcronyme' => $partenaire->getPartenaireAcronyme(),
+                    'role' => $appelOffrePartenaire->getRole(),
+                ];
+            }
         }
-
+    
         return [
             'id' => $appel->getId(),
             'appelOffreDevis' => $appel->getAppelOffreDevis(),
@@ -325,24 +338,22 @@ $appelOffre->setResultatRangTotal($data['resultatRangTotal'] ?? null);
             'appelOffreCautionBancaire' => $appel->getAppelOffreCautionBancaire(),
             'dateLimiteRemise' => $appel->getDateLimiteRemise()?->format('Y-m-d'),
             'lienAnnonce' => $appel->getLienAnnonce(),
-
-            // Relations
-            'appelOffreTypeId' => $appel->getAppelOffreType()?->getId(),
+            
+            // Relations - ✅ TOUTES CORRIGÉES
+            'appelOffreType' => $appel->getAppelOffreType()?->getId(),
             'appelOffreTypeLibelle' => $appel->getAppelOffreType()?->getAppelOffreType(),
-
-            'moyenLivraisonId' => $appel->getMoyenLivraison()?->getId(),
+            'appelOffresTypeShort' => $appel->getAppelOffreType()?->getAppelOffresTypeShort(), // ✅ AJOUTÉ
+            'moyenLivraison' => $appel->getMoyenLivraison()?->getId(),
             'moyenLivraisonLibelle' => $appel->getMoyenLivraison()?->getMoyenLivraison(),
-
-            'paysId' => $appel->getPays()?->getId(),
+            'pays' => $appel->getPays()?->getId(),
             'paysLibelle' => $appel->getPays()?->getPaysLibelle(),
-
-            'devisesId' => $appel->getDevises()?->getDevisesId(),
-            'devisesLibelle' => $appel->getDevises()?->getDevisesLibelle(),
-
-            'organismeDemandeurId' => $appel->getOrganismeDemandeur()?->getId(),
+            'organismeDemandeur' => $appel->getOrganismeDemandeur()?->getId(),
             'organismeDemandeurLibelle' => $appel->getOrganismeDemandeur()?->getOrganismeDemandeurLibelle(),
-
-            // ✅ Partenaires
+            'devises' => $appel->getDevises()?->getDevisesId(),
+            'devisesLibelle' => $appel->getDevises()?->getDevisesLibelle(),
+            'devisesAcronyme' => $appel->getDevises()?->getDevisesAcronyme(),
+            
+            // ✅ Partenaires avec leurs rôles (Chef équipe / Partenaire simple)
             'partenaires' => $partenaires,
         ];
     }

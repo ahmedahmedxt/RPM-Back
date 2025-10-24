@@ -20,6 +20,9 @@ class AppelOffreType
     #[Assert\NotBlank]
     private ?string $appelOffreType;
 
+    #[ORM\Column(length: 50, nullable: true)]
+    private ?string $appelOffresTypeShort;
+
     #[ORM\OneToMany(targetEntity: AppelOffre::class, mappedBy: 'appelOffreType')]
     private Collection $appelOffres;
 
@@ -47,6 +50,18 @@ class AppelOffreType
     public function setAppelOffreType(?string $appelOffreType): static
     {
         $this->appelOffreType = $appelOffreType;
+
+        return $this;
+    }
+
+    public function getAppelOffresTypeShort(): ?string
+    {
+        return $this->appelOffresTypeShort;
+    }
+
+    public function setAppelOffresTypeShort(?string $appelOffresTypeShort): static
+    {
+        $this->appelOffresTypeShort = $appelOffresTypeShort;
 
         return $this;
     }

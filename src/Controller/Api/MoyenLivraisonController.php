@@ -55,6 +55,7 @@ public function getAll(EntityManagerInterface $entityManager, TokenStorageInterf
         $data[] = [
             'moyenLivraisonId' => $moyenLivraison->getId(),
             'moyenLivraison' => $moyenLivraison->getMoyenLivraison(),
+            'moyenLivraisonShort' => $moyenLivraison->getMoyenLivraisonShort(), // ✅ CORRIGÉ
         ];
     }
 

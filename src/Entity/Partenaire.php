@@ -26,19 +26,56 @@ class Partenaire
     #[Groups(['partenaire:read', 'partenaire:write', 'appeloffre:read'])]
     private ?string $partenaireAcronyme = null;
 
-    #[ORM\Column(name: 'partenaireRole', type: 'string', length: 100, nullable: true)]
-    #[Groups(['partenaire:read', 'partenaire:write', 'appeloffre:read'])]
-    private ?string $partenaireRole = null;
+    #[ORM\Column(name: 'premierResponsable', type: 'string', length: 255, nullable: true)]
+    #[Groups(['partenaire:read', 'partenaire:write'])]
+    private ?string $premierResponsable = null;
 
-    #[ORM\ManyToMany(targetEntity: AppelOffre::class, mappedBy: 'partenaires')]
-    private Collection $appelOffres;
+    #[ORM\Column(name: 'prEmail', type: 'string', length: 255, nullable: true)]
+    #[Groups(['partenaire:read', 'partenaire:write'])]
+    private ?string $prEmail = null;
 
-    public function __construct()
-    {
-        $this->appelOffres = new ArrayCollection();
-    }
+    #[ORM\Column(name: 'prTel', type: 'string', length: 50, nullable: true)]
+    #[Groups(['partenaire:read', 'partenaire:write'])]
+    private ?string $prTel = null;
 
-    // Getters et Setters
+    #[ORM\Column(name: 'adresse', type: 'text', nullable: true)]
+    #[Groups(['partenaire:read', 'partenaire:write'])]
+    private ?string $adresse = null;
+
+    #[ORM\Column(name: 'pays', type: 'string', length: 100, nullable: true)]
+    #[Groups(['partenaire:read', 'partenaire:write'])]
+    private ?string $pays = null;
+
+    #[ORM\Column(name: 'email', type: 'string', length: 255, nullable: true)]
+    #[Groups(['partenaire:read', 'partenaire:write'])]
+    private ?string $email = null;
+
+    #[ORM\Column(name: 'tel1', type: 'string', length: 50, nullable: true)]
+    #[Groups(['partenaire:read', 'partenaire:write'])]
+    private ?string $tel1 = null;
+
+    #[ORM\Column(name: 'tel2', type: 'string', length: 50, nullable: true)]
+    #[Groups(['partenaire:read', 'partenaire:write'])]
+    private ?string $tel2 = null;
+
+    #[ORM\Column(name: 'siteWeb', type: 'string', length: 255, nullable: true)]
+    #[Groups(['partenaire:read', 'partenaire:write'])]
+    private ?string $siteWeb = null;
+
+    #[ORM\Column(name: 'linkedIn', type: 'string', length: 255, nullable: true)]
+    #[Groups(['partenaire:read', 'partenaire:write'])]
+    private ?string $linkedIn = null;
+
+   
+#[ORM\OneToMany(mappedBy: 'partenaire', targetEntity: AppelOffrePartenaire::class)]
+private Collection $appelOffrePartenaires;
+
+public function __construct()
+{
+    $this->appelOffrePartenaires = new ArrayCollection();  
+}
+
+    // Getters et Setters existants
     public function getPartenaireId(): ?int
     {
         return $this->partenaireId;
@@ -66,39 +103,124 @@ class Partenaire
         return $this;
     }
 
-    public function getPartenaireRole(): ?string
+    // Nouveaux Getters et Setters
+    public function getPremierResponsable(): ?string
     {
-        return $this->partenaireRole;
+        return $this->premierResponsable;
     }
 
-    public function setPartenaireRole(?string $partenaireRole): self
+    public function setPremierResponsable(?string $premierResponsable): self
     {
-        $this->partenaireRole = $partenaireRole;
+        $this->premierResponsable = $premierResponsable;
         return $this;
     }
 
-    /**
-     * @return Collection<int, AppelOffre>
-     */
-    public function getAppelOffres(): Collection
+    public function getPrEmail(): ?string
     {
-        return $this->appelOffres;
+        return $this->prEmail;
     }
 
-    public function addAppelOffre(AppelOffre $appelOffre): self
+    public function setPrEmail(?string $prEmail): self
     {
-        if (!$this->appelOffres->contains($appelOffre)) {
-            $this->appelOffres->add($appelOffre);
-            $appelOffre->addPartenaire($this);
-        }
+        $this->prEmail = $prEmail;
         return $this;
     }
 
-    public function removeAppelOffre(AppelOffre $appelOffre): self
+    public function getPrTel(): ?string
     {
-        if ($this->appelOffres->removeElement($appelOffre)) {
-            $appelOffre->removePartenaire($this);
-        }
+        return $this->prTel;
+    }
+
+    public function setPrTel(?string $prTel): self
+    {
+        $this->prTel = $prTel;
         return $this;
     }
+
+    public function getAdresse(): ?string
+    {
+        return $this->adresse;
+    }
+
+    public function setAdresse(?string $adresse): self
+    {
+        $this->adresse = $adresse;
+        return $this;
+    }
+
+    public function getPays(): ?string
+    {
+        return $this->pays;
+    }
+
+    public function setPays(?string $pays): self
+    {
+        $this->pays = $pays;
+        return $this;
+    }
+
+    public function getEmail(): ?string
+    {
+        return $this->email;
+    }
+
+    public function setEmail(?string $email): self
+    {
+        $this->email = $email;
+        return $this;
+    }
+
+    public function getTel1(): ?string
+    {
+        return $this->tel1;
+    }
+
+    public function setTel1(?string $tel1): self
+    {
+        $this->tel1 = $tel1;
+        return $this;
+    }
+
+    public function getTel2(): ?string
+    {
+        return $this->tel2;
+    }
+
+    public function setTel2(?string $tel2): self
+    {
+        $this->tel2 = $tel2;
+        return $this;
+    }
+
+    public function getSiteWeb(): ?string
+    {
+        return $this->siteWeb;
+    }
+
+    public function setSiteWeb(?string $siteWeb): self
+    {
+        $this->siteWeb = $siteWeb;
+        return $this;
+    }
+
+    public function getLinkedIn(): ?string
+    {
+        return $this->linkedIn;
+    }
+
+    public function setLinkedIn(?string $linkedIn): self
+    {
+        $this->linkedIn = $linkedIn;
+        return $this;
+    }
+
+  
+/**
+ * @return Collection<int, AppelOffrePartenaire>
+ */
+public function getAppelOffrePartenaires(): Collection
+{
+    return $this->appelOffrePartenaires;
+}
+    
 }

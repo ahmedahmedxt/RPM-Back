@@ -36,12 +36,9 @@ class AppelOffre
     #[ORM\JoinColumn(name: "devisesId", referencedColumnName: "devisesId", nullable: false)]
     private $devises;
 
-    // ✅ NOUVELLE RELATION : Many-to-Many avec Partenaire
-    #[ORM\ManyToMany(targetEntity: Partenaire::class, inversedBy: 'appelOffres')]
-    #[ORM\JoinTable(name: 'appel_offre_partenaire')]
-    #[ORM\JoinColumn(name: 'appel_offre_id', referencedColumnName: 'id')]
-    #[ORM\InverseJoinColumn(name: 'partenaire_id', referencedColumnName: 'partenaireId')]
-    private Collection $partenaires;
+    // ✅ NOUVELLE RELATION : OneToMany avec AppelOffrePartenaire (remplace ManyToMany)
+    #[ORM\OneToMany(mappedBy: 'appelOffre', targetEntity: AppelOffrePartenaire::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $appelOffrePartenaires;
 
     #[ORM\Column(type: "string", length: 255)]
     #[Assert\NotBlank]
@@ -89,21 +86,23 @@ class AppelOffre
 
     #[ORM\Column(type: "integer", nullable: true)]
     private ?int $appelOffreCautionBancaire = null;
+
     #[ORM\Column(type: 'integer', nullable: true)]
     private ?int $resultatRang = null;
     
     #[ORM\Column(type: 'integer', nullable: true)]
     private ?int $resultatRangTotal = null;
+
     #[ORM\Column(type: 'date', nullable: true)]
     private ?\DateTimeInterface $dateLimiteRemise = null;
 
     #[ORM\Column(type: 'string', length: 255, nullable: true)]
     private ?string $lienAnnonce = null;
 
-    // ✅ CONSTRUCTEUR avec initialisation de la collection partenaires
+    // ✅ CONSTRUCTEUR avec initialisation de la collection appelOffrePartenaires
     public function __construct()
     {
-        $this->partenaires = new ArrayCollection();
+        $this->appelOffrePartenaires = new ArrayCollection();
     }
 
     // ===================== GETTERS & SETTERS =====================
@@ -200,6 +199,7 @@ class AppelOffre
         $this->organismeDemandeur = $organismeDemandeur;
         return $this;
     }
+
     public function getResultatRang(): ?int
     {
         return $this->resultatRang;
@@ -221,6 +221,7 @@ class AppelOffre
         $this->resultatRangTotal = $resultatRangTotal;
         return $this;
     }
+
     public function getAppelOffreObjet(): ?string
     {
         return $this->appelOffreObjet;
@@ -360,32 +361,52 @@ class AppelOffre
         return $this;
     }
 
-    // ✅ NOUVELLES MÉTHODES pour gérer les Partenaires
+    // ✅ NOUVELLES MÉTHODES pour gérer les AppelOffrePartenaires
     /**
-     * @return Collection<int, Partenaire>
+     * @return Collection<int, AppelOffrePartenaire>
      */
-    public function getPartenaires(): Collection
+    public function getAppelOffrePartenaires(): Collection
     {
-        return $this->partenaires;
+        return $this->appelOffrePartenaires;
     }
 
-    public function addPartenaire(Partenaire $partenaire): self
+    public function addAppelOffrePartenaire(AppelOffrePartenaire $appelOffrePartenaire): self
     {
-        if (!$this->partenaires->contains($partenaire)) {
-            $this->partenaires->add($partenaire);
+        if (!$this->appelOffrePartenaires->contains($appelOffrePartenaire)) {
+            $this->appelOffrePartenaires->add($appelOffrePartenaire);
+            $appelOffrePartenaire->setAppelOffre($this);
         }
         return $this;
     }
 
-    public function removePartenaire(Partenaire $partenaire): self
+    public function removeAppelOffrePartenaire(AppelOffrePartenaire $appelOffrePartenaire): self
     {
-        $this->partenaires->removeElement($partenaire);
+        if ($this->appelOffrePartenaires->removeElement($appelOffrePartenaire)) {
+            // Définir le côté propriétaire à null (à moins qu'il ne soit déjà modifié)
+            if ($appelOffrePartenaire->getAppelOffre() === $this) {
+                $appelOffrePartenaire->setAppelOffre(null);
+            }
+        }
         return $this;
     }
 
-    public function clearPartenaires(): self
+    public function clearAppelOffrePartenaires(): self
     {
-        $this->partenaires->clear();
+        $this->appelOffrePartenaires->clear();
         return $this;
+    }
+
+    // ✅ Méthode helper pour obtenir les partenaires avec leurs rôles (optionnel, pour faciliter l'utilisation)
+    public function getPartenairesWithRoles(): array
+    {
+        $result = [];
+        foreach ($this->appelOffrePartenaires as $aop) {
+            $result[] = [
+                'id' => $aop->getId(),
+                'partenaire' => $aop->getPartenaire(),
+                'role' => $aop->getRole()
+            ];
+        }
+        return $result;
     }
 }
