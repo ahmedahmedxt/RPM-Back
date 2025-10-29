@@ -56,8 +56,8 @@ class AppelOffre
     #[ORM\Column(type: "integer")]
     private ?int $appelOffreParticipation = null;
 
-    #[ORM\Column(type: "string", length: 20)]
-    private ?string $appelOffreEtat = null;
+    #[ORM\Column(type: "string", length: 50, nullable: true)]
+private ?string $appelOffreEtat = null;
 
     public const ETATS = [
         'EN_ATTENTE' => 'En Attente du résultat',
@@ -270,9 +270,15 @@ class AppelOffre
     {
         return $this->appelOffreEtat;
     }
-
-    public function setAppelOffreEtat(string $etat): self
+    public function setAppelOffreEtat(?string $etat): self
     {
+        // ✅ Si NULL, on autorise
+        if ($etat === null) {
+            $this->appelOffreEtat = null;
+            return $this;
+        }
+        
+        // Sinon, validation comme avant
         $key = array_search($etat, self::ETATS);
         if ($key === false) {
             if (!in_array($etat, array_keys(self::ETATS))) {
@@ -283,7 +289,7 @@ class AppelOffre
         $this->appelOffreEtat = $key;
         return $this;
     }
-
+    
     public function getRemarque(): ?string
     {
         return $this->remarque;

@@ -92,16 +92,18 @@ class AppelOffreController extends AbstractController
             $appel->setAppelOffreDateRemise(new \DateTime($data['appelOffreDateRemise']));
             $appel->setAppelOffreRetire($data['appelOffreRetire'] ?? 0);
             $appel->setAppelOffreParticipation($data['appelOffreParticipation'] ?? 0);
-            $appel->setAppelOffreEtat($data['appelOffreEtat'] ?? 'EN_ATTENTE');
+            
+            // ✅ CORRECTION : Permet NULL pour appelOffreEtat
+            $appel->setAppelOffreEtat($data['appelOffreEtat'] ?? null);
             
             // Champs optionnels
             $appel->setRemarque($data['remarque'] ?? null);
-            $appel->setHeureRemis(isset($data['heureRemis']) ? new \DateTime($data['heureRemis']) : null);
-            $appel->setDateParticipation(isset($data['dateParticipation']) ? new \DateTime($data['dateParticipation']) : null);
+            $appel->setHeureRemis(isset($data['heureRemis']) && !empty($data['heureRemis']) ? new \DateTime($data['heureRemis']) : null);
+            $appel->setDateParticipation(isset($data['dateParticipation']) && !empty($data['dateParticipation']) ? new \DateTime($data['dateParticipation']) : null);
             $appel->setTypeParticipation($data['typeParticipation'] ?? null);
             $appel->setAppelOffreAnnee($data['appelOffreAnnee'] ?? null);
             $appel->setAppelOffreCautionBancaire($data['appelOffreCautionBancaire'] ?? null);
-            $appel->setDateLimiteRemise(isset($data['dateLimiteRemise']) ? new \DateTime($data['dateLimiteRemise']) : null);
+            $appel->setDateLimiteRemise(isset($data['dateLimiteRemise']) && !empty($data['dateLimiteRemise']) ? new \DateTime($data['dateLimiteRemise']) : null);
             $appel->setLienAnnonce($data['lienAnnonce'] ?? null);
             $appel->setResultatRang($data['resultatRang'] ?? null);
             $appel->setResultatRangTotal($data['resultatRangTotal'] ?? null);
@@ -219,17 +221,20 @@ class AppelOffreController extends AbstractController
             $appelOffre->setAppelOffreDateRemise(new \DateTime($data['appelOffreDateRemise']));
             $appelOffre->setAppelOffreRetire($data['appelOffreRetire'] ?? 0);
             $appelOffre->setAppelOffreParticipation($data['appelOffreParticipation'] ?? 0);
-            $appelOffre->setAppelOffreEtat($data['appelOffreEtat'] ?? 'EN_ATTENTE');
+            
+            // ✅ CORRECTION : Permet NULL pour appelOffreEtat (ligne corrigée - duplication supprimée)
+            $appelOffre->setAppelOffreEtat($data['appelOffreEtat'] ?? null);
+            
             $appelOffre->setRemarque($data['remarque'] ?? null);
-            $appelOffre->setHeureRemis(isset($data['heureRemis']) ? new \DateTime($data['heureRemis']) : null);
-            $appelOffre->setDateParticipation(isset($data['dateParticipation']) ? new \DateTime($data['dateParticipation']) : null);
+            $appelOffre->setHeureRemis(isset($data['heureRemis']) && !empty($data['heureRemis']) ? new \DateTime($data['heureRemis']) : null);
+            $appelOffre->setDateParticipation(isset($data['dateParticipation']) && !empty($data['dateParticipation']) ? new \DateTime($data['dateParticipation']) : null);
             $appelOffre->setNumeroDevisParticipation($data['numeroDevisParticipation'] ?? null);
             $appelOffre->setTypeParticipation($data['typeParticipation'] ?? null);
             $appelOffre->setAppelOffreAnnee($data['appelOffreAnnee'] ?? null);
             $appelOffre->setResultatRang($data['resultatRang'] ?? null);
             $appelOffre->setResultatRangTotal($data['resultatRangTotal'] ?? null);
             $appelOffre->setAppelOffreCautionBancaire($data['appelOffreCautionBancaire'] ?? null);
-            $appelOffre->setDateLimiteRemise(isset($data['dateLimiteRemise']) ? new \DateTime($data['dateLimiteRemise']) : null);
+            $appelOffre->setDateLimiteRemise(isset($data['dateLimiteRemise']) && !empty($data['dateLimiteRemise']) ? new \DateTime($data['dateLimiteRemise']) : null);
             $appelOffre->setLienAnnonce($data['lienAnnonce'] ?? null);
 
             // Mise à jour des relations
@@ -342,7 +347,7 @@ class AppelOffreController extends AbstractController
             // Relations - ✅ TOUTES CORRIGÉES
             'appelOffreType' => $appel->getAppelOffreType()?->getId(),
             'appelOffreTypeLibelle' => $appel->getAppelOffreType()?->getAppelOffreType(),
-            'appelOffresTypeShort' => $appel->getAppelOffreType()?->getAppelOffresTypeShort(), // ✅ AJOUTÉ
+            'appelOffresTypeShort' => $appel->getAppelOffreType()?->getAppelOffresTypeShort(),
             'moyenLivraison' => $appel->getMoyenLivraison()?->getId(),
             'moyenLivraisonLibelle' => $appel->getMoyenLivraison()?->getMoyenLivraison(),
             'pays' => $appel->getPays()?->getId(),
