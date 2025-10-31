@@ -17,6 +17,7 @@ class ProjetEmployePoste
         private ?string $duree = null;
     
         #[ORM\ManyToOne(targetEntity: Employe::class, inversedBy: 'projetsEmployePostes')]
+        #[ORM\JoinColumn(name: "employeId", referencedColumnName: "employeId", nullable: true)]
         private ?Employe $employe = null;
 
     public function getId(): ?int
