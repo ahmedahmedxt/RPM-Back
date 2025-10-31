@@ -27,11 +27,9 @@ class Notification
     #[ORM\Column(type: "boolean")]
     private bool $isread = false;
 
-
-    #[ORM\ManyToOne(targetEntity: AppelOffre::class, cascade: ["persist","remove"])]
-    private ?AppelOffre $appelOffre = null;
-
- 
+    #[ORM\ManyToOne(targetEntity: AppelOffres::class)]
+    #[ORM\JoinColumn(name: "appel_offre_id", referencedColumnName: "appelOffresId", nullable: true)]
+    private ?AppelOffres $appelOffre = null;
 
     public function __construct()
     {
@@ -65,25 +63,25 @@ class Notification
         return $this;
     }
 
-    public function getAppelOffre(): ?AppelOffre
+    public function getAppelOffre(): ?AppelOffres
     {
         return $this->appelOffre;
     }
 
-    public function setAppelOffre(?AppelOffre $appelOffre): self
+    public function setAppelOffre(?AppelOffres $appelOffre): self
     {
         $this->appelOffre = $appelOffre;
         return $this;
     }
+
     public function isRead(): bool
-{
-    return $this->read;
-}
+    {
+        return $this->isread;
+    }
 
-public function setRead(bool $read): self
-{
-    $this->read = $read;
-    return $this;
-}
-
+    public function setRead(bool $read): self
+    {
+        $this->isread = $read;
+        return $this;
+    }
 }

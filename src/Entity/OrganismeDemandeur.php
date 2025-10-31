@@ -7,20 +7,23 @@ use Doctrine\ORM\Mapping as ORM;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Symfony\Component\Validator\Constraints as Assert;
+use App\Entity\AppelOffres;
 
 #[ORM\Entity(repositoryClass: OrganismeDemandeurRepository::class)]
+#[ORM\Table(name: 'organisme_demandeur')]
 class OrganismeDemandeur
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column]
+    #[ORM\Column(name: 'id', type: 'integer')]
     private ?int $id = null;
 
-    #[ORM\Column(length: 255, unique: true)]
+    #[ORM\Column(name: 'organismeDemandeurLibelle', length: 255, unique: true)]
     #[Assert\NotBlank]
     private ?string $organismeDemandeurLibelle = null;
 
-    #[ORM\OneToMany(targetEntity: AppelOffre::class, mappedBy: 'organismeDemandeur')]
+    // Relation inverse: côté AppelOffres la propriété s'appelle "appelOffresOrganismeDemandeurId"
+    #[ORM\OneToMany(targetEntity: AppelOffres::class, mappedBy: 'appelOffresOrganismeDemandeurId')]
     private Collection $appelOffres;
 
     public function __construct()
@@ -30,7 +33,7 @@ class OrganismeDemandeur
 
     public function __toString(): string
     {
-        return (string) $this->id;
+        return (string) ($this->organismeDemandeurLibelle ?? '');
     }
 
     public function getId(): ?int
@@ -43,39 +46,37 @@ class OrganismeDemandeur
         return $this->organismeDemandeurLibelle;
     }
 
-    public function setOrganismeDemandeurLibelle(?string $organismeDemandeurLibelle): static
+    public function setOrganismeDemandeurLibelle(?string $organismeDemandeurLibelle): self
     {
         $this->organismeDemandeurLibelle = $organismeDemandeurLibelle;
         return $this;
     }
 
     /**
-     * @return Collection|AppelOffre[]
+     * @return Collection<int, AppelOffres>
      */
     public function getAppelOffres(): Collection
     {
         return $this->appelOffres;
     }
 
-    public function addAppelOffre(AppelOffre $appelOffre): self
+    public function addAppelOffres(AppelOffres $appel): self
     {
-        if (!$this->appelOffres->contains($appelOffre)) {
-            $this->appelOffres[] = $appelOffre;
-            $appelOffre->setOrganismeDemandeur($this);
+        if (!$this->appelOffres->contains($appel)) {
+            $this->appelOffres->add($appel);
+            // côté AppelOffres: propriété "appelOffresOrganismeDemandeurId"
+            $appel->setAppelOffresOrganismeDemandeurId($this);
         }
-
         return $this;
     }
 
-    public function removeAppelOffre(AppelOffre $appelOffre): self
+    public function removeAppelOffres(AppelOffres $appel): self
     {
-        if ($this->appelOffres->removeElement($appelOffre)) {
-            // set the owning side to null (unless already changed)
-            if ($appelOffre->getOrganismeDemandeur() === $this) {
-                $appelOffre->setOrganismeDemandeur(null);
+        if ($this->appelOffres->removeElement($appel)) {
+            if ($appel->getAppelOffresOrganismeDemandeurId() === $this) {
+                $appel->setAppelOffresOrganismeDemandeurId(null);
             }
         }
-
         return $this;
     }
 }

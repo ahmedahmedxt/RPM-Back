@@ -9,20 +9,23 @@ use Symfony\Component\Validator\Constraints as Assert;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: MoyenLivraisonRepository::class)]
+#[ORM\Table(name: 'moyen_livraison')]
 class MoyenLivraison
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column]
-    private ?int $id = null;
+    #[ORM\Column(name: 'moyenLivraisonId', type: 'integer')]
+    private ?int $moyenLivraisonId = null;
 
-    #[ORM\Column(length: 255, unique: true)]
+    #[ORM\Column(name: 'moyenLivraisonLibelle', type: 'string', length: 255, unique: true)]
     #[Assert\NotBlank]
-    private ?string $moyenLivraison = null;
-    #[ORM\Column(length: 10, nullable: false)]
+    private ?string $moyenLivraisonLibelle = null;
+
+    #[ORM\Column(name: 'moyenLivraisonShort', type: 'string', length: 10, nullable: false)]
     private ?string $moyenLivraisonShort = '';
-  
-    #[ORM\OneToMany(targetEntity: AppelOffre::class, mappedBy: 'moyenLivraison')]
+
+    // Relation inverse vers AppelOffres: la propriété côté AppelOffres s'appelle "appelOffresMoyenLivraisonId"
+    #[ORM\OneToMany(mappedBy: 'appelOffresMoyenLivraisonId', targetEntity: AppelOffres::class)]
     private Collection $appelOffres;
 
     public function __construct()
@@ -30,64 +33,64 @@ class MoyenLivraison
         $this->appelOffres = new ArrayCollection();
     }
 
-    public function __toString()
+    public function __toString(): string
     {
-        return $this->id;
+        return (string) ($this->moyenLivraisonLibelle ?? '');
     }
 
-    public function getId(): ?int
+    // Getters/Setters
+
+    public function getMoyenLivraisonId(): ?int
     {
-        return $this->id;
-    }
-    public function getMoyenLivraison(): ?string
-    {
-        return $this->moyenLivraison;
+        return $this->moyenLivraisonId;
     }
 
-    public function setMoyenLivraison(?string $moyenLivraison): static
+    public function getMoyenLivraisonLibelle(): ?string
     {
-        $this->moyenLivraison = $moyenLivraison;
+        return $this->moyenLivraisonLibelle;
+    }
 
+    public function setMoyenLivraisonLibelle(?string $moyenLivraisonLibelle): self
+    {
+        $this->moyenLivraisonLibelle = $moyenLivraisonLibelle;
         return $this;
     }
+
     public function getMoyenLivraisonShort(): ?string
     {
         return $this->moyenLivraisonShort;
     }
-    
-    public function setMoyenLivraisonShort(string $moyenLivraisonShort): static
+
+    public function setMoyenLivraisonShort(string $moyenLivraisonShort): self
     {
         $this->moyenLivraisonShort = $moyenLivraisonShort;
         return $this;
     }
+
     /**
-     * @return Collection|AppelOffre[]
+     * @return Collection<int, AppelOffres>
      */
     public function getAppelOffres(): Collection
     {
         return $this->appelOffres;
     }
 
-    public function addAppelOffre(AppelOffre $appelOffre): self
+    public function addAppelOffres(AppelOffres $appelOffres): self
     {
-        if (!$this->appelOffres->contains($appelOffre)) {
-            $this->appelOffres[] = $appelOffre;
-            $appelOffre->setMoyenLivraison($this);
+        if (!$this->appelOffres->contains($appelOffres)) {
+            $this->appelOffres->add($appelOffres);
+            $appelOffres->setAppelOffresMoyenLivraisonId($this);
         }
-
         return $this;
     }
-    
 
-    public function removeAppelOffre(AppelOffre $appelOffre): self
+    public function removeAppelOffres(AppelOffres $appelOffres): self
     {
-        if ($this->appelOffres->removeElement($appelOffre)) {
-            // set the owning side to null (unless already changed)
-            if ($appelOffre->getMoyenLivraison() === $this) {
-                $appelOffre->setMoyenLivraison(null);
+        if ($this->appelOffres->removeElement($appelOffres)) {
+            if ($appelOffres->getAppelOffresMoyenLivraisonId() === $this) {
+                $appelOffres->setAppelOffresMoyenLivraisonId(null);
             }
         }
-
         return $this;
     }
 }

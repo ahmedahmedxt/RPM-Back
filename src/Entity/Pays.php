@@ -7,6 +7,7 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
+use App\Entity\AppelOffres;
 
 #[ORM\Entity(repositoryClass: PaysRepository::class)]
 class Pays
@@ -24,7 +25,7 @@ class Pays
     #[Assert\NotBlank]
     private ?string $paysCapitale = null;
 
-    #[ORM\ManyToOne]
+    #[ORM\ManyToOne(targetEntity: Continent::class)]
     #[ORM\JoinColumn(name: "continentId", referencedColumnName: "continentId")]
     private ?Continent $continent = null;
 
@@ -34,23 +35,27 @@ class Pays
     #[ORM\OneToMany(targetEntity: Client::class, mappedBy: 'pays')]
     private Collection $clients; 
 
-     #[ORM\OneToMany(targetEntity: AppelOffre::class, mappedBy: 'pays')]
-    private Collection $appelOffre; 
-
-   
+    #[ORM\OneToMany(targetEntity: AppelOffres::class, mappedBy: 'appelOffresPaysId')]
+    private Collection $appelOffres;
 
     #[ORM\OneToMany(targetEntity: EmployeExperience::class, mappedBy: 'pays')]
     private Collection $employeExperiences;
-
 
     public function __construct()
     {
         $this->lieux = new ArrayCollection();
         $this->clients = new ArrayCollection();
+        $this->appelOffres = new ArrayCollection();
         $this->employeExperiences = new ArrayCollection();
     }
 
     public function getId(): ?int
+    {
+        return $this->id;
+    }
+
+    // Ajout de getPaysId() pour cohérence avec le contrôleur
+    public function getPaysId(): ?int
     {
         return $this->id;
     }
@@ -63,7 +68,6 @@ class Pays
     public function setPaysLibelle(string $paysLibelle): static
     {
         $this->paysLibelle = $paysLibelle;
-
         return $this;
     }
 
@@ -75,10 +79,8 @@ class Pays
     public function setPaysCapitale(string $paysCapitale): static
     {
         $this->paysCapitale = $paysCapitale;
-
         return $this;
     }
-
 
     public function getContinent(): ?Continent
     {
@@ -88,7 +90,6 @@ class Pays
     public function setContinent(?Continent $continent): static
     {
         $this->continent = $continent;
-
         return $this;
     }
 
@@ -106,22 +107,16 @@ class Pays
             $this->lieux[] = $lieu;
             $lieu->setPays($this);
         }
-
         return $this;
     }
 
-
-
-    
     public function removeLieu(Lieu $lieu): self
     {
         if ($this->lieux->removeElement($lieu)) {
-            // set the owning side to null (unless already changed)
             if ($lieu->getPays() === $this) {
                 $lieu->setPays(null);
             }
         }
-
         return $this;
     }
 
@@ -139,19 +134,43 @@ class Pays
             $this->clients->add($client);
             $client->setPays($this);
         }
-
         return $this;
     }
 
     public function removeClient(Client $client): static
     {
         if ($this->clients->removeElement($client)) {
-            // set the owning side to null (unless already changed)
             if ($client->getPays() === $this) {
                 $client->setPays(null);
             }
         }
+        return $this;
+    }
 
+    /**
+     * @return Collection<int, AppelOffres>
+     */
+    public function getAppelOffres(): Collection
+    {
+        return $this->appelOffres;
+    }
+
+    public function addAppelOffres(AppelOffres $appel): self
+    {
+        if (!$this->appelOffres->contains($appel)) {
+            $this->appelOffres->add($appel);
+            $appel->setAppelOffresPaysId($this);
+        }
+        return $this;
+    }
+
+    public function removeAppelOffres(AppelOffres $appel): self
+    {
+        if ($this->appelOffres->removeElement($appel)) {
+            if ($appel->getAppelOffresPaysId() === $this) {
+                $appel->setAppelOffresPaysId(null);
+            }
+        }
         return $this;
     }
 
@@ -169,20 +188,16 @@ class Pays
             $this->employeExperiences->add($employeExperience);
             $employeExperience->setPays($this);
         }
-
         return $this;
     }
 
     public function removeEmployeExperience(EmployeExperience $employeExperience): static
     {
         if ($this->employeExperiences->removeElement($employeExperience)) {
-            // set the owning side to null (unless already changed)
             if ($employeExperience->getPays() === $this) {
                 $employeExperience->setPays(null);
             }
         }
-
         return $this;
     }
-
 }

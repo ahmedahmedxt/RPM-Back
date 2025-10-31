@@ -15,36 +15,6 @@ file_upload:
   controller: App\Controller\Api\UploadFileController::upload
   methods: [POST]
 
-api_appel_offres_create:
-  path: /api/create/appel-offres
-  controller: App\Controller\Api\AppelOffreController::create
-  methods: [POST]
-
-api_appel_offres_get:
-  path: /api/get/appel-offres/{id}
-  controller: App\Controller\Api\AppelOffreController::getOne
-  methods: [GET]
-
-api_appel_offres_get_by_name:
-  path: /api/getOne/appel-offres/{id}
-  controller: App\Controller\Api\AppelOffreController::getOneByName
-  methods: [GET]
-
-api_appel_offres_update:
-  path: /api/put/appel-offres/{id}
-  controller: App\Controller\Api\AppelOffreController::update
-  methods: [PUT]
-
-api_appel_offres_delete:
-  path: /api/delete/appel-offres/{id}
-  controller: App\Controller\Api\AppelOffreController::delete
-  methods: [DELETE]
-
-api_appel_offres_index:
-  path: /api/getAll/appelOffres
-  controller: App\Controller\Api\AppelOffreController::index
-  methods: [GET]
-
 api_employe_create:
   path: /api/create/employe
   controller: App\Controller\Api\EmployeController::create
@@ -188,7 +158,7 @@ api_templates_get:
   controller: App\Controller\Api\Template\TemplateController::getTemplate
   methods: [GET]
 
-# Application d’un template sur une référence (si méthode implémentée)
+# Application d'un template sur une référence (si méthode implémentée)
 api_reference_apply_template:
   path: /api/templates/references/{id}/apply/{templateId}
   controller: App\Controller\Api\Template\TemplateController::applyTemplateToReference

@@ -2,7 +2,7 @@
 
 namespace App\Controller\Api;
 
-use App\Entity\AppelOffre;
+use App\Entity\AppelOffres;
 use App\Entity\Notification;
 use App\Repository\NotificationRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -35,44 +35,44 @@ class NotificationController extends AbstractController
         $dateActuelle = new \DateTime('now', new \DateTimeZone('Africa/Tunis'));
     
         // Récupérer tous les AppelOffres
-        $appelOffres = $this->entityManager->getRepository(AppelOffre::class)->findAll();
+        $appelOffres = $this->entityManager->getRepository(AppelOffres::class)->findAll();
     
         // Initialiser un tableau pour stocker les IDs des AppelOffres affectés
         $affectedAppelOffresIds = [];
     
-        foreach ($appelOffres as $appelOffre) {
+        foreach ($appelOffres as $appelOffresItem) {
             // Vérifier si la participation est égale à 1
-            if ($appelOffre->getAppelOffreParticipation() !== 1) {
+            if ($appelOffresItem->getAppelOffresParticipation() !== 1) {
                 continue;
             }
 
             // Convertir la date de remise en utilisant le fuseau horaire de la Tunisie
-            $appelOffreDateRemise = $appelOffre->getAppelOffreDateRemise();
-            if ($appelOffreDateRemise) {
-                $appelOffreDateRemise->setTimezone(new \DateTimeZone('Africa/Tunis'));
+            $appelOffresDateRemise = $appelOffresItem->getAppelOffreDateRemise();
+            if ($appelOffresDateRemise) {
+                $appelOffresDateRemise->setTimezone(new \DateTimeZone('Africa/Tunis'));
             }
             
             // Vérifier si la date d'achèvement est dans les 10 jours à partir de la date actuelle
             $limiteNotification = (clone $dateActuelle)->add(new \DateInterval('P10D'));
-            if ($appelOffreDateRemise && $appelOffreDateRemise <= $limiteNotification && $appelOffreDateRemise > $dateActuelle) {
+            if ($appelOffresDateRemise && $appelOffresDateRemise <= $limiteNotification && $appelOffresDateRemise > $dateActuelle) {
                 // Calculer la différence entre la date d'achèvement et la date actuelle
-                $diff = date_diff($dateActuelle, $appelOffreDateRemise);
+                $diff = date_diff($dateActuelle, $appelOffresDateRemise);
                 $joursRestants = $diff->days;
     
                 // Construire le message de la notification avec le nombre de jours restants
-                $message = "La date d'achèvement de l'appel d'offre est dans $joursRestants jours.";
+                $message = "La date d'achèvement de l'appel d'offres est dans $joursRestants jours.";
     
                 // Créer une nouvelle notification
                 $notification = new Notification();
                 $notification->setMessage($message);
-                $notification->setDateCreation(new \DateTime('now', new \DateTimeZone('Africa/Tunis'))); // Définir la date de création
-                $notification->setAppelOffre($appelOffre);
+                $notification->setDateCreation(new \DateTime('now', new \DateTimeZone('Africa/Tunis')));
+                $notification->setAppelOffre($appelOffresItem);
     
                 // Enregistrer la notification en base de données
                 $this->entityManager->persist($notification);
     
-                // Ajouter l'ID de l'AppelOffre à la liste des IDs affectés
-                $affectedAppelOffresIds[] = $appelOffre->getId();
+                // Ajouter l'ID de l'AppelOffres à la liste des IDs affectés
+                $affectedAppelOffresIds[] = $appelOffresItem->getAppelOffresId();
             }
         }
     
@@ -90,10 +90,8 @@ class NotificationController extends AbstractController
     public function getUnreadNotificationCount(NotificationRepository $notificationRepository, TokenStorageInterface $tokenStorage): JsonResponse
     {
         //$this->checkToken($tokenStorage);
-        // Récupérer le nombre de notifications non lues
         $unreadNotificationCount = $notificationRepository->countUnreadNotifications();
 
-        // Retourner le nombre de notifications non lues au format JSON
         return new JsonResponse(['unread_notification_count' => $unreadNotificationCount]);
     }
 
@@ -101,37 +99,32 @@ class NotificationController extends AbstractController
     public function getNotifications(NotificationRepository $notificationRepository, TokenStorageInterface $tokenStorage): JsonResponse
     {
         //$this->checkToken($tokenStorage);
-        // Récupérer toutes les notifications avec les données de l'appel d'offre associées
         $notifications = $notificationRepository->findAllWithAppelOffre();
 
-        // Convertir les notifications en un tableau associatif pour le retour JSON
         $notificationsArray = [];
         foreach ($notifications as $notification) {
-            $notificationsArray[] = [
+            $aop = $notification->getAppelOffre();
+            $n
+            otificationsArray[] = [
                 'id' => $notification->getId(),
                 'message' => $notification->getMessage(),
-                'dateCreation' => $notification->getDateCreation()->format('Y-m-d H:i:s'), // Formatage de la date
-                'appelOffre' => [
-                    'id' => $notification->getAppelOffre()->getId(),
-                    'devis' => $notification->getAppelOffre()->getAppelOffreDevis(),
-                    'objet' => $notification->getAppelOffre()->getAppelOffreObjet(),
-                    'dateRemise' => $notification->getAppelOffre()->getAppelOffreDateRemise() ? $notification->getAppelOffre()->getAppelOffreDateRemise()->format('Y-m-d') : null,
-                    // Ajoutez d'autres propriétés de l'appel d'offre si nécessaire
+                'dateCreation' => $notification->getDateCreation()->format('Y-m-d H:i:s'),
+                'appelOffres' => [
+                    'id' => $aop ? $aop->getAppelOffresId() : null,
+                    'devis' => $aop ? $aop->getAppelOffreDevis() : null,
+                    'objet' => $aop ? $aop->getAppelOffresObjet() : null,
+                    'dateRemise' => $aop && $aop->getAppelOffreDateRemise() ? $aop->getAppelOffreDateRemise()->format('Y-m-d') : null,
                 ],
-                
             ];
         }
 
-        // Retourner les notifications au format JSON
         return new JsonResponse($notificationsArray);
     }
 
     public function checkToken(TokenStorageInterface $tokenStorage): void
     {
-        // Récupérer le token d'authentification de Symfony
         $token = $tokenStorage->getToken();
 
-        // Vérifier si le token d'authentification est présent et est de type TokenInterface
         if (!$token instanceof TokenInterface) {
             throw new AccessDeniedHttpException('Token d\'authentification manquant ou invalide');
         }

@@ -7,6 +7,7 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
+use App\Entity\AppelOffresPartenaire;
 
 #[ORM\Entity(repositoryClass: PartenaireRepository::class)]
 #[ORM\Table(name: 'partenaire')]
@@ -15,67 +16,67 @@ class Partenaire
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(name: 'partenaireId', type: 'integer')]
-    #[Groups(['partenaire:read', 'appeloffre:read'])]
+    #[Groups(['partenaire:read', 'appeloffres:read'])]
     private ?int $partenaireId = null;
 
     #[ORM\Column(name: 'partenaireLibelle', type: 'string', length: 255)]
-    #[Groups(['partenaire:read', 'partenaire:write', 'appeloffre:read'])]
+    #[Groups(['partenaire:read', 'partenaire:write', 'appeloffres:read'])]
     private ?string $partenaireLibelle = null;
 
     #[ORM\Column(name: 'partenaireAcronyme', type: 'string', length: 50, nullable: true)]
-    #[Groups(['partenaire:read', 'partenaire:write', 'appeloffre:read'])]
+    #[Groups(['partenaire:read', 'partenaire:write', 'appeloffres:read'])]
     private ?string $partenaireAcronyme = null;
 
-    #[ORM\Column(name: 'premierResponsable', type: 'string', length: 255, nullable: true)]
+    #[ORM\Column(name: 'partenairePremierResponsable', type: 'string', length: 255, nullable: true)]
     #[Groups(['partenaire:read', 'partenaire:write'])]
-    private ?string $premierResponsable = null;
+    private ?string $partenairePremierResponsable = null;
 
-    #[ORM\Column(name: 'prEmail', type: 'string', length: 255, nullable: true)]
+    #[ORM\Column(name: 'partenairePremierResponsableEmail', type: 'string', length: 255, nullable: true)]
     #[Groups(['partenaire:read', 'partenaire:write'])]
-    private ?string $prEmail = null;
+    private ?string $partenairePremierResponsableEmail = null;
 
-    #[ORM\Column(name: 'prTel', type: 'string', length: 50, nullable: true)]
+    #[ORM\Column(name: 'partenairePremierResponsableTelephone', type: 'string', length: 50, nullable: true)]
     #[Groups(['partenaire:read', 'partenaire:write'])]
-    private ?string $prTel = null;
+    private ?string $partenairePremierResponsableTelephone = null;
 
-    #[ORM\Column(name: 'adresse', type: 'text', nullable: true)]
+    #[ORM\Column(name: 'partenairePremierResponsableAdresse', type: 'text', nullable: true)]
     #[Groups(['partenaire:read', 'partenaire:write'])]
-    private ?string $adresse = null;
+    private ?string $partenairePremierResponsableAdresse = null;
 
-    #[ORM\Column(name: 'pays', type: 'string', length: 100, nullable: true)]
+    #[ORM\Column(name: 'partenairePays', type: 'string', length: 100, nullable: true)]
     #[Groups(['partenaire:read', 'partenaire:write'])]
-    private ?string $pays = null;
+    private ?string $partenairePays = null;
 
-    #[ORM\Column(name: 'email', type: 'string', length: 255, nullable: true)]
+    #[ORM\Column(name: 'partenaireEmail', type: 'string', length: 255, nullable: true)]
     #[Groups(['partenaire:read', 'partenaire:write'])]
-    private ?string $email = null;
+    private ?string $partenaireEmail = null;
 
-    #[ORM\Column(name: 'tel1', type: 'string', length: 50, nullable: true)]
+    #[ORM\Column(name: 'partenaireTelephone1', type: 'string', length: 50, nullable: true)]
     #[Groups(['partenaire:read', 'partenaire:write'])]
-    private ?string $tel1 = null;
+    private ?string $partenaireTelephone1 = null;
 
-    #[ORM\Column(name: 'tel2', type: 'string', length: 50, nullable: true)]
+    #[ORM\Column(name: 'partenaireTelephone2', type: 'string', length: 50, nullable: true)]
     #[Groups(['partenaire:read', 'partenaire:write'])]
-    private ?string $tel2 = null;
+    private ?string $partenaireTelephone2 = null;
 
-    #[ORM\Column(name: 'siteWeb', type: 'string', length: 255, nullable: true)]
+    #[ORM\Column(name: 'partenaireSiteWeb', type: 'string', length: 255, nullable: true)]
     #[Groups(['partenaire:read', 'partenaire:write'])]
-    private ?string $siteWeb = null;
+    private ?string $partenaireSiteWeb = null;
 
-    #[ORM\Column(name: 'linkedIn', type: 'string', length: 255, nullable: true)]
+    #[ORM\Column(name: 'partenaireLinkedIn', type: 'string', length: 255, nullable: true)]
     #[Groups(['partenaire:read', 'partenaire:write'])]
-    private ?string $linkedIn = null;
+    private ?string $partenaireLinkedIn = null;
 
-   
-#[ORM\OneToMany(mappedBy: 'partenaire', targetEntity: AppelOffrePartenaire::class)]
-private Collection $appelOffrePartenaires;
+    #[ORM\OneToMany(mappedBy: 'partenaire', targetEntity: AppelOffresPartenaire::class, cascade: ['persist', 'remove'])]
+    private Collection $appelOffresPartenaires;
 
-public function __construct()
-{
-    $this->appelOffrePartenaires = new ArrayCollection();  
-}
+    public function __construct()
+    {
+        $this->appelOffresPartenaires = new ArrayCollection();
+    }
 
-    // Getters et Setters existants
+    // Getters / Setters
+
     public function getPartenaireId(): ?int
     {
         return $this->partenaireId;
@@ -103,124 +104,140 @@ public function __construct()
         return $this;
     }
 
-    // Nouveaux Getters et Setters
-    public function getPremierResponsable(): ?string
+    public function getPartenairePremierResponsable(): ?string
     {
-        return $this->premierResponsable;
+        return $this->partenairePremierResponsable;
     }
 
-    public function setPremierResponsable(?string $premierResponsable): self
+    public function setPartenairePremierResponsable(?string $partenairePremierResponsable): self
     {
-        $this->premierResponsable = $premierResponsable;
+        $this->partenairePremierResponsable = $partenairePremierResponsable;
         return $this;
     }
 
-    public function getPrEmail(): ?string
+    public function getPartenairePremierResponsableEmail(): ?string
     {
-        return $this->prEmail;
+        return $this->partenairePremierResponsableEmail;
     }
 
-    public function setPrEmail(?string $prEmail): self
+    public function setPartenairePremierResponsableEmail(?string $partenairePremierResponsableEmail): self
     {
-        $this->prEmail = $prEmail;
+        $this->partenairePremierResponsableEmail = $partenairePremierResponsableEmail;
         return $this;
     }
 
-    public function getPrTel(): ?string
+    public function getPartenairePremierResponsableTelephone(): ?string
     {
-        return $this->prTel;
+        return $this->partenairePremierResponsableTelephone;
     }
 
-    public function setPrTel(?string $prTel): self
+    public function setPartenairePremierResponsableTelephone(?string $partenairePremierResponsableTelephone): self
     {
-        $this->prTel = $prTel;
+        $this->partenairePremierResponsableTelephone = $partenairePremierResponsableTelephone;
         return $this;
     }
 
-    public function getAdresse(): ?string
+    public function getPartenairePremierResponsableAdresse(): ?string
     {
-        return $this->adresse;
+        return $this->partenairePremierResponsableAdresse;
     }
 
-    public function setAdresse(?string $adresse): self
+    public function setPartenairePremierResponsableAdresse(?string $partenairePremierResponsableAdresse): self
     {
-        $this->adresse = $adresse;
+        $this->partenairePremierResponsableAdresse = $partenairePremierResponsableAdresse;
         return $this;
     }
 
-    public function getPays(): ?string
+    public function getPartenairePays(): ?string
     {
-        return $this->pays;
+        return $this->partenairePays;
     }
 
-    public function setPays(?string $pays): self
+    public function setPartenairePays(?string $partenairePays): self
     {
-        $this->pays = $pays;
+        $this->partenairePays = $partenairePays;
         return $this;
     }
 
-    public function getEmail(): ?string
+    public function getPartenaireEmail(): ?string
     {
-        return $this->email;
+        return $this->partenaireEmail;
     }
 
-    public function setEmail(?string $email): self
+    public function setPartenaireEmail(?string $partenaireEmail): self
     {
-        $this->email = $email;
+        $this->partenaireEmail = $partenaireEmail;
         return $this;
     }
 
-    public function getTel1(): ?string
+    public function getPartenaireTelephone1(): ?string
     {
-        return $this->tel1;
+        return $this->partenaireTelephone1;
     }
 
-    public function setTel1(?string $tel1): self
+    public function setPartenaireTelephone1(?string $partenaireTelephone1): self
     {
-        $this->tel1 = $tel1;
+        $this->partenaireTelephone1 = $partenaireTelephone1;
         return $this;
     }
 
-    public function getTel2(): ?string
+    public function getPartenaireTelephone2(): ?string
     {
-        return $this->tel2;
+        return $this->partenaireTelephone2;
     }
 
-    public function setTel2(?string $tel2): self
+    public function setPartenaireTelephone2(?string $partenaireTelephone2): self
     {
-        $this->tel2 = $tel2;
+        $this->partenaireTelephone2 = $partenaireTelephone2;
         return $this;
     }
 
-    public function getSiteWeb(): ?string
+    public function getPartenaireSiteWeb(): ?string
     {
-        return $this->siteWeb;
+        return $this->partenaireSiteWeb;
     }
 
-    public function setSiteWeb(?string $siteWeb): self
+    public function setPartenaireSiteWeb(?string $partenaireSiteWeb): self
     {
-        $this->siteWeb = $siteWeb;
+        $this->partenaireSiteWeb = $partenaireSiteWeb;
         return $this;
     }
 
-    public function getLinkedIn(): ?string
+    public function getPartenaireLinkedIn(): ?string
     {
-        return $this->linkedIn;
+        return $this->partenaireLinkedIn;
     }
 
-    public function setLinkedIn(?string $linkedIn): self
+    public function setPartenaireLinkedIn(?string $partenaireLinkedIn): self
     {
-        $this->linkedIn = $linkedIn;
+        $this->partenaireLinkedIn = $partenaireLinkedIn;
         return $this;
     }
 
-  
-/**
- * @return Collection<int, AppelOffrePartenaire>
- */
-public function getAppelOffrePartenaires(): Collection
-{
-    return $this->appelOffrePartenaires;
-}
-    
+    /**
+     * @return Collection<int, AppelOffresPartenaire>
+     */
+    public function getAppelOffresPartenaires(): Collection
+    {
+        return $this->appelOffresPartenaires;
+    }
+
+    public function addAppelOffresPartenaire(AppelOffresPartenaire $p): self
+    {
+        if (!$this->appelOffresPartenaires->contains($p)) {
+            $this->appelOffresPartenaires->add($p);
+            $p->setPartenaire($this);
+        }
+        return $this;
+    }
+
+    public function removeAppelOffresPartenaire(AppelOffresPartenaire $p): self
+    {
+        if ($this->appelOffresPartenaires->removeElement($p)) {
+            if ($p->getPartenaire() === $this) {
+                $p->setPartenaire(null);
+            }
+        }
+        return $this;
+    }
 }

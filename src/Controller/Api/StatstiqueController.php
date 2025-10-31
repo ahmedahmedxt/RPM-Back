@@ -9,7 +9,7 @@ use App\Repository\CallsForTendersRepository;
 use App\Repository\EmployeRepository;
 use App\Repository\ProjetRepository;
 use App\Repository\ClientRepository;
-use App\Repository\AppelOffreRepository;
+use App\Repository\AppelOffresRepository;
 
 class StatstiqueController extends AbstractController
 {
@@ -17,23 +17,21 @@ class StatstiqueController extends AbstractController
     private $employeeRepository;
     private $projectRepository;
     private $clientRepository;
-    private $appelOffreRepository;
+    private $appelOffresRepository;
 
     public function __construct(
         CallsForTendersRepository $callsForTendersRepository,
         EmployeRepository $employeeRepository,
         ProjetRepository $projectRepository,
         ClientRepository $clientRepository,
-        AppelOffreRepository $appelOffreRepository
+        AppelOffresRepository $appelOffresRepository
     ) {
         $this->callsForTendersRepository = $callsForTendersRepository;
         $this->employeeRepository = $employeeRepository;
         $this->projectRepository = $projectRepository;
         $this->clientRepository = $clientRepository;
-        $this->appelOffreRepository = $appelOffreRepository;
+        $this->appelOffresRepository = $appelOffresRepository;
     }
-
-   
 
     #[Route('/api/statistics/employees', name: 'api_statistics_employees')]
     public function getEmployeesStatistics(): JsonResponse
@@ -58,12 +56,12 @@ class StatstiqueController extends AbstractController
 
         return new JsonResponse(['totalClients' => $totalClients]);
     }
+
     #[Route('/api/statistics/AppeslOffres', name: 'api_statistics_appels_offres')]
-public function getAppelsOffresStatistics(): JsonResponse
-{
-    $totalAppeslOffres = $this->appelOffreRepository->count([]);
+    public function getAppelsOffresStatistics(): JsonResponse
+    {
+        $totalAppeslOffres = $this->appelOffresRepository->count([]);
 
-    return new JsonResponse(['totalAppeslOffres' => $totalAppeslOffres]);
-}
-
+        return new JsonResponse(['totalAppeslOffres' => $totalAppeslOffres]);
+    }
 }

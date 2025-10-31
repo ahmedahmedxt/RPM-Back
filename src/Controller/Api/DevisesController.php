@@ -4,6 +4,7 @@ namespace App\Controller\Api;
 
 use App\Entity\Devises;
 use App\Entity\Reference;
+use App\Entity\AppelOffres;
 use App\Repository\DevisesRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -14,18 +15,12 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
-use Symfony\Component\Serializer\SerializerInterface;
 
 #[Route('/api/devises', name: 'api_devises_')]
 class DevisesController extends AbstractController
 {
-    private $entityManager;
-    private $serializer;
-
-    public function __construct(EntityManagerInterface $entityManager, SerializerInterface $serializer)
+    public function __construct(private EntityManagerInterface $entityManager)
     {
-        $this->entityManager = $entityManager;
-        $this->serializer = $serializer;
     }
 
     #[Route('', name: 'get_all', methods: ['GET'])]
@@ -33,56 +28,79 @@ class DevisesController extends AbstractController
     {
         //$this->checkToken($tokenStorage);
         $devises = $repository->findAll();
-        $data = $this->serializer->serialize($devises, 'json');
 
-        return new JsonResponse($data, Response::HTTP_OK, [], true);
+        $data = array_map(function (Devises $d) {
+            return [
+                'devisesId' => $d->getDevisesId(),
+                'devisesLibelle' => $d->getDevisesLibelle(),
+                'devisesAcronyme' => $d->getDevisesAcronyme(),
+            ];
+        }, $devises);
+
+        return new JsonResponse($data, Response::HTTP_OK);
     }
 
     #[Route('/{id}', name: 'get_by_id', methods: ['GET'])]
     public function getById(int $id, DevisesRepository $devisesRepository, TokenStorageInterface $tokenStorage): JsonResponse
     {
         //$this->checkToken($tokenStorage);
-        $devises = $devisesRepository->find($id);
+        $d = $devisesRepository->find($id);
 
-        if (!$devises) {
+        if (!$d) {
             return new JsonResponse(['message' => 'Devises not found'], Response::HTTP_NOT_FOUND);
         }
 
-        $data = $this->serializer->serialize($devises, 'json');
+        $data = [
+            'devisesId' => $d->getDevisesId(),
+            'devisesLibelle' => $d->getDevisesLibelle(),
+            'devisesAcronyme' => $d->getDevisesAcronyme(),
+        ];
 
-        return new JsonResponse($data, Response::HTTP_OK, [], true);
+        return new JsonResponse($data, Response::HTTP_OK);
     }
 
     #[Route('', name: 'create', methods: ['POST'])]
     public function create(Request $request, TokenStorageInterface $tokenStorage): JsonResponse
     {
         //$this->checkToken($tokenStorage);
-        $data = json_decode($request->getContent(), true);
+        $data = json_decode($request->getContent(), true) ?? [];
 
-        $devises = new Devises();
-        $devises->setDevisesLibelle($data['devisesLibelle'] ?? null);
-        $devises->setDevisesAcronyme($data['devisesAcronyme'] ?? null);
+        // Validation minimale
+        if (empty($data['devisesLibelle']) || empty($data['devisesAcronyme'])) {
+            return new JsonResponse(['error' => 'devisesLibelle et devisesAcronyme sont requis'], Response::HTTP_BAD_REQUEST);
+        }
 
-        $this->entityManager->persist($devises);
+        $dev = new Devises();
+        $dev->setDevisesLibelle($data['devisesLibelle'] ?? null);
+        $dev->setDevisesAcronyme($data['devisesAcronyme'] ?? null);
+
+        $this->entityManager->persist($dev);
         $this->entityManager->flush();
 
-        return new JsonResponse(['message' => 'Devises created'], Response::HTTP_CREATED);
+        return new JsonResponse([
+            'message' => 'Devises created',
+            'devisesId' => $dev->getDevisesId(),
+        ], Response::HTTP_CREATED);
     }
 
     #[Route('/{id}', name: 'update', methods: ['PUT'])]
     public function update(int $id, Request $request, DevisesRepository $devisesRepository, TokenStorageInterface $tokenStorage): JsonResponse
     {
         //$this->checkToken($tokenStorage);
-        $devises = $devisesRepository->find($id);
+        $dev = $devisesRepository->find($id);
 
-        if (!$devises) {
+        if (!$dev) {
             return new JsonResponse(['message' => 'Devises not found'], Response::HTTP_NOT_FOUND);
         }
 
-        $data = json_decode($request->getContent(), true);
+        $data = json_decode($request->getContent(), true) ?? [];
 
-        $devises->setDevisesLibelle($data['devisesLibelle'] ?? $devises->getDevisesLibelle());
-        $devises->setDevisesAcronyme($data['devisesAcronyme'] ?? $devises->getDevisesAcronyme());
+        if (array_key_exists('devisesLibelle', $data)) {
+            $dev->setDevisesLibelle($data['devisesLibelle']);
+        }
+        if (array_key_exists('devisesAcronyme', $data)) {
+            $dev->setDevisesAcronyme($data['devisesAcronyme']);
+        }
 
         $this->entityManager->flush();
 
@@ -93,12 +111,23 @@ class DevisesController extends AbstractController
     public function delete(Devises $devises, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
     {
         //$this->checkToken($tokenStorage);
-        $references = $entityManager->getRepository(Reference::class)->findBy(['devises' => $devises]);
 
-        if ($references != null) {
+        // Déréférencer les References
+        $references = $entityManager->getRepository(Reference::class)->findBy(['devises' => $devises]);
+        if (!empty($references)) {
             foreach ($references as $reference) {
                 $reference->setDevises(null);
                 $entityManager->persist($reference);
+            }
+            $entityManager->flush();
+        }
+
+        // Déréférencer les AppelOffres
+        $appels = $entityManager->getRepository(AppelOffres::class)->findBy(['appelOffresDevisesId' => $devises]);
+        if (!empty($appels)) {
+            foreach ($appels as $appel) {
+                $appel->setAppelOffresDevisesId(null);
+                $entityManager->persist($appel);
             }
             $entityManager->flush();
         }
@@ -111,10 +140,7 @@ class DevisesController extends AbstractController
 
     public function checkToken(TokenStorageInterface $tokenStorage): void
     {
-        // Récupérer le token d'authentification de Symfony
         $token = $tokenStorage->getToken();
-
-        // Vérifier si le token d'authentification est présent et est de type TokenInterface
         if (!$token instanceof TokenInterface) {
             throw new AccessDeniedHttpException('Token d\'authentification manquant ou invalide');
         }
