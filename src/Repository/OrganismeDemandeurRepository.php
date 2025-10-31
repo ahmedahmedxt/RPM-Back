@@ -21,28 +21,19 @@ class OrganismeDemandeurRepository extends ServiceEntityRepository
         parent::__construct($registry, OrganismeDemandeur::class);
     }
 
-    //    /**
-    //     * @return OrganismeDemandeur[] Returns an array of OrganismeDemandeur objects
-    //     */
-    //    public function findByExampleField($value): array
-    //    {
-    //        return $this->createQueryBuilder('o')
-    //            ->andWhere('o.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->orderBy('o.id', 'ASC')
-    //            ->setMaxResults(10)
-    //            ->getQuery()
-    //            ->getResult()
-    //        ;
-    //    }
+    public function add(OrganismeDemandeur $entity, bool $flush = true): void
+    {
+        $this->getEntityManager()->persist($entity);
+        if ($flush) {
+            $this->getEntityManager()->flush();
+        }
+    }
 
-    //    public function findOneBySomeField($value): ?OrganismeDemandeur
-    //    {
-    //        return $this->createQueryBuilder('o')
-    //            ->andWhere('o.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->getQuery()
-    //            ->getOneOrNullResult()
-    //        ;
-    //    }
+    public function remove(OrganismeDemandeur $entity, bool $flush = true): void
+    {
+        $this->getEntityManager()->remove($entity);
+        if ($flush) {
+            $this->getEntityManager()->flush();
+        }
+    }
 }

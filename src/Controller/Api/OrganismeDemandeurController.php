@@ -19,26 +19,26 @@ class OrganismeDemandeurController extends AbstractController
 {
     
     #[Route('/api/create/organisme-demandeurs', name: 'api_organisme_demandeur_create', methods: ['POST'])]
-public function create(Request $request, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
-{
-    //$this->checkToken($tokenStorage);
-    $data = json_decode($request->getContent(), true);
+    public function create(Request $request, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
+    {
+        //$this->checkToken($tokenStorage);
+        $data = json_decode($request->getContent(), true);
 
-    // Vérifier si l'organisme demandeur existe déjà
-    $existingOrganismeDemandeur = $entityManager->getRepository(OrganismeDemandeur::class)->findOneBy(['organismeDemandeurLibelle' => $data['organismeDemandeurLibelle']]);
-    if ($existingOrganismeDemandeur !== null) {
-        return new JsonResponse('L\'organisme demandeur existe déjà', Response::HTTP_CONFLICT);
+        // Vérifier si l'organisme demandeur existe déjà
+        $existingOrganismeDemandeur = $entityManager->getRepository(OrganismeDemandeur::class)->findOneBy(['organismeDemandeurLibelle' => $data['organismeDemandeurLibelle'] ?? null]);
+        if ($existingOrganismeDemandeur !== null) {
+            return new JsonResponse('L\'organisme demandeur existe déjà', Response::HTTP_CONFLICT);
+        }
+
+        // Créer un nouvel organisme demandeur
+        $organismeDemandeur = new OrganismeDemandeur();
+        $organismeDemandeur->setOrganismeDemandeurLibelle($data['organismeDemandeurLibelle'] ?? null);
+
+        $entityManager->persist($organismeDemandeur);
+        $entityManager->flush();
+
+        return new JsonResponse('Organisme demandeur créé avec succès', Response::HTTP_CREATED);
     }
-
-    // Créer un nouvel organisme demandeur
-    $organismeDemandeur = new OrganismeDemandeur();
-    $organismeDemandeur->setOrganismeDemandeurLibelle($data['organismeDemandeurLibelle']);
-
-    $entityManager->persist($organismeDemandeur);
-    $entityManager->flush();
-
-    return new JsonResponse('Organisme demandeur créé avec succès', Response::HTTP_CREATED);
-}
 
     #[Route('/api/getAll/organisme-demandeurs', name: 'api_organisme_demandeur_get_all', methods: ['GET'])]
     public function getAll(EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
@@ -78,7 +78,9 @@ public function create(Request $request, EntityManagerInterface $entityManager, 
         //$this->checkToken($tokenStorage);
         $data = json_decode($request->getContent(), true);
 
-        $organismeDemandeur->setOrganismeDemandeurLibelle($data['organismeDemandeurLibelle']);
+        if (array_key_exists('organismeDemandeurLibelle', $data)) {
+            $organismeDemandeur->setOrganismeDemandeurLibelle($data['organismeDemandeurLibelle']);
+        }
 
         $entityManager->flush();
 
@@ -90,28 +92,28 @@ public function create(Request $request, EntityManagerInterface $entityManager, 
     {
         //$this->checkToken($tokenStorage);
         
-        // Vérifier s'il y a des AppelOffre associés à cet OrganismeDemandeur
+        // Vérifier s'il y a des AppelOffres associés à cet OrganismeDemandeur
         if ($organismeDemandeur->getAppelOffres()->isEmpty()) {
-            // Aucun AppelOffre associé, donc supprimer simplement l'OrganismeDemandeur
+            // Aucun AppelOffres associé, supprimer l'entité
             $entityManager->remove($organismeDemandeur);
             $entityManager->flush();
             
             return new JsonResponse('Organisme demandeur supprimé avec succès', Response::HTTP_OK);
         } else {
-            // Des AppelOffre sont associés, mettre à jour les références à null dans chaque AppelOffre
-            foreach ($organismeDemandeur->getAppelOffres() as $appelOffre) {
-                $appelOffre->setOrganismeDemandeur(null);
-                $entityManager->persist($appelOffre);
+            // Déréférencer côté AppelOffres puis supprimer l'OrganismeDemandeur
+            foreach ($organismeDemandeur->getAppelOffres() as $appel) {
+                $appel->setAppelOffresOrganismeDemandeurId(null);
+                $entityManager->persist($appel);
             }
             $entityManager->flush();
             
-            // Après avoir mis à jour les références, supprimer l'OrganismeDemandeur
             $entityManager->remove($organismeDemandeur);
             $entityManager->flush();
             
-            return new JsonResponse('Les références à l\'Organisme demandeur ont été supprimées des Appels d\'offre associés, et l\'Organisme demandeur a été supprimé avec succès.', Response::HTTP_OK);
+            return new JsonResponse('Les références à l\'organisme demandeur ont été supprimées des Appels d\'offres associés, et l\'organisme demandeur a été supprimé avec succès.', Response::HTTP_OK);
         }
     }
+
     public function checkToken(TokenStorageInterface $tokenStorage): void
     {
         // Récupérer le token d'authentification de Symfony
@@ -121,6 +123,5 @@ public function create(Request $request, EntityManagerInterface $entityManager, 
         if (!$token instanceof TokenInterface) {
             throw new AccessDeniedHttpException('Token d\'authentification manquant ou invalide');
         }
-}
-    
+    }
 }

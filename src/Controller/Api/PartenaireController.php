@@ -89,7 +89,7 @@ class PartenaireController extends AbstractController
     public function create(Request $request): JsonResponse
     {
         try {
-            $data = json_decode($request->getContent(), true);
+            $data = json_decode($request->getContent(), true) ?? [];
 
             // Validation
             if (empty($data['partenaireLibelle'])) {
@@ -100,42 +100,23 @@ class PartenaireController extends AbstractController
 
             $partenaire = new Partenaire();
             $partenaire->setPartenaireLibelle($data['partenaireLibelle']);
-            
+
             if (isset($data['partenaireAcronyme'])) {
                 $partenaire->setPartenaireAcronyme($data['partenaireAcronyme']);
             }
-            
-            // ✅ NOUVEAUX CHAMPS (sans partenaireRole)
-            if (isset($data['premierResponsable'])) {
-                $partenaire->setPremierResponsable($data['premierResponsable']);
-            }
-            if (isset($data['prEmail'])) {
-                $partenaire->setPrEmail($data['prEmail']);
-            }
-            if (isset($data['prTel'])) {
-                $partenaire->setPrTel($data['prTel']);
-            }
-            if (isset($data['adresse'])) {
-                $partenaire->setAdresse($data['adresse']);
-            }
-            if (isset($data['pays'])) {
-                $partenaire->setPays($data['pays']);
-            }
-            if (isset($data['email'])) {
-                $partenaire->setEmail($data['email']);
-            }
-            if (isset($data['tel1'])) {
-                $partenaire->setTel1($data['tel1']);
-            }
-            if (isset($data['tel2'])) {
-                $partenaire->setTel2($data['tel2']);
-            }
-            if (isset($data['siteWeb'])) {
-                $partenaire->setSiteWeb($data['siteWeb']);
-            }
-            if (isset($data['linkedIn'])) {
-                $partenaire->setLinkedIn($data['linkedIn']);
-            }
+
+            // Champs harmonisés (noms "partenaire...") + rétrocompat
+            $partenaire->setPartenairePremierResponsable($data['partenairePremierResponsable'] ?? ($data['premierResponsable'] ?? null));
+            $partenaire->setPartenairePremierResponsableEmail($data['partenairePremierResponsableEmail'] ?? ($data['prEmail'] ?? null));
+            $partenaire->setPartenairePremierResponsableTelephone($data['partenairePremierResponsableTelephone'] ?? ($data['prTel'] ?? null));
+            $partenaire->setPartenairePremierResponsableAdresse($data['partenairePremierResponsableAdresse'] ?? ($data['adresse'] ?? null));
+
+            $partenaire->setPartenairePays($data['partenairePays'] ?? ($data['pays'] ?? null));
+            $partenaire->setPartenaireEmail($data['partenaireEmail'] ?? ($data['email'] ?? null));
+            $partenaire->setPartenaireTelephone1($data['partenaireTelephone1'] ?? ($data['tel1'] ?? null));
+            $partenaire->setPartenaireTelephone2($data['partenaireTelephone2'] ?? ($data['tel2'] ?? null));
+            $partenaire->setPartenaireSiteWeb($data['partenaireSiteWeb'] ?? ($data['siteWeb'] ?? null));
+            $partenaire->setPartenaireLinkedIn($data['partenaireLinkedIn'] ?? ($data['linkedIn'] ?? null));
 
             $this->entityManager->persist($partenaire);
             $this->entityManager->flush();
@@ -170,46 +151,46 @@ class PartenaireController extends AbstractController
                 ], Response::HTTP_NOT_FOUND);
             }
 
-            $data = json_decode($request->getContent(), true);
+            $data = json_decode($request->getContent(), true) ?? [];
 
             if (isset($data['partenaireLibelle'])) {
                 $partenaire->setPartenaireLibelle($data['partenaireLibelle']);
             }
-            
             if (isset($data['partenaireAcronyme'])) {
                 $partenaire->setPartenaireAcronyme($data['partenaireAcronyme']);
             }
-            
-            // ✅ NOUVEAUX CHAMPS (sans partenaireRole)
-            if (isset($data['premierResponsable'])) {
-                $partenaire->setPremierResponsable($data['premierResponsable']);
+
+            // Champs harmonisés (noms "partenaire...") + rétrocompat
+            if (array_key_exists('partenairePremierResponsable', $data) || array_key_exists('premierResponsable', $data)) {
+                $partenaire->setPartenairePremierResponsable($data['partenairePremierResponsable'] ?? ($data['premierResponsable'] ?? null));
             }
-            if (isset($data['prEmail'])) {
-                $partenaire->setPrEmail($data['prEmail']);
+            if (array_key_exists('partenairePremierResponsableEmail', $data) || array_key_exists('prEmail', $data)) {
+                $partenaire->setPartenairePremierResponsableEmail($data['partenairePremierResponsableEmail'] ?? ($data['prEmail'] ?? null));
             }
-            if (isset($data['prTel'])) {
-                $partenaire->setPrTel($data['prTel']);
+            if (array_key_exists('partenairePremierResponsableTelephone', $data) || array_key_exists('prTel', $data)) {
+                $partenaire->setPartenairePremierResponsableTelephone($data['partenairePremierResponsableTelephone'] ?? ($data['prTel'] ?? null));
             }
-            if (isset($data['adresse'])) {
-                $partenaire->setAdresse($data['adresse']);
+            if (array_key_exists('partenairePremierResponsableAdresse', $data) || array_key_exists('adresse', $data)) {
+                $partenaire->setPartenairePremierResponsableAdresse($data['partenairePremierResponsableAdresse'] ?? ($data['adresse'] ?? null));
             }
-            if (isset($data['pays'])) {
-                $partenaire->setPays($data['pays']);
+
+            if (array_key_exists('partenairePays', $data) || array_key_exists('pays', $data)) {
+                $partenaire->setPartenairePays($data['partenairePays'] ?? ($data['pays'] ?? null));
             }
-            if (isset($data['email'])) {
-                $partenaire->setEmail($data['email']);
+            if (array_key_exists('partenaireEmail', $data) || array_key_exists('email', $data)) {
+                $partenaire->setPartenaireEmail($data['partenaireEmail'] ?? ($data['email'] ?? null));
             }
-            if (isset($data['tel1'])) {
-                $partenaire->setTel1($data['tel1']);
+            if (array_key_exists('partenaireTelephone1', $data) || array_key_exists('tel1', $data)) {
+                $partenaire->setPartenaireTelephone1($data['partenaireTelephone1'] ?? ($data['tel1'] ?? null));
             }
-            if (isset($data['tel2'])) {
-                $partenaire->setTel2($data['tel2']);
+            if (array_key_exists('partenaireTelephone2', $data) || array_key_exists('tel2', $data)) {
+                $partenaire->setPartenaireTelephone2($data['partenaireTelephone2'] ?? ($data['tel2'] ?? null));
             }
-            if (isset($data['siteWeb'])) {
-                $partenaire->setSiteWeb($data['siteWeb']);
+            if (array_key_exists('partenaireSiteWeb', $data) || array_key_exists('siteWeb', $data)) {
+                $partenaire->setPartenaireSiteWeb($data['partenaireSiteWeb'] ?? ($data['siteWeb'] ?? null));
             }
-            if (isset($data['linkedIn'])) {
-                $partenaire->setLinkedIn($data['linkedIn']);
+            if (array_key_exists('partenaireLinkedIn', $data) || array_key_exists('linkedIn', $data)) {
+                $partenaire->setPartenaireLinkedIn($data['partenaireLinkedIn'] ?? ($data['linkedIn'] ?? null));
             }
 
             $this->entityManager->flush();

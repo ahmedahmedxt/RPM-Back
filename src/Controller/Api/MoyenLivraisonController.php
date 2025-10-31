@@ -15,6 +15,7 @@ use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use App\Repository\MoyenLivraisonRepository;
+
 class MoyenLivraisonController extends AbstractController
 {
     
@@ -23,52 +24,54 @@ class MoyenLivraisonController extends AbstractController
     {
         //$this->checkToken($tokenStorage);
         $data = json_decode($request->getContent(), true);
-    
-        // Vérifier si le moyen de livraison existe déjà
-        $existingMoyenLivraison = $moyenLivraisonRepository->findOneBy(['moyenLivraison' => $data['moyenLivraison']]);
-    
+
+        // Vérifier si le moyen de livraison existe déjà (sur le libellé)
+        $existingMoyenLivraison = $moyenLivraisonRepository->findOneBy(['moyenLivraisonLibelle' => $data['moyenLivraisonLibelle'] ?? null]);
+
         if ($existingMoyenLivraison) {
             return new JsonResponse('Le moyen de livraison existe déjà', Response::HTTP_CONFLICT);
         }
-    
+
         // Créer un nouveau moyen de livraison
         $moyenLivraison = new MoyenLivraison();
-        $moyenLivraison->setMoyenLivraison($data['moyenLivraison']);
-    
+        $moyenLivraison->setMoyenLivraisonLibelle($data['moyenLivraisonLibelle'] ?? null);
+        $moyenLivraison->setMoyenLivraisonShort($data['moyenLivraisonShort'] ?? '');
+
         $entityManager->persist($moyenLivraison);
         $entityManager->flush();
-    
+
         return new JsonResponse('Moyen de livraison créé avec succès', Response::HTTP_CREATED);
     }
     
     #[Route('/api/getAll/moyen-livraisons', name: 'api_moyen_livraison_get_all', methods: ['GET'])]
-public function getAll(EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
-{
-    //$this->checkToken($tokenStorage);
-    
-    // Récupérer les moyens de livraison triés par nom
-    $moyenLivraisonRepository = $entityManager->getRepository(MoyenLivraison::class);
-    $moyenLivraisons = $moyenLivraisonRepository->findBy([], ['moyenLivraison' => 'ASC']);
-    
-    $data = [];
-    foreach ($moyenLivraisons as $moyenLivraison) {
-        $data[] = [
-            'moyenLivraisonId' => $moyenLivraison->getId(),
-            'moyenLivraison' => $moyenLivraison->getMoyenLivraison(),
-            'moyenLivraisonShort' => $moyenLivraison->getMoyenLivraisonShort(), // ✅ CORRIGÉ
-        ];
-    }
+    public function getAll(EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
+    {
+        //$this->checkToken($tokenStorage);
+        
+        // Récupérer les moyens de livraison triés par libellé
+        $moyenLivraisonRepository = $entityManager->getRepository(MoyenLivraison::class);
+        $moyenLivraisons = $moyenLivraisonRepository->findBy([], ['moyenLivraisonLibelle' => 'ASC']);
+        
+        $data = [];
+        foreach ($moyenLivraisons as $moyenLivraison) {
+            $data[] = [
+                'moyenLivraisonId' => $moyenLivraison->getMoyenLivraisonId(),
+                'moyenLivraisonLibelle' => $moyenLivraison->getMoyenLivraisonLibelle(),
+                'moyenLivraisonShort' => $moyenLivraison->getMoyenLivraisonShort(),
+            ];
+        }
 
-    return new JsonResponse($data, Response::HTTP_OK);
-}
+        return new JsonResponse($data, Response::HTTP_OK);
+    }
 
     #[Route('/api/get/moyen-livraisons/{id}', name: 'api_moyen_livraison_get', methods: ['GET'])]
     public function getOne(MoyenLivraison $moyenLivraison, TokenStorageInterface $tokenStorage): JsonResponse
     {
         //$this->checkToken($tokenStorage);
         $data = [
-            'moyenLivraisonId' => $moyenLivraison->getId(),
-            'moyenLivraison' => $moyenLivraison->getMoyenLivraison(),
+            'moyenLivraisonId' => $moyenLivraison->getMoyenLivraisonId(),
+            'moyenLivraisonLibelle' => $moyenLivraison->getMoyenLivraisonLibelle(),
+            'moyenLivraisonShort' => $moyenLivraison->getMoyenLivraisonShort(),
         ];
 
         return new JsonResponse($data, Response::HTTP_OK);
@@ -80,7 +83,12 @@ public function getAll(EntityManagerInterface $entityManager, TokenStorageInterf
         //$this->checkToken($tokenStorage);
         $data = json_decode($request->getContent(), true);
 
-        $moyenLivraison->setMoyenLivraison($data['moyenLivraison']);
+        if (array_key_exists('moyenLivraisonLibelle', $data)) {
+            $moyenLivraison->setMoyenLivraisonLibelle($data['moyenLivraisonLibelle']);
+        }
+        if (array_key_exists('moyenLivraisonShort', $data)) {
+            $moyenLivraison->setMoyenLivraisonShort($data['moyenLivraisonShort'] ?? '');
+        }
 
         $entityManager->flush();
 
@@ -90,14 +98,14 @@ public function getAll(EntityManagerInterface $entityManager, TokenStorageInterf
     #[Route('/api/delete/moyen-livraisons/{id}', name: 'api_moyen_livraison_delete', methods: ['DELETE'])]
     public function delete(MoyenLivraison $moyenLivraison, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
     {
-            // Après avoir mis à jour les références, supprimer le MoyenLivraison
-            $entityManager->remove($moyenLivraison);
-            $entityManager->flush();
-            
-            return new JsonResponse('Les références au Moyen de livraison ont été supprimées des Appels d\'offre associés, et le Moyen de livraison a été supprimé avec succès.', Response::HTTP_OK);
+        //$this->checkToken($tokenStorage);
+        $entityManager->remove($moyenLivraison);
+        $entityManager->flush();
+        
+        return new JsonResponse('Les références au Moyen de livraison ont été supprimées des Appels d\'offre associés, et le Moyen de livraison a été supprimé avec succès.', Response::HTTP_OK);
     }
 
-public function checkToken(TokenStorageInterface $tokenStorage): void
+    public function checkToken(TokenStorageInterface $tokenStorage): void
     {
         // Récupérer le token d'authentification de Symfony
         $token = $tokenStorage->getToken();
@@ -106,5 +114,5 @@ public function checkToken(TokenStorageInterface $tokenStorage): void
         if (!$token instanceof TokenInterface) {
             throw new AccessDeniedHttpException('Token d\'authentification manquant ou invalide');
         }
-}
+    }
 }
