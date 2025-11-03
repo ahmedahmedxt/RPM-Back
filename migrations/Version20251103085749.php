@@ -10,7 +10,7 @@ use Doctrine\Migrations\AbstractMigration;
 /**
  * Auto-generated Migration: Please modify to your needs!
  */
-final class Version20251031151655 extends AbstractMigration
+final class Version20251103085749 extends AbstractMigration
 {
     public function getDescription(): string
     {
@@ -27,7 +27,7 @@ final class Version20251031151655 extends AbstractMigration
         $this->addSql('CREATE TABLE categorie (categorieId INT AUTO_INCREMENT NOT NULL, categorieLibelle VARCHAR(255) NOT NULL, categorieShort VARCHAR(255) NOT NULL, categorieCodeRef INT NOT NULL, categorieCodeCouleur VARCHAR(255) NOT NULL, UNIQUE INDEX UNIQ_497DD634147E737F (categorieLibelle), UNIQUE INDEX UNIQ_497DD63464E548EA (categorieShort), UNIQUE INDEX UNIQ_497DD634DD113742 (categorieCodeRef), UNIQUE INDEX UNIQ_497DD634E1BB45B (categorieCodeCouleur), PRIMARY KEY(categorieId)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
         $this->addSql('CREATE TABLE client (clientId INT AUTO_INCREMENT NOT NULL, clientRaisonSocial VARCHAR(254) NOT NULL, clientRaisonSocialShort VARCHAR(254) NOT NULL, clientAdresse VARCHAR(254) NOT NULL, clientTelephone1 VARCHAR(254) NOT NULL, clientTelephone2 VARCHAR(254) NOT NULL, clientTelephone3 VARCHAR(254) NOT NULL, clientEmail VARCHAR(254) NOT NULL, clientPersonneContact1 VARCHAR(254) NOT NULL, clientPersonneContact2 VARCHAR(254) NOT NULL, clientPersonneContact3 VARCHAR(254) NOT NULL, natureClientId INT DEFAULT NULL, INDEX IDX_C74404557FA12140 (natureClientId), PRIMARY KEY(clientId)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
         $this->addSql('CREATE TABLE client_pays (client_id INT NOT NULL, pays_id INT NOT NULL, INDEX IDX_E503FFCC19EB6921 (client_id), INDEX IDX_E503FFCCA6E44244 (pays_id), PRIMARY KEY(client_id, pays_id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
-        $this->addSql('CREATE TABLE clientsecteuractivite (clientId INT NOT NULL, secteurActiviteId INT NOT NULL, INDEX IDX_93A254E4EA1CE9BE (clientId), INDEX IDX_93A254E4BEFC80CA (secteurActiviteId), PRIMARY KEY(clientId, secteurActiviteId)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE clientsecteuractivite (secteur_activite_id INT NOT NULL, clientId INT NOT NULL, INDEX IDX_93A254E4EA1CE9BE (clientId), INDEX IDX_93A254E45233A7FC (secteur_activite_id), PRIMARY KEY(clientId, secteur_activite_id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
         $this->addSql('CREATE TABLE continent (continentId INT AUTO_INCREMENT NOT NULL, continentName VARCHAR(254) DEFAULT NULL, PRIMARY KEY(continentId)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
         $this->addSql('CREATE TABLE cvlangueniveau (cvLangueNiveauId INT AUTO_INCREMENT NOT NULL, cvLangueNiveauLibelle VARCHAR(254) DEFAULT NULL, PRIMARY KEY(cvLangueNiveauId)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
         $this->addSql('CREATE TABLE devises (devisesId INT AUTO_INCREMENT NOT NULL, devisesLibelle VARCHAR(254) DEFAULT NULL, devisesAcronyme VARCHAR(10) DEFAULT NULL, PRIMARY KEY(devisesId)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
@@ -44,11 +44,12 @@ final class Version20251031151655 extends AbstractMigration
         $this->addSql('CREATE TABLE methodologie (methodologieId INT AUTO_INCREMENT NOT NULL, methodologieLibelle VARCHAR(254) DEFAULT NULL, methodologieDescription VARCHAR(254) DEFAULT NULL, PRIMARY KEY(methodologieId)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
         $this->addSql('CREATE TABLE moyen_livraison (moyenLivraisonId INT AUTO_INCREMENT NOT NULL, moyenLivraisonLibelle VARCHAR(255) NOT NULL, moyenLivraisonShort VARCHAR(10) NOT NULL, UNIQUE INDEX UNIQ_348289E9EA3748D (moyenLivraisonLibelle), PRIMARY KEY(moyenLivraisonId)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
         $this->addSql('CREATE TABLE nationalite (id INT AUTO_INCREMENT NOT NULL, nationalite_libelle VARCHAR(255) NOT NULL, UNIQUE INDEX UNIQ_9EC4D73F6585FED (nationalite_libelle), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE nature_organisme_demendeur (nature_organisme_demendeur_id INT AUTO_INCREMENT NOT NULL, nature_organisme_demendeur_libelle VARCHAR(255) NOT NULL, nature_organisme_demendeur_description LONGTEXT DEFAULT NULL, UNIQUE INDEX UNIQ_9FF9C47E30DD260E (nature_organisme_demendeur_libelle), PRIMARY KEY(nature_organisme_demendeur_id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
         $this->addSql('CREATE TABLE natureclient (natureClientId INT AUTO_INCREMENT NOT NULL, natureClientLibelle VARCHAR(254) NOT NULL, natureClientDescription VARCHAR(254) DEFAULT NULL, UNIQUE INDEX UNIQ_2F07C3A042B3A93C (natureClientLibelle), PRIMARY KEY(natureClientId)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
         $this->addSql('CREATE TABLE notification (id INT AUTO_INCREMENT NOT NULL, appel_offre_id INT DEFAULT NULL, message VARCHAR(255) NOT NULL, date_creation DATETIME NOT NULL, isread TINYINT(1) NOT NULL, INDEX IDX_BF5476CA308E35F8 (appel_offre_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
-        $this->addSql('CREATE TABLE organisme_demandeur (id INT AUTO_INCREMENT NOT NULL, organismeDemandeurLibelle VARCHAR(255) NOT NULL, UNIQUE INDEX UNIQ_2F340854A21D60B4 (organismeDemandeurLibelle), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE organisme_demandeur (organisme_demandeur_id INT AUTO_INCREMENT NOT NULL, organismeDemandeurLibelle VARCHAR(255) NOT NULL, organismeDemandeurDescription LONGTEXT DEFAULT NULL, organismeDemandeurAcronyme VARCHAR(100) DEFAULT NULL, organismeDemandeurLogo VARCHAR(255) DEFAULT NULL, organismeDemandeurNomCoordinateur VARCHAR(150) DEFAULT NULL, organismeDemandeurEmailCoordinateur VARCHAR(180) DEFAULT NULL, organismeDemandeurRaisonSocial VARCHAR(255) DEFAULT NULL, organismeDemandeurRaisonSocialShort VARCHAR(100) DEFAULT NULL, organismeDemandeurAdresse VARCHAR(500) DEFAULT NULL, organismeDemandeurPersonneContact1 VARCHAR(150) DEFAULT NULL, organismeDemandeurPersonneTelephonne1 VARCHAR(50) DEFAULT NULL, organismeDemandeurPersonneContact2 VARCHAR(150) DEFAULT NULL, organismeDemandeurTelephone2 VARCHAR(50) DEFAULT NULL, organismeDemandeurEmail2 VARCHAR(180) DEFAULT NULL, organismeDemandeurPersonneContact3 VARCHAR(150) DEFAULT NULL, organismeDemandeurTelephone3 VARCHAR(50) DEFAULT NULL, organismeDemandeurEmail3 VARCHAR(180) DEFAULT NULL, paysId INT DEFAULT NULL, UNIQUE INDEX UNIQ_2F340854A21D60B4 (organismeDemandeurLibelle), INDEX IDX_2F34085435569A8D (paysId), PRIMARY KEY(organisme_demandeur_id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
         $this->addSql('CREATE TABLE partenaire (partenaireId INT AUTO_INCREMENT NOT NULL, partenaireLibelle VARCHAR(255) NOT NULL, partenaireAcronyme VARCHAR(50) DEFAULT NULL, partenairePremierResponsable VARCHAR(255) DEFAULT NULL, partenairePremierResponsableEmail VARCHAR(255) DEFAULT NULL, partenairePremierResponsableTelephone VARCHAR(50) DEFAULT NULL, partenairePremierResponsableAdresse LONGTEXT DEFAULT NULL, partenairePays VARCHAR(100) DEFAULT NULL, partenaireEmail VARCHAR(255) DEFAULT NULL, partenaireTelephone1 VARCHAR(50) DEFAULT NULL, partenaireTelephone2 VARCHAR(50) DEFAULT NULL, partenaireSiteWeb VARCHAR(255) DEFAULT NULL, partenaireLinkedIn VARCHAR(255) DEFAULT NULL, PRIMARY KEY(partenaireId)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
-        $this->addSql('CREATE TABLE pays (paysId INT AUTO_INCREMENT NOT NULL, paysLibelle VARCHAR(254) NOT NULL, paysCapitale VARCHAR(254) NOT NULL, continentId INT DEFAULT NULL, UNIQUE INDEX UNIQ_349F3CAE23588E17 (paysLibelle), UNIQUE INDEX UNIQ_349F3CAE41BCE223 (paysCapitale), INDEX IDX_349F3CAEA08155E4 (continentId), PRIMARY KEY(paysId)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE pays (paysId INT AUTO_INCREMENT NOT NULL, paysLibelle VARCHAR(254) NOT NULL, paysCapitale VARCHAR(254) NOT NULL, continentId INT DEFAULT NULL, UNIQUE INDEX UNIQ_349F3CAE23588E17 (paysLibelle), INDEX IDX_349F3CAEA08155E4 (continentId), PRIMARY KEY(paysId)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
         $this->addSql('CREATE TABLE poste (id INT AUTO_INCREMENT NOT NULL, poste_nom VARCHAR(255) NOT NULL, UNIQUE INDEX UNIQ_7C890FAB3C18B63 (poste_nom), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
         $this->addSql('CREATE TABLE project_templates (id INT AUTO_INCREMENT NOT NULL, name VARCHAR(100) NOT NULL, description LONGTEXT DEFAULT NULL, hidden_fields JSON NOT NULL, is_system TINYINT(1) NOT NULL, created_at DATETIME NOT NULL, updated_at DATETIME NOT NULL, PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
         $this->addSql('CREATE TABLE projet (id INT AUTO_INCREMENT NOT NULL, lieu_id INT DEFAULT NULL, client_id INT DEFAULT NULL, projet_libelle VARCHAR(255) NOT NULL, projet_description LONGTEXT NOT NULL, projet_reference VARCHAR(255) NOT NULL, projet_date_demarrage DATE NOT NULL, projet_date_achevement DATE NOT NULL, projet_url_fonctionnel VARCHAR(255) NOT NULL, projet_description_service_effectivement_rendus LONGTEXT NOT NULL, INDEX IDX_50159CA96AB213CC (lieu_id), INDEX IDX_50159CA919EB6921 (client_id), PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
@@ -64,7 +65,7 @@ final class Version20251031151655 extends AbstractMigration
         $this->addSql('CREATE TABLE reference_employe (id INT AUTO_INCREMENT NOT NULL, PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
         $this->addSql('CREATE TABLE referencedocuments (referenceDocumentsId INT AUTO_INCREMENT NOT NULL, referenceDocumentsLibelle VARCHAR(255) DEFAULT NULL, typeDocumentId INT DEFAULT NULL, referenceID INT DEFAULT NULL, INDEX IDX_547A6C97E8B2CC08 (typeDocumentId), INDEX IDX_547A6C977F3C753F (referenceID), PRIMARY KEY(referenceDocumentsId)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
         $this->addSql('CREATE TABLE role (roleId INT AUTO_INCREMENT NOT NULL, roleLibelle VARCHAR(255) DEFAULT NULL, roleShort VARCHAR(255) DEFAULT NULL, PRIMARY KEY(roleId)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
-        $this->addSql('CREATE TABLE secteuractivite (secteurActiviteId INT AUTO_INCREMENT NOT NULL, secteurActiviteLibelle VARCHAR(254) DEFAULT NULL, secteurActiviteDescription VARCHAR(254) DEFAULT NULL, PRIMARY KEY(secteurActiviteId)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
+        $this->addSql('CREATE TABLE secteur_activite (secteur_activite_id INT AUTO_INCREMENT NOT NULL, secteurActiviteLibelle VARCHAR(255) NOT NULL, secteurActiviteDescription LONGTEXT DEFAULT NULL, UNIQUE INDEX UNIQ_5CD9BFE1FAB72483 (secteurActiviteLibelle), PRIMARY KEY(secteur_activite_id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
         $this->addSql('CREATE TABLE situationfamiliale (situationFamilialeId INT AUTO_INCREMENT NOT NULL, situationFamilialeLibelle VARCHAR(254) NOT NULL, UNIQUE INDEX UNIQ_EB87AFF6910843DB (situationFamilialeLibelle), PRIMARY KEY(situationFamilialeId)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
         $this->addSql('CREATE TABLE technologie (technologieId INT AUTO_INCREMENT NOT NULL, referenceTechnologieLibelle VARCHAR(254) DEFAULT NULL, referenceTechnologieDescription TEXT DEFAULT NULL, PRIMARY KEY(technologieId)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
         $this->addSql('CREATE TABLE typediplome (typeDiplomeId INT AUTO_INCREMENT NOT NULL, typeDiplomeLibelle VARCHAR(254) DEFAULT NULL, PRIMARY KEY(typeDiplomeId)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
@@ -74,7 +75,7 @@ final class Version20251031151655 extends AbstractMigration
         $this->addSql('ALTER TABLE appel_offres ADD CONSTRAINT FK_F30A4DC5E88A3956 FOREIGN KEY (appelOffresTypeId) REFERENCES appel_offres_type (appelOffresTypeId)');
         $this->addSql('ALTER TABLE appel_offres ADD CONSTRAINT FK_F30A4DC532DC916C FOREIGN KEY (appelOffresMoyenLivraisonId) REFERENCES moyen_livraison (moyenLivraisonId)');
         $this->addSql('ALTER TABLE appel_offres ADD CONSTRAINT FK_F30A4DC54628374B FOREIGN KEY (appelOffresPaysId) REFERENCES pays (paysId)');
-        $this->addSql('ALTER TABLE appel_offres ADD CONSTRAINT FK_F30A4DC5BD4A9BF3 FOREIGN KEY (appelOffresOrganismeDemandeurId) REFERENCES organisme_demandeur (id)');
+        $this->addSql('ALTER TABLE appel_offres ADD CONSTRAINT FK_F30A4DC5BD4A9BF3 FOREIGN KEY (appelOffresOrganismeDemandeurId) REFERENCES organisme_demandeur (organisme_demandeur_id)');
         $this->addSql('ALTER TABLE appel_offres ADD CONSTRAINT FK_F30A4DC569A1BF6E FOREIGN KEY (appelOffresDevisesId) REFERENCES devises (devisesId)');
         $this->addSql('ALTER TABLE appel_offres_partenaires ADD CONSTRAINT FK_E10F36AEFFAF5D99 FOREIGN KEY (appelOffresId) REFERENCES appel_offres (appelOffresId) ON DELETE CASCADE');
         $this->addSql('ALTER TABLE appel_offres_partenaires ADD CONSTRAINT FK_E10F36AE98DE13AC FOREIGN KEY (partenaire_id) REFERENCES partenaire (partenaireId) ON DELETE CASCADE');
@@ -82,7 +83,7 @@ final class Version20251031151655 extends AbstractMigration
         $this->addSql('ALTER TABLE client_pays ADD CONSTRAINT FK_E503FFCC19EB6921 FOREIGN KEY (client_id) REFERENCES client (clientId)');
         $this->addSql('ALTER TABLE client_pays ADD CONSTRAINT FK_E503FFCCA6E44244 FOREIGN KEY (pays_id) REFERENCES pays (paysId)');
         $this->addSql('ALTER TABLE clientsecteuractivite ADD CONSTRAINT FK_93A254E4EA1CE9BE FOREIGN KEY (clientId) REFERENCES client (clientId)');
-        $this->addSql('ALTER TABLE clientsecteuractivite ADD CONSTRAINT FK_93A254E4BEFC80CA FOREIGN KEY (secteurActiviteId) REFERENCES secteuractivite (secteurActiviteId)');
+        $this->addSql('ALTER TABLE clientsecteuractivite ADD CONSTRAINT FK_93A254E45233A7FC FOREIGN KEY (secteur_activite_id) REFERENCES secteur_activite (secteur_activite_id)');
         $this->addSql('ALTER TABLE employe ADD CONSTRAINT FK_F804D3B9A8AEDFE0 FOREIGN KEY (situationFamilialeId) REFERENCES situationfamiliale (situationFamilialeId)');
         $this->addSql('ALTER TABLE employe ADD CONSTRAINT FK_F804D3B9AF59822E FOREIGN KEY (employePosteId) REFERENCES employeposte (employePosteId)');
         $this->addSql('ALTER TABLE employe ADD CONSTRAINT FK_F804D3B9E6E30F5B FOREIGN KEY (employeLangueId) REFERENCES employelangue (employeLangueId)');
@@ -95,7 +96,8 @@ final class Version20251031151655 extends AbstractMigration
         $this->addSql('ALTER TABLE employelangue ADD CONSTRAINT FK_547287856101996A FOREIGN KEY (employeLangueNiveauId) REFERENCES employelangueniveau (employeLangueNiveauId)');
         $this->addSql('ALTER TABLE lieu ADD CONSTRAINT FK_2F577D5935569A8D FOREIGN KEY (paysId) REFERENCES pays (paysId)');
         $this->addSql('ALTER TABLE notification ADD CONSTRAINT FK_BF5476CA308E35F8 FOREIGN KEY (appel_offre_id) REFERENCES appel_offres (appelOffresId)');
-        $this->addSql('ALTER TABLE pays ADD CONSTRAINT FK_349F3CAEA08155E4 FOREIGN KEY (continentId) REFERENCES continent (continentId)');
+        $this->addSql('ALTER TABLE organisme_demandeur ADD CONSTRAINT FK_2F34085435569A8D FOREIGN KEY (paysId) REFERENCES pays (paysId) ON DELETE SET NULL');
+        $this->addSql('ALTER TABLE pays ADD CONSTRAINT FK_349F3CAEA08155E4 FOREIGN KEY (continentId) REFERENCES continent (continentId) ON DELETE SET NULL');
         $this->addSql('ALTER TABLE projet ADD CONSTRAINT FK_50159CA96AB213CC FOREIGN KEY (lieu_id) REFERENCES lieu (lieuId)');
         $this->addSql('ALTER TABLE projet ADD CONSTRAINT FK_50159CA919EB6921 FOREIGN KEY (client_id) REFERENCES client (clientId)');
         $this->addSql('ALTER TABLE projet_categorie ADD CONSTRAINT FK_6A8331E0C18272 FOREIGN KEY (projet_id) REFERENCES projet (id)');
@@ -134,7 +136,7 @@ final class Version20251031151655 extends AbstractMigration
         $this->addSql('ALTER TABLE client_pays DROP FOREIGN KEY FK_E503FFCC19EB6921');
         $this->addSql('ALTER TABLE client_pays DROP FOREIGN KEY FK_E503FFCCA6E44244');
         $this->addSql('ALTER TABLE clientsecteuractivite DROP FOREIGN KEY FK_93A254E4EA1CE9BE');
-        $this->addSql('ALTER TABLE clientsecteuractivite DROP FOREIGN KEY FK_93A254E4BEFC80CA');
+        $this->addSql('ALTER TABLE clientsecteuractivite DROP FOREIGN KEY FK_93A254E45233A7FC');
         $this->addSql('ALTER TABLE employe DROP FOREIGN KEY FK_F804D3B9A8AEDFE0');
         $this->addSql('ALTER TABLE employe DROP FOREIGN KEY FK_F804D3B9AF59822E');
         $this->addSql('ALTER TABLE employe DROP FOREIGN KEY FK_F804D3B9E6E30F5B');
@@ -147,6 +149,7 @@ final class Version20251031151655 extends AbstractMigration
         $this->addSql('ALTER TABLE employelangue DROP FOREIGN KEY FK_547287856101996A');
         $this->addSql('ALTER TABLE lieu DROP FOREIGN KEY FK_2F577D5935569A8D');
         $this->addSql('ALTER TABLE notification DROP FOREIGN KEY FK_BF5476CA308E35F8');
+        $this->addSql('ALTER TABLE organisme_demandeur DROP FOREIGN KEY FK_2F34085435569A8D');
         $this->addSql('ALTER TABLE pays DROP FOREIGN KEY FK_349F3CAEA08155E4');
         $this->addSql('ALTER TABLE projet DROP FOREIGN KEY FK_50159CA96AB213CC');
         $this->addSql('ALTER TABLE projet DROP FOREIGN KEY FK_50159CA919EB6921');
@@ -194,6 +197,7 @@ final class Version20251031151655 extends AbstractMigration
         $this->addSql('DROP TABLE methodologie');
         $this->addSql('DROP TABLE moyen_livraison');
         $this->addSql('DROP TABLE nationalite');
+        $this->addSql('DROP TABLE nature_organisme_demendeur');
         $this->addSql('DROP TABLE natureclient');
         $this->addSql('DROP TABLE notification');
         $this->addSql('DROP TABLE organisme_demandeur');
@@ -214,7 +218,7 @@ final class Version20251031151655 extends AbstractMigration
         $this->addSql('DROP TABLE reference_employe');
         $this->addSql('DROP TABLE referencedocuments');
         $this->addSql('DROP TABLE role');
-        $this->addSql('DROP TABLE secteuractivite');
+        $this->addSql('DROP TABLE secteur_activite');
         $this->addSql('DROP TABLE situationfamiliale');
         $this->addSql('DROP TABLE technologie');
         $this->addSql('DROP TABLE typediplome');

@@ -8,56 +8,57 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
 use App\Entity\AppelOffres;
+use App\Entity\Lieu;
+use App\Entity\Client;
+use App\Entity\EmployeExperience;
+use App\Entity\OrganismeDemandeur;
+use App\Entity\Continent;
 
 #[ORM\Entity(repositoryClass: PaysRepository::class)]
+#[ORM\Table(name: 'pays')]
 class Pays
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column(name: "paysId", type: "integer")]
-    private ?int $id = null;
+    #[ORM\Column(name: 'paysId', type: 'integer')]
+    private ?int $paysId = null;
 
-    #[ORM\Column(name: "paysLibelle", length: 254, unique: true)]
-    #[Assert\NotBlank]
+    #[ORM\Column(name: 'paysLibelle', length: 254, unique: true)]
+    #[Assert\NotBlank(message: 'Le libellé du pays est obligatoire.')]
     private ?string $paysLibelle = null;
 
-    #[ORM\Column(name: "paysCapitale", length: 254, unique: true)]
-    #[Assert\NotBlank]
+    #[ORM\Column(name: 'paysCapitale', length: 254)]
+    #[Assert\NotBlank(message: 'La capitale du pays est obligatoire.')]
     private ?string $paysCapitale = null;
 
     #[ORM\ManyToOne(targetEntity: Continent::class)]
-    #[ORM\JoinColumn(name: "continentId", referencedColumnName: "continentId")]
+    #[ORM\JoinColumn(name: 'continentId', referencedColumnName: 'continentId', nullable: true, onDelete: 'SET NULL')]
     private ?Continent $continent = null;
 
-    #[ORM\OneToMany(targetEntity: Lieu::class, mappedBy: "pays")]
+    #[ORM\OneToMany(targetEntity: Lieu::class, mappedBy: 'pays', cascade: ['persist', 'remove'])]
     private Collection $lieux;
 
-    #[ORM\OneToMany(targetEntity: Client::class, mappedBy: 'pays')]
-    private Collection $clients; 
-
-    #[ORM\OneToMany(targetEntity: AppelOffres::class, mappedBy: 'appelOffresPaysId')]
+    #[ORM\OneToMany(targetEntity: AppelOffres::class, mappedBy: 'appelOffresPaysId', cascade: ['persist', 'remove'])]
     private Collection $appelOffres;
 
-    #[ORM\OneToMany(targetEntity: EmployeExperience::class, mappedBy: 'pays')]
+    #[ORM\OneToMany(targetEntity: EmployeExperience::class, mappedBy: 'pays', cascade: ['persist', 'remove'])]
     private Collection $employeExperiences;
+
+    #[ORM\OneToMany(targetEntity: OrganismeDemandeur::class, mappedBy: 'pays')]
+    private Collection $organismesDemandeurs;
 
     public function __construct()
     {
         $this->lieux = new ArrayCollection();
-        $this->clients = new ArrayCollection();
         $this->appelOffres = new ArrayCollection();
         $this->employeExperiences = new ArrayCollection();
+        $this->organismesDemandeurs = new ArrayCollection();
     }
 
-    public function getId(): ?int
-    {
-        return $this->id;
-    }
 
-    // Ajout de getPaysId() pour cohérence avec le contrôleur
     public function getPaysId(): ?int
     {
-        return $this->id;
+        return $this->paysId;
     }
 
     public function getPaysLibelle(): ?string
@@ -94,7 +95,7 @@ class Pays
     }
 
     /**
-     * @return Collection|Lieu[]
+     * @return Collection<int, Lieu>
      */
     public function getLieux(): Collection
     {
@@ -104,7 +105,7 @@ class Pays
     public function addLieu(Lieu $lieu): self
     {
         if (!$this->lieux->contains($lieu)) {
-            $this->lieux[] = $lieu;
+            $this->lieux->add($lieu);
             $lieu->setPays($this);
         }
         return $this;
@@ -115,33 +116,6 @@ class Pays
         if ($this->lieux->removeElement($lieu)) {
             if ($lieu->getPays() === $this) {
                 $lieu->setPays(null);
-            }
-        }
-        return $this;
-    }
-
-    /**
-     * @return Collection<int, Client>
-     */
-    public function getClients(): Collection
-    {
-        return $this->clients;
-    }
-
-    public function addClient(Client $client): static
-    {
-        if (!$this->clients->contains($client)) {
-            $this->clients->add($client);
-            $client->setPays($this);
-        }
-        return $this;
-    }
-
-    public function removeClient(Client $client): static
-    {
-        if ($this->clients->removeElement($client)) {
-            if ($client->getPays() === $this) {
-                $client->setPays(null);
             }
         }
         return $this;
@@ -196,6 +170,33 @@ class Pays
         if ($this->employeExperiences->removeElement($employeExperience)) {
             if ($employeExperience->getPays() === $this) {
                 $employeExperience->setPays(null);
+            }
+        }
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, OrganismeDemandeur>
+     */
+    public function getOrganismesDemandeurs(): Collection
+    {
+        return $this->organismesDemandeurs;
+    }
+
+    public function addOrganismesDemandeur(OrganismeDemandeur $organisme): self
+    {
+        if (!$this->organismesDemandeurs->contains($organisme)) {
+            $this->organismesDemandeurs->add($organisme);
+            $organisme->setPays($this);
+        }
+        return $this;
+    }
+
+    public function removeOrganismesDemandeur(OrganismeDemandeur $organisme): self
+    {
+        if ($this->organismesDemandeurs->removeElement($organisme)) {
+            if ($organisme->getPays() === $this) {
+                $organisme->setPays(null);
             }
         }
         return $this;

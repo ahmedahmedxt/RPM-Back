@@ -1,6 +1,6 @@
 lexik_jwt_authentication:
     secret_key: '%kernel.project_dir%/config/jwt/private.pem'
     public_key: '%kernel.project_dir%/config/jwt/public.pem'
-    pass_phrase: 'anas'
+    pass_phrase: null
     token_ttl: 3600                              # durée de validité du token en secondes
     user_identity_field: email                                 # le champ de l'utilisateur utilisé pour l'authentification

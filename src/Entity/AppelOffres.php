@@ -37,7 +37,7 @@ class AppelOffres
     private ?Pays $appelOffresPaysId = null;
 
     #[ORM\ManyToOne(targetEntity: OrganismeDemandeur::class, inversedBy: "appelOffres")]
-    #[ORM\JoinColumn(name: "appelOffresOrganismeDemandeurId", referencedColumnName: "id", nullable: true)]
+    #[ORM\JoinColumn(name: "appelOffresOrganismeDemandeurId", referencedColumnName: "organisme_demandeur_id", nullable: true)]
     private ?OrganismeDemandeur $appelOffresOrganismeDemandeurId = null;
 
     #[ORM\ManyToOne(targetEntity: Devises::class, inversedBy: "appelOffres")]
