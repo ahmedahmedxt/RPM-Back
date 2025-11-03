@@ -104,8 +104,7 @@ class NotificationController extends AbstractController
         $notificationsArray = [];
         foreach ($notifications as $notification) {
             $aop = $notification->getAppelOffre();
-            $n
-            otificationsArray[] = [
+            $notificationsArray[] = [
                 'id' => $notification->getId(),
                 'message' => $notification->getMessage(),
                 'dateCreation' => $notification->getDateCreation()->format('Y-m-d H:i:s'),
