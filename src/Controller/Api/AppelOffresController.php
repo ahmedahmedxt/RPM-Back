@@ -62,21 +62,62 @@ class AppelOffresController extends AbstractController
             }
 
             $appel = new AppelOffres();
+            $connection = $em->getConnection();
+
+            // ✅ AUTO-CALCUL DU DEVIS (max+1 de l'année en cours)
+            $annee = $data['appelOffreAnnee'] ?? (int)date('Y');
+            
+            $sql = 'SELECT MAX(CAST(appelOffreDevis AS UNSIGNED)) as maxDevis 
+                    FROM appel_offres 
+                    WHERE appelOffreAnnee = :annee 
+                    AND appelOffreDevis IS NOT NULL 
+                    AND appelOffreDevis != ""';
+            
+            $stmt = $connection->prepare($sql);
+            $result = $stmt->executeQuery(['annee' => $annee]);
+            $maxDevis = $result->fetchOne();
+            
+            $nouveauDevis = ($maxDevis ? (int)$maxDevis : 0) + 1;
+            $appel->setAppelOffreDevis((string)$nouveauDevis);
+            $appel->setAppelOffreAnnee($annee);
+
+            // ✅ AUTO-CALCUL DU DEVIS PARTICIPATION (si participation = Oui)
+            $participation = isset($data['appelOffresParticipation']) ? (int)$data['appelOffresParticipation'] : 0;
+
+            if ($participation === 1 && !empty($data['appelOffresDateParticipation'])) {
+                // Extraire l'année de la date de participation
+                $dateParticipation = new \DateTime($data['appelOffresDateParticipation']);
+                $anneeParticipation = (int)$dateParticipation->format('Y');
+                
+                // Requête SQL pour trouver le max des devis participation de cette année
+                $sqlParticipation = 'SELECT MAX(CAST(appelOffresNumeroDevisParticipation AS UNSIGNED)) as maxDevisParticipation 
+                                     FROM appel_offres 
+                                     WHERE YEAR(appelOffresDateParticipation) = :anneeParticipation 
+                                     AND appelOffresNumeroDevisParticipation IS NOT NULL 
+                                     AND appelOffresNumeroDevisParticipation != ""';
+                
+                $stmtParticipation = $connection->prepare($sqlParticipation);
+                $resultParticipation = $stmtParticipation->executeQuery(['anneeParticipation' => $anneeParticipation]);
+                $maxDevisParticipation = $resultParticipation->fetchOne();
+                
+                $nouveauDevisParticipation = ($maxDevisParticipation ? (int)$maxDevisParticipation : 0) + 1;
+                $appel->setAppelOffresNumeroDevisParticipation((string)$nouveauDevisParticipation);
+            } else {
+                // Si participation = Non, le devis participation reste NULL
+                $appel->setAppelOffresNumeroDevisParticipation(null);
+            }
 
             // Champs simples
             $appel->setAppelOffresObjet($data['appelOffresObjet'] ?? null);
-            $appel->setAppelOffreDevis($data['appelOffreDevis'] ?? null);
-            $appel->setAppelOffreAnnee($data['appelOffreAnnee'] ?? null);
             $appel->setAppelOffresCCRetire(isset($data['appelOffresCCRetire']) ? (int)$data['appelOffresCCRetire'] : null);
             $appel->setAppelOffresLienAnnonce($data['appelOffresLienAnnonce'] ?? null);
             $appel->setAppelOffresCautionBancaire(isset($data['appelOffresCautionBancaire']) ? (int)$data['appelOffresCautionBancaire'] : null);
             $appel->setAppelOffresTypeParticipationId($data['appelOffresTypeParticipationId'] ?? null);
             $appel->setAppelOffresRemarque($data['appelOffresRemarque'] ?? null);
-            $appel->setAppelOffresParticipation(isset($data['appelOffresParticipation']) ? (int)$data['appelOffresParticipation'] : null);
+            $appel->setAppelOffresParticipation($participation);
             $appel->setAppelOffresEtat($data['appelOffresEtat'] ?? null);
             $appel->setAppelOffresResultatRang(isset($data['appelOffresResultatRang']) ? (int)$data['appelOffresResultatRang'] : null);
             $appel->setAppelOffresResultatRangTotal(isset($data['appelOffresResultatRangTotal']) ? (int)$data['appelOffresResultatRangTotal'] : null);
-            $appel->setAppelOffresNumeroDevisParticipation($data['appelOffresNumeroDevisParticipation'] ?? null);
 
             // Dates/Heures
             $appel->setAppelOffreDateRemise(!empty($data['appelOffreDateRemise']) ? new \DateTime($data['appelOffreDateRemise']) : null);
@@ -112,6 +153,8 @@ class AppelOffresController extends AbstractController
             return new JsonResponse([
                 'message' => 'AppelOffres créé avec succès',
                 'id' => $appel->getAppelOffresId(),
+                'devis' => $appel->getAppelOffreDevis(),
+                'devisParticipation' => $appel->getAppelOffresNumeroDevisParticipation(),
                 'data' => $this->serializeAppelOffres($appel),
             ], Response::HTTP_CREATED);
 
@@ -227,6 +270,13 @@ class AppelOffresController extends AbstractController
             }
         }
 
+        // ✅ Extraire les entités relations pour accéder aux libellés
+        $type = $appel->getAppelOffresTypeId();
+        $moyen = $appel->getAppelOffresMoyenLivraisonId();
+        $pays = $appel->getAppelOffresPaysId();
+        $organisme = $appel->getAppelOffresOrganismeDemandeurId();
+        $devise = $appel->getAppelOffresDevisesId();
+
         return [
             'appelOffresId' => $appel->getAppelOffresId(),
             'appelOffreDevis' => $appel->getAppelOffreDevis(),
@@ -247,12 +297,22 @@ class AppelOffresController extends AbstractController
             'appelOffresNumeroDevisParticipation' => $appel->getAppelOffresNumeroDevisParticipation(),
             'appelOffreAnnee' => $appel->getAppelOffreAnnee(),
 
-            // Relations - Correction : utiliser les bons getters selon les entités
-            'appelOffresTypeId' => $appel->getAppelOffresTypeId()?->getAppelOffresTypeId(),
-            'appelOffresMoyenLivraisonId' => $appel->getAppelOffresMoyenLivraisonId()?->getMoyenLivraisonId(),
-            'appelOffresPaysId' => $appel->getAppelOffresPaysId()?->getPaysId(),
-            'appelOffresOrganismeDemandeurId' => $appel->getAppelOffresOrganismeDemandeurId()?->getId(),
-            'appelOffresDevisesId' => $appel->getAppelOffresDevisesId()?->getDevisesId(),
+            // Relations - IDs
+            'appelOffresTypeId' => $type?->getAppelOffresTypeId(),
+            'appelOffresMoyenLivraisonId' => $moyen?->getMoyenLivraisonId(),
+            'appelOffresPaysId' => $pays?->getPaysId(),
+            'appelOffresOrganismeDemandeurId' => $organisme?->getId(),
+            'appelOffresDevisesId' => $devise?->getDevisesId(),
+
+            // ✅ LIBELLÉS ENRICHIS (pour affichage dans le frontend)
+            'appelOffreTypeLibelle' => $type?->getAppelOffresTypeLibelle(),
+            'appelOffreTypeShort' => $type?->getAppelOffresTypeShort(),
+            'moyenLivraisonLibelle' => $moyen?->getMoyenLivraisonLibelle(),
+            'moyenLivraisonShort' => $moyen?->getMoyenLivraisonShort(),
+            'paysLibelle' => $pays?->getPaysLibelle(),
+            'organismeDemandeurLibelle' => $organisme?->getOrganismeDemandeurLibelle(),
+            'devisesLibelle' => $devise?->getDevisesLibelle(),
+            'devisesAcronyme' => $devise?->getDevisesAcronyme(),
 
             'partenaires' => $partenaires,
         ];
