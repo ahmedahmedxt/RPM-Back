@@ -41,28 +41,28 @@ class CategorieController extends AbstractController
         return new JsonResponse('Catégorie créée avec succès', Response::HTTP_CREATED);
     }
 
-#[Route('/api/getAll/categorie', name: 'api_categorie_get_all', methods: ['GET'])]
-public function index(EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
-{
-    //$this->checkToken($tokenStorage);
-    
-    // Récupérer les catégories triées par ordre alphabétique
-    $categories = $entityManager->getRepository(Categorie::class)->findBy([], ['categorieCodeRef' => 'ASC']);
-    
-    $data = [];
+    #[Route('/api/getAll/categorie', name: 'api_categorie_get_all', methods: ['GET'])]
+    public function index(EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
+    {
+        //$this->checkToken($tokenStorage);
+        
+        // Récupérer les catégories triées par ordre
+        $categories = $entityManager->getRepository(Categorie::class)->findBy([], ['categorieCodeRef' => 'ASC']);
+        
+        $data = [];
 
-    foreach ($categories as $categorie) {
-        $data[] = [
-            'categorieId' => $categorie->getId(),
-            'categorieLibelle' => $categorie->getCategorieLibelle(),
-            'categorieCodeRef' => $categorie->getCategorieCodeRef(),
-            'categorieCodeCouleur' => $categorie->getCategorieCodeCouleur(),
-            'categorieShort' => $categorie->getCategorieShort(),
-        ];
+        foreach ($categories as $categorie) {
+            $data[] = [
+                'categorieId' => $categorie->getId(),
+                'categorieLibelle' => $categorie->getCategorieLibelle(),
+                'categorieCodeRef' => $categorie->getCategorieCodeRef(),
+                'categorieCodeCouleur' => $categorie->getCategorieCodeCouleur(),
+                'categorieShort' => $categorie->getCategorieShort(),
+            ];
+        }
+
+        return new JsonResponse($data, Response::HTTP_OK);
     }
-
-    return new JsonResponse($data, Response::HTTP_OK);
-}
 
     #[Route('/api/get/categorie/{id}', name: 'api_categorie_get', methods: ['GET'])]
     public function show(Categorie $categorie, TokenStorageInterface $tokenStorage): JsonResponse
@@ -80,33 +80,59 @@ public function index(EntityManagerInterface $entityManager, TokenStorageInterfa
     }
 
     #[Route('/api/put/categorie/{id}', name: 'api_categorie_update', methods: ['PUT'])]
-public function update(Request $request, Categorie $categorie, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
-{
-    //$this->checkToken($tokenStorage);
-    $data = json_decode($request->getContent(), true);
+    public function update(Request $request, Categorie $categorie, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
+    {
+        //$this->checkToken($tokenStorage);
+        $data = json_decode($request->getContent(), true);
 
-    $newCodeRef = $data['categorieCodeRef'];
-    $oldCodeRef = $categorie->getCategorieCodeRef();
+        $newCodeRef = $data['categorieCodeRef'];
+        $oldCodeRef = $categorie->getCategorieCodeRef();
 
-    // Vérifier si une autre catégorie a déjà le nouveau code
-    $otherCategorie = $entityManager->getRepository(Categorie::class)->findOneBy(['categorieCodeRef' => $newCodeRef]);
+        // Vérifier si une autre catégorie a déjà le nouveau code
+        $otherCategorie = $entityManager->getRepository(Categorie::class)->findOneBy(['categorieCodeRef' => $newCodeRef]);
 
-    if ($otherCategorie && $otherCategorie->getId() !== $categorie->getId()) {
-        // Échanger les codes
-        $otherCategorie->setCategorieCodeRef($oldCodeRef);
-        $entityManager->persist($otherCategorie);
+        if ($otherCategorie && $otherCategorie->getId() !== $categorie->getId()) {
+            // Échanger les codes
+            $otherCategorie->setCategorieCodeRef($oldCodeRef);
+            $entityManager->persist($otherCategorie);
+        }
+
+        $categorie->setCategorieLibelle($data['categorieLibelle']);
+        $categorie->setCategorieShort($data['categorieShort']);
+        $categorie->setCategorieCodeRef($newCodeRef);
+        $categorie->setCategorieCodeCouleur($data['categorieCodeCouleur']);
+
+        $entityManager->flush();
+
+        return new JsonResponse('Catégorie mise à jour avec succès', Response::HTTP_OK);
     }
 
-    $categorie->setCategorieLibelle($data['categorieLibelle']);
-    $categorie->setCategorieShort($data['categorieShort']);
-    $categorie->setCategorieCodeRef($newCodeRef);
-    $categorie->setCategorieCodeCouleur($data['categorieCodeCouleur']);
+    #[Route('/api/update/categorie/order', name: 'api_categorie_update_order', methods: ['PUT'])]
+    public function updateOrder(Request $request, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
+    {
+        //$this->checkToken($tokenStorage);
+        $data = json_decode($request->getContent(), true);
 
-    $entityManager->flush();
+        if (!is_array($data)) {
+            return new JsonResponse(['error' => 'Invalid data format'], Response::HTTP_BAD_REQUEST);
+        }
 
-    return new JsonResponse('Catégorie mise à jour avec succès', Response::HTTP_OK);
-}
+        foreach ($data as $item) {
+            if (!isset($item['id']) || !isset($item['position'])) {
+                continue;
+            }
 
+            $categorie = $entityManager->getRepository(Categorie::class)->find($item['id']);
+            if ($categorie) {
+                $categorie->setCategorieCodeRef($item['position']);
+                $entityManager->persist($categorie);
+            }
+        }
+
+        $entityManager->flush();
+
+        return new JsonResponse(['message' => 'Ordre mis à jour avec succès'], Response::HTTP_OK);
+    }
 
     #[Route('/api/delete/categorie/{id}', name: 'api_categorie_delete', methods: ['DELETE'])]
     public function delete(Categorie $categorie, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
@@ -128,6 +154,7 @@ public function update(Request $request, Categorie $categorie, EntityManagerInte
 
         return new JsonResponse('Catégorie supprimée avec succès', Response::HTTP_OK);
     }
+
     public function checkToken(TokenStorageInterface $tokenStorage): void
     {
         // Récupérer le token d'authentification de Symfony

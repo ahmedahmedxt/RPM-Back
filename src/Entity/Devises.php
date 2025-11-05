@@ -22,6 +22,9 @@ class Devises
     #[ORM\Column(type: "string", length: 10, nullable: true, name: "devisesAcronyme")]
     private ?string $devisesAcronyme = null;
 
+    #[ORM\Column(type: "string", length: 3, nullable: true, name: "deviseSymbole")]
+    private ?string $deviseSymbole = null;
+
     #[ORM\OneToMany(targetEntity: Reference::class, mappedBy: "devises")]
     private $references;
 
@@ -59,6 +62,17 @@ class Devises
     public function setDevisesAcronyme(?string $devisesAcronyme): self
     {
         $this->devisesAcronyme = $devisesAcronyme;
+        return $this;
+    }
+
+    public function getDeviseSymbole(): ?string
+    {
+        return $this->deviseSymbole;
+    }
+
+    public function setDeviseSymbole(?string $deviseSymbole): self
+    {
+        $this->deviseSymbole = $deviseSymbole;
         return $this;
     }
 

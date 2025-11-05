@@ -34,6 +34,7 @@ class DevisesController extends AbstractController
                 'devisesId' => $d->getDevisesId(),
                 'devisesLibelle' => $d->getDevisesLibelle(),
                 'devisesAcronyme' => $d->getDevisesAcronyme(),
+                'deviseSymbole' => $d->getDeviseSymbole(),
             ];
         }, $devises);
 
@@ -54,6 +55,7 @@ class DevisesController extends AbstractController
             'devisesId' => $d->getDevisesId(),
             'devisesLibelle' => $d->getDevisesLibelle(),
             'devisesAcronyme' => $d->getDevisesAcronyme(),
+            'deviseSymbole' => $d->getDeviseSymbole(),
         ];
 
         return new JsonResponse($data, Response::HTTP_OK);
@@ -73,6 +75,7 @@ class DevisesController extends AbstractController
         $dev = new Devises();
         $dev->setDevisesLibelle($data['devisesLibelle'] ?? null);
         $dev->setDevisesAcronyme($data['devisesAcronyme'] ?? null);
+        $dev->setDeviseSymbole($data['deviseSymbole'] ?? null);
 
         $this->entityManager->persist($dev);
         $this->entityManager->flush();
@@ -100,6 +103,9 @@ class DevisesController extends AbstractController
         }
         if (array_key_exists('devisesAcronyme', $data)) {
             $dev->setDevisesAcronyme($data['devisesAcronyme']);
+        }
+        if (array_key_exists('deviseSymbole', $data)) {
+            $dev->setDeviseSymbole($data['deviseSymbole']);
         }
 
         $this->entityManager->flush();
