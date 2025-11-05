@@ -82,7 +82,7 @@ class OrganismeDemandeurController extends AbstractController
     public function list(Request $request): JsonResponse
     {
         $page = max(1, (int) $request->query->get('page', 1));
-        $limit = max(1, min(100, (int) $request->query->get('limit', 50)));
+        $limit = max(1, min(100, (int) $request->query->get('limit', 10)));
         $offset = ($page - 1) * $limit;
 
         $repo = $this->em->getRepository(OrganismeDemandeur::class);
