@@ -60,6 +60,11 @@ class Pays
     {
         return $this->paysId;
     }
+    
+    public function getId(): ?int
+    {
+        return $this->getPaysId();
+    }
 
     public function getPaysLibelle(): ?string
     {

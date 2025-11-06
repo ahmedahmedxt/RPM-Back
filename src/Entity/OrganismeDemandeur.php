@@ -26,11 +26,12 @@ class OrganismeDemandeur
         return $this->organismeDemandeurId;
     }
 
-    #[ORM\Column(name: 'organismeDemandeurLibelle', length: 255, unique: true)]
-    #[Assert\NotBlank]
+    #[ORM\Column(name: 'organismeDemandeurLibelle', length: 255, unique: true, nullable: false)]
+    #[Assert\NotBlank(message: 'Le libellé est obligatoire.')]
     private ?string $organismeDemandeurLibelle = null;
 
-    #[ORM\Column(name: 'organismeDemandeurDescription', type: 'text', nullable: true)]
+    #[ORM\Column(name: 'organismeDemandeurDescription', type: 'text', nullable: false)]
+    #[Assert\NotBlank(message: 'La description est obligatoire.')]
     private ?string $organismeDemandeurDescription = null;
 
     #[ORM\Column(name: 'organismeDemandeurAcronyme', length: 100, nullable: true)]
@@ -39,20 +40,24 @@ class OrganismeDemandeur
     #[ORM\Column(name: 'organismeDemandeurLogo', length: 255, nullable: true)]
     private ?string $organismeDemandeurLogo = null;
 
-    #[ORM\Column(name: 'organismeDemandeurNomCoordinateur', length: 150, nullable: true)]
+    #[ORM\Column(name: 'organismeDemandeurNomCoordinateur', length: 150, nullable: false)]
+    #[Assert\NotBlank(message: 'Le nom du coordinateur est obligatoire.')]
     private ?string $organismeDemandeurNomCoordinateur = null;
 
-    #[ORM\Column(name: 'organismeDemandeurEmailCoordinateur', length: 180, nullable: true)]
+    #[ORM\Column(name: 'organismeDemandeurEmailCoordinateur', length: 180, nullable: false)]
+    #[Assert\NotBlank(message: 'L\'email du coordinateur est obligatoire.')]
     #[Assert\Email]
     private ?string $organismeDemandeurEmailCoordinateur = null;
 
-    #[ORM\Column(name: 'organismeDemandeurRaisonSocial', length: 255, nullable: true)]
+    #[ORM\Column(name: 'organismeDemandeurRaisonSocial', length: 255, nullable: false)]
+    #[Assert\NotBlank(message: 'La raison sociale est obligatoire.')]
     private ?string $organismeDemandeurRaisonSocial = null;
 
-    #[ORM\Column(name: 'organismeDemandeurRaisonSocialShort', length: 100, nullable: true)]
+    #[ORM\Column(name: 'organismeDemandeurRaisonSocialShort', length: 100, nullable: false)]
     private ?string $organismeDemandeurRaisonSocialShort = null;
 
-    #[ORM\Column(name: 'organismeDemandeurAdresse', length: 500, nullable: true)]
+    #[ORM\Column(name: 'organismeDemandeurAdresse', length: 500, nullable: false)]
+    #[Assert\NotBlank(message: 'L\'adresse est obligatoire.')]
     private ?string $organismeDemandeurAdresse = null;
 
     #[ORM\Column(name: 'organismeDemandeurPersonneContact1', length: 150, nullable: true)]
