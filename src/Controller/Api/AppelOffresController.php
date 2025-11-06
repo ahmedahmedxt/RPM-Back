@@ -85,11 +85,9 @@ class AppelOffresController extends AbstractController
             $participation = isset($data['appelOffresParticipation']) ? (int)$data['appelOffresParticipation'] : 0;
 
             if ($participation === 1 && !empty($data['appelOffresDateParticipation'])) {
-                // Extraire l'année de la date de participation
                 $dateParticipation = new \DateTime($data['appelOffresDateParticipation']);
                 $anneeParticipation = (int)$dateParticipation->format('Y');
                 
-                // Requête SQL pour trouver le max des devis participation de cette année
                 $sqlParticipation = 'SELECT MAX(CAST(appelOffresNumeroDevisParticipation AS UNSIGNED)) as maxDevisParticipation 
                                      FROM appel_offres 
                                      WHERE YEAR(appelOffresDateParticipation) = :anneeParticipation 
@@ -103,7 +101,6 @@ class AppelOffresController extends AbstractController
                 $nouveauDevisParticipation = ($maxDevisParticipation ? (int)$maxDevisParticipation : 0) + 1;
                 $appel->setAppelOffresNumeroDevisParticipation((string)$nouveauDevisParticipation);
             } else {
-                // Si participation = Non, le devis participation reste NULL
                 $appel->setAppelOffresNumeroDevisParticipation(null);
             }
 
@@ -145,6 +142,11 @@ class AppelOffresController extends AbstractController
             if (!empty($data['appelOffresDevisesId'])) {
                 $dev = $em->getRepository(Devises::class)->find($data['appelOffresDevisesId']);
                 if ($dev) { $appel->setAppelOffresDevisesId($dev); }
+            }
+            // ✅ NOUVEAU: Devise de caution
+            if (!empty($data['appelOffresCautionBancaireDeviseId'])) {
+                $cautionDev = $em->getRepository(Devises::class)->find($data['appelOffresCautionBancaireDeviseId']);
+                if ($cautionDev) { $appel->setAppelOffresCautionBancaireDeviseId($cautionDev); }
             }
 
             $em->persist($appel);
@@ -222,6 +224,11 @@ class AppelOffresController extends AbstractController
                 $d = !empty($data['appelOffresDevisesId']) ? $em->getRepository(Devises::class)->find($data['appelOffresDevisesId']) : null;
                 $appel->setAppelOffresDevisesId($d);
             }
+            // ✅ NOUVEAU: Devise de caution
+            if (array_key_exists('appelOffresCautionBancaireDeviseId', $data)) {
+                $cautionDev = !empty($data['appelOffresCautionBancaireDeviseId']) ? $em->getRepository(Devises::class)->find($data['appelOffresCautionBancaireDeviseId']) : null;
+                $appel->setAppelOffresCautionBancaireDeviseId($cautionDev);
+            }
 
             $em->flush();
 
@@ -270,12 +277,13 @@ class AppelOffresController extends AbstractController
             }
         }
 
-        // ✅ Extraire les entités relations pour accéder aux libellés
+        // ✅ Extraire les entités relations
         $type = $appel->getAppelOffresTypeId();
         $moyen = $appel->getAppelOffresMoyenLivraisonId();
         $pays = $appel->getAppelOffresPaysId();
         $organisme = $appel->getAppelOffresOrganismeDemandeurId();
         $devise = $appel->getAppelOffresDevisesId();
+        $cautionDevise = $appel->getAppelOffresCautionBancaireDeviseId();  // ✅ NOUVEAU
 
         return [
             'appelOffresId' => $appel->getAppelOffresId(),
@@ -303,8 +311,9 @@ class AppelOffresController extends AbstractController
             'appelOffresPaysId' => $pays?->getPaysId(),
             'appelOffresOrganismeDemandeurId' => $organisme?->getId(),
             'appelOffresDevisesId' => $devise?->getDevisesId(),
+            'appelOffresCautionBancaireDeviseId' => $cautionDevise?->getDevisesId(),  // ✅ NOUVEAU
 
-            // ✅ LIBELLÉS ENRICHIS (pour affichage dans le frontend)
+            // ✅ LIBELLÉS ENRICHIS
             'appelOffreTypeLibelle' => $type?->getAppelOffresTypeLibelle(),
             'appelOffreTypeShort' => $type?->getAppelOffresTypeShort(),
             'moyenLivraisonLibelle' => $moyen?->getMoyenLivraisonLibelle(),

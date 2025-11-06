@@ -44,6 +44,11 @@ class AppelOffres
     #[ORM\JoinColumn(name: "appelOffresDevisesId", referencedColumnName: "devisesId", nullable: true)]
     private ?Devises $appelOffresDevisesId = null;
 
+    // ✅ NOUVELLE RELATION POUR LA DEVISE DE CAUTION
+    #[ORM\ManyToOne(targetEntity: Devises::class)]
+    #[ORM\JoinColumn(name: "appelOffresCautionBancaireDeviseId", referencedColumnName: "devisesId", nullable: true)]
+    private ?Devises $appelOffresCautionBancaireDeviseId = null;
+
     #[ORM\OneToMany(mappedBy: 'appelOffres', targetEntity: AppelOffresPartenaire::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $appelOffresPartenaires;
 
@@ -132,6 +137,10 @@ class AppelOffres
     public function getAppelOffresDevisesId(): ?Devises { return $this->appelOffresDevisesId; }
     public function setAppelOffresDevisesId(?Devises $v): self { $this->appelOffresDevisesId = $v; return $this; }
 
+    // ✅ NOUVEAU GETTER/SETTER POUR LA DEVISE DE CAUTION
+    public function getAppelOffresCautionBancaireDeviseId(): ?Devises { return $this->appelOffresCautionBancaireDeviseId; }
+    public function setAppelOffresCautionBancaireDeviseId(?Devises $v): self { $this->appelOffresCautionBancaireDeviseId = $v; return $this; }
+
     public function getAppelOffresObjet(): ?string { return $this->appelOffresObjet; }
     public function setAppelOffresObjet(?string $v): self { $this->appelOffresObjet = $v; return $this; }
 
@@ -207,7 +216,7 @@ class AppelOffres
     }
 
     public function clearAppelOffresPartenaires(): self
- {
+    {
         $this->appelOffresPartenaires->clear();
         return $this;
     }
