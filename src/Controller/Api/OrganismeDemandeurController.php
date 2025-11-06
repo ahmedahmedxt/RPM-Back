@@ -141,8 +141,6 @@ class OrganismeDemandeurController extends AbstractController
         return $this->json($this->toArray($organisme), Response::HTTP_CREATED);
     }
 
-
-
     /**
      * Get all OrganismeDemandeur (supports ?page & ?limit)
      * GET /api/organisme-demandeurs
@@ -171,6 +169,28 @@ class OrganismeDemandeurController extends AbstractController
             'data' => $data,
         ], Response::HTTP_OK);
     }
+
+    /**
+     * Get all OrganismeDemandeur (for dropdowns)
+     * GET /api/organisme-demandeurs/all
+     */
+    #[Route("/all", name: "all", methods: ["GET"])]
+    public function all(): JsonResponse
+    {
+        $repo = $this->em->getRepository(OrganismeDemandeur::class);
+
+        $items = $repo->findBy([], ['organismeDemandeurLibelle' => 'ASC']);
+
+        $data = array_map(static function (OrganismeDemandeur $o) {
+            return [
+                'organismeDemandeurId' => $o->getOrganismeDemandeurId(),
+                'organismeDemandeurLibelle' => $o->getOrganismeDemandeurLibelle(),
+            ];
+        }, $items);
+
+        return $this->json($data, Response::HTTP_OK);
+    }
+
 
     /**
      * Get one OrganismeDemandeur
