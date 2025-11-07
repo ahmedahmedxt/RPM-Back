@@ -14,7 +14,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
-#[Route("/api/organisme-demandeurs", name:"api_organisme_demandeur_")]
+#[Route('/api/organisme-demandeurs', name: 'api_organisme_demandeur_')]
 class OrganismeDemandeurController extends AbstractController
 {
     private EntityManagerInterface $em;
@@ -26,105 +26,36 @@ class OrganismeDemandeurController extends AbstractController
         $this->validator = $validator;
     }
 
-    #[Route("", name: "create", methods: ["POST"])]
+    #[Route('', name: 'create', methods: ['POST'])]
     public function create(Request $request): JsonResponse
     {
-        $contentType = $request->headers->get('content-type') ?? '';
-        if (str_contains($contentType, 'application/json')) {
-            $data = json_decode($request->getContent(), true);
-        } else {
-            $data = $request->request->all();
-        }
-
+        $data = json_decode($request->getContent(), true);
         if (!is_array($data)) {
-            return $this->json(['error' => 'Invalid payload'], Response::HTTP_BAD_REQUEST);
+            return $this->json(['error' => 'Invalid JSON payload.'], Response::HTTP_BAD_REQUEST);
         }
 
-        $required = [
-            'organismeDemandeurLibelle',
-            'organismeDemandeurDescription',
-            'organismeDemandeurNomCoordinateur',
-            'organismeDemandeurEmailCoordinateur',
-            'organismeDemandeurRaisonSocial',
-            'organismeDemandeurRaisonSocialShort',
-            'organismeDemandeurAdresse',
-        ];
-
-        $missing = [];
-        foreach ($required as $k) {
-            if (!array_key_exists($k, $data) || $data[$k] === null || (is_string($data[$k]) && trim($data[$k]) === '')) {
-                $missing[] = $k;
+        $required = ['organismeDemandeurRaisonSociale', 'organismeDemandeurRaisonSocialeShort'];
+        foreach ($required as $key) {
+            if (empty($data[$key])) {
+                return $this->json([
+                    'errors' => [$key => 'This field is required.']
+                ], Response::HTTP_BAD_REQUEST);
             }
-        }
-        if (!empty($missing)) {
-            $errors = array_combine($missing, array_fill(0, count($missing), 'This field is required.'));
-            return $this->json(['errors' => $errors], Response::HTTP_BAD_REQUEST);
-        }
-
-        $libelle = $data['organismeDemandeurLibelle'];
-        $repo = $this->em->getRepository(OrganismeDemandeur::class);
-        if ($repo->findOneBy(['organismeDemandeurLibelle' => $libelle])) {
-            return $this->json(['error' => 'An organisme with this libelle already exists.'], Response::HTTP_CONFLICT);
         }
 
         $organisme = new OrganismeDemandeur();
-        $organisme->setOrganismeDemandeurLibelle($libelle);
 
         $this->mapScalars($organisme, $data);
 
         if (!empty($data['organismeDemandeurLogo']) && is_string($data['organismeDemandeurLogo'])) {
-            $base64 = $data['organismeDemandeurLogo'];
-
-            if (preg_match('#^data:(image/[^;]+);base64,#', $base64, $m)) {
-                $mime = $m[1];
-                $base64 = substr($base64, strpos($base64, ',') + 1);
-                $ext = explode('/', $mime)[1] ?? 'png';
-            } else {
-                $ext = 'png';
+            $publicPath = $this->saveBase64Logo($data['organismeDemandeurLogo']);
+            if ($publicPath === null) {
+                return $this->json(['error' => 'Invalid base64 image.'], Response::HTTP_BAD_REQUEST);
             }
-
-            $decoded = base64_decode($base64);
-            if ($decoded === false) {
-                return $this->json(['error' => 'Invalid base64 image for organismeDemandeurLogo.'], Response::HTTP_BAD_REQUEST);
-            }
-
-            $uploadsDir = $this->getParameter('uploads_directory') . '/organismes';
-            if (!is_dir($uploadsDir) && !@mkdir($uploadsDir, 0755, true) && !is_dir($uploadsDir)) {
-                return $this->json(['error' => 'Unable to create upload directory.'], Response::HTTP_INTERNAL_SERVER_ERROR);
-            }
-
-            $safeName = uniqid('org_', true) . '.' . $ext;
-            $filePath = rtrim($uploadsDir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $safeName;
-
-            try {
-                file_put_contents($filePath, $decoded);
-                $publicPath = '/uploads/organismes/' . $safeName;
-                $organisme->setOrganismeDemandeurLogo($publicPath);
-            } catch (\Throwable $e) {
-                return $this->json(['error' => 'Failed to save logo file: ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
-            }
+            $organisme->setOrganismeDemandeurLogo($publicPath);
         }
 
-        if (!empty($data['paysId'])) {
-            $pays = $this->em->getRepository(Pays::class)->find((int)$data['paysId']);
-            if ($pays) {
-                $organisme->setPays($pays);
-            }
-        }
-
-        if (!empty($data['nature_organisme_demendeur_id'])) {
-            $nature = $this->em->getRepository(NatureOrganismeDemendeur::class)->find((int)$data['nature_organisme_demendeur_id']);
-            if ($nature) {
-                $organisme->setNatureOrganismeDemendeur($nature);
-            }
-        }
-
-        if (!empty($data['secteur_activite_id'])) {
-            $secteur = $this->em->getRepository(SecteurActivite::class)->find((int)$data['secteur_activite_id']);
-            if ($secteur) {
-                $organisme->setSecteurActivite($secteur);
-            }
-        }
+        $this->setRelations($organisme, $data);
 
         $errors = $this->validator->validate($organisme);
         if (count($errors) > 0) {
@@ -141,11 +72,8 @@ class OrganismeDemandeurController extends AbstractController
         return $this->json($this->toArray($organisme), Response::HTTP_CREATED);
     }
 
-    /**
-     * Get all OrganismeDemandeur (supports ?page & ?limit)
-     * GET /api/organisme-demandeurs
-     */
-    #[Route("", name: "list", methods: ["GET"])]
+
+    #[Route('', name: 'list', methods: ['GET'])]
     public function list(Request $request): JsonResponse
     {
         $page = max(1, (int) $request->query->get('page', 1));
@@ -153,165 +81,56 @@ class OrganismeDemandeurController extends AbstractController
         $offset = ($page - 1) * $limit;
 
         $repo = $this->em->getRepository(OrganismeDemandeur::class);
-        $items = $repo->findBy([], ['organismeDemandeurLibelle' => 'ASC'], $limit, $offset);
+        $items = $repo->findBy([], ['organismeDemandeurRaisonSociale' => 'ASC'], $limit, $offset);
         $total = (int) $this->em->createQueryBuilder()
             ->select('COUNT(o)')
             ->from(OrganismeDemandeur::class, 'o')
             ->getQuery()
             ->getSingleScalarResult();
 
-        $data = array_map(fn(OrganismeDemandeur $o) => $this->toArray($o), $items);
-
         return $this->json([
             'page' => $page,
             'limit' => $limit,
             'total' => $total,
-            'data' => $data,
+            'data' => array_map(fn($o) => $this->toArray($o), $items),
         ], Response::HTTP_OK);
     }
 
-    /**
-     * Get all OrganismeDemandeur (for dropdowns)
-     * GET /api/organisme-demandeurs/all
-     */
-    #[Route("/all", name: "all", methods: ["GET"])]
+    #[Route('/all', name: 'all', methods: ['GET'])]
     public function all(): JsonResponse
     {
         $repo = $this->em->getRepository(OrganismeDemandeur::class);
+        $items = $repo->findBy([], ['organismeDemandeurRaisonSociale' => 'ASC']);
 
-        $items = $repo->findBy([], ['organismeDemandeurLibelle' => 'ASC']);
+        $data = array_map(fn(OrganismeDemandeur $o) => [
+            'organismeDemandeurId' => $o->getOrganismeDemandeurId(),
+            'organismeDemandeurRaisonSociale' => $o->getOrganismeDemandeurRaisonSociale(),
+        ], $items);
 
-        $data = array_map(static function (OrganismeDemandeur $o) {
-            return [
-                'organismeDemandeurId' => $o->getOrganismeDemandeurId(),
-                'organismeDemandeurLibelle' => $o->getOrganismeDemandeurLibelle(),
-            ];
-        }, $items);
-
-        return $this->json($data, Response::HTTP_OK);
+        return $this->json($data);
     }
 
-
-    /**
-     * Get one OrganismeDemandeur
-     * GET /api/organisme-demandeurs/{id}
-     */
-    #[Route("/{id}", name: "get", methods: ["GET"])]
+    #[Route('/{id}', name: 'get', methods: ['GET'])]
     public function getOne(OrganismeDemandeur $organismeDemandeur): JsonResponse
     {
-        return $this->json($this->toArray($organismeDemandeur), Response::HTTP_OK);
+        return $this->json($this->toArray($organismeDemandeur));
     }
 
-    #[Route("/{id}", name: "update", methods: ["PUT","POST"])]
+    #[Route('/{id}', name: 'update', methods: ['PUT', 'POST'])]
     public function update(Request $request, OrganismeDemandeur $organismeDemandeur): JsonResponse
     {
-        $contentType = $request->headers->get('content-type') ?? '';
-
-        if (stripos($contentType, 'application/json') !== false) {
-            $data = json_decode($request->getContent(), true);
-        } else {
-            $data = $request->request->all();
-        }
-
+        $data = json_decode($request->getContent(), true);
         if (!is_array($data)) {
-            return $this->json(['error' => 'Invalid payload'], Response::HTTP_BAD_REQUEST);
-        }
-
-        if (array_key_exists('organismeDemandeurLibelle', $data)) {
-            $newLib = trim((string)$data['organismeDemandeurLibelle']);
-            if ($newLib !== $organismeDemandeur->getOrganismeDemandeurLibelle()) {
-                $exists = $this->em->getRepository(OrganismeDemandeur::class)
-                            ->findOneBy(['organismeDemandeurLibelle' => $newLib]);
-                if ($exists && $exists->getOrganismeDemandeurId() !== $organismeDemandeur->getOrganismeDemandeurId()) {
-                    return $this->json(['error' => 'Another organisme with this libelle already exists.'], Response::HTTP_CONFLICT);
-                }
-            }
-            $organismeDemandeur->setOrganismeDemandeurLibelle($newLib);
+            return $this->json(['error' => 'Invalid JSON payload.'], Response::HTTP_BAD_REQUEST);
         }
 
         $this->mapScalars($organismeDemandeur, $data);
+        $this->setRelations($organismeDemandeur, $data);
 
-        $this->setRelationsFromData($organismeDemandeur, $data);
-
-        /** @var UploadedFile|null $logoFile */
-        $logoFile = $request->files->get('organismeDemandeurLogo');
-
-        $removeLogo = false;
-        if (array_key_exists('removeLogo', $data)) {
-            $rv = $data['removeLogo'];
-            $removeLogo = ($rv === true || $rv === '1' || $rv === 1 || $rv === 'true' || $rv === 'on');
-        }
-
-        $uploadsDir = rtrim($this->getParameter('uploads_directory'), '/\\') . '/organismes';
-        if (!is_dir($uploadsDir)) {
-            @mkdir($uploadsDir, 0755, true);
-        }
-
-        $deleteOldLogo = function (?string $oldPath) {
-            if (!$oldPath) {
-                return;
-            }
-            $abs = $this->getParameter('kernel.project_dir') . '/public' . $oldPath;
-            if (is_file($abs)) {
-                @unlink($abs);
-            }
-        };
-
-        if ($logoFile instanceof UploadedFile) {
-            $safeName = uniqid('org_', true) . '.' . ($logoFile->guessExtension() ?: 'png');
-            try {
-                $logoFile->move($uploadsDir, $safeName);
-                $old = $organismeDemandeur->getOrganismeDemandeurLogo();
-                $deleteOldLogo($old);
-                $organismeDemandeur->setOrganismeDemandeurLogo('/uploads/organismes/' . $safeName);
-            } catch (\Throwable $e) {
-                return $this->json(['error' => 'Failed to upload file: ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
-            }
-        } else {
-            if (!empty($data['organismeDemandeurLogo']) && is_string($data['organismeDemandeurLogo'])) {
-                $base64 = $data['organismeDemandeurLogo'];
-
-                $ext = 'png';
-                if (preg_match('#^data:(image/[^;]+);base64,#', $base64, $m)) {
-                    $mime = $m[1];
-                    $base64 = substr($base64, strpos($base64, ',') + 1);
-                    $parts = explode('/', $mime);
-                    if (isset($parts[1])) {
-                        $ext = preg_replace('/[^a-z0-9]+/i', '', $parts[1]);
-                    }
-                } else {
-                    $decodedTest = base64_decode($base64, true);
-                    if ($decodedTest !== false) {
-                        $finfo = new \finfo(FILEINFO_MIME_TYPE);
-                        $mimeType = $finfo->buffer($decodedTest);
-                        if ($mimeType && str_starts_with($mimeType, 'image/')) {
-                            $parts = explode('/', $mimeType);
-                            $ext = $parts[1] ?? $ext;
-                        }
-                        unset($decodedTest);
-                    }
-                }
-
-                $decoded = base64_decode($base64, true);
-                if ($decoded === false) {
-                    return $this->json(['error' => 'Invalid base64 image for organismeDemandeurLogo.'], Response::HTTP_BAD_REQUEST);
-                }
-
-                $safeName = uniqid('org_', true) . '.' . $ext;
-                $filePath = rtrim($uploadsDir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $safeName;
-
-                try {
-                    file_put_contents($filePath, $decoded);
-                    $old = $organismeDemandeur->getOrganismeDemandeurLogo();
-                    $deleteOldLogo($old);
-                    $organismeDemandeur->setOrganismeDemandeurLogo('/uploads/organismes/' . $safeName);
-                } catch (\Throwable $e) {
-                    return $this->json(['error' => 'Failed to save logo file: ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
-                }
-            } elseif ($removeLogo) {
-                $old = $organismeDemandeur->getOrganismeDemandeurLogo();
-                $deleteOldLogo($old);
-                $organismeDemandeur->setOrganismeDemandeurLogo(null);
+        if (!empty($data['organismeDemandeurLogo']) && is_string($data['organismeDemandeurLogo'])) {
+            $publicPath = $this->saveBase64Logo($data['organismeDemandeurLogo']);
+            if ($publicPath) {
+                $organismeDemandeur->setOrganismeDemandeurLogo($publicPath);
             }
         }
 
@@ -326,66 +145,43 @@ class OrganismeDemandeurController extends AbstractController
 
         $this->em->flush();
 
-        return $this->json($this->toArray($organismeDemandeur), Response::HTTP_OK);
+        return $this->json($this->toArray($organismeDemandeur));
     }
 
-
-
-    /**
-     * Delete an OrganismeDemandeur
-     * DELETE /api/organisme-demandeurs/{id}
-     *
-     * Behavior:
-     * - If no AppelOffres linked, deletes it directly
-     * - If AppelOffres exist, set their FK to null, persist them, then remove the organisme
-     */
-    #[Route("/{id}", name: "delete", methods: ["DELETE"])]
+    #[Route('/{id}', name: 'delete', methods: ['DELETE'])]
     public function delete(OrganismeDemandeur $organismeDemandeur): JsonResponse
     {
-        // Dereference appelOffres if any
-        $appelOffres = $organismeDemandeur->getAppelOffres();
-        if (!$appelOffres->isEmpty()) {
-            foreach ($appelOffres as $appel) {
-                // keep same property name your colleague uses
-                $appel->setAppelOffresOrganismeDemandeurId(null);
-                $this->em->persist($appel);
-            }
-            $this->em->flush();
+        foreach ($organismeDemandeur->getAppelOffres() as $appel) {
+            $appel->setAppelOffresOrganismeDemandeurId(null);
+            $this->em->persist($appel);
         }
-
         $this->em->remove($organismeDemandeur);
         $this->em->flush();
 
-        return $this->json(['message' => 'OrganismeDemandeur deleted.'], Response::HTTP_OK);
+        return $this->json(['message' => 'OrganismeDemandeur deleted.']);
     }
 
-    // -----------------------
-    // Helpers
-    // -----------------------
-
-    /**
-     * Map scalar fields (strings) from input data to the entity
-     * Accepts keys matching your entity column names.
-     */
     private function mapScalars(OrganismeDemandeur $o, array $data): void
     {
         $map = [
+            'organismeDemandeurRaisonSociale' => 'setOrganismeDemandeurRaisonSociale',
+            'organismeDemandeurRaisonSocialeShort' => 'setOrganismeDemandeurRaisonSocialeShort',
             'organismeDemandeurDescription' => 'setOrganismeDemandeurDescription',
-            'organismeDemandeurAcronyme' => 'setOrganismeDemandeurAcronyme',
-            'organismeDemandeurLogo' => 'setOrganismeDemandeurLogo',
-            'organismeDemandeurNomCoordinateur' => 'setOrganismeDemandeurNomCoordinateur',
-            'organismeDemandeurEmailCoordinateur' => 'setOrganismeDemandeurEmailCoordinateur',
-            'organismeDemandeurRaisonSocial' => 'setOrganismeDemandeurRaisonSocial',
-            'organismeDemandeurRaisonSocialShort' => 'setOrganismeDemandeurRaisonSocialShort',
+            'organismeDemandeurCoordinateurPrenomNom' => 'setOrganismeDemandeurCoordinateurPrenomNom',
+            'organismeDemandeurCoordinateurEmail' => 'setOrganismeDemandeurCoordinateurEmail',
+            'organismeDemandeurCoordinateurTel' => 'setOrganismeDemandeurCoordinateurTel',
             'organismeDemandeurAdresse' => 'setOrganismeDemandeurAdresse',
-            'organismeDemandeurPersonneContact1' => 'setOrganismeDemandeurPersonneContact1',
-            'organismeDemandeurPersonneTelephonne1' => 'setOrganismeDemandeurPersonneTelephonne1',
-            'organismeDemandeurPersonneContact2' => 'setOrganismeDemandeurPersonneContact2',
-            'organismeDemandeurTelephone2' => 'setOrganismeDemandeurTelephone2',
-            'organismeDemandeurEmail2' => 'setOrganismeDemandeurEmail2',
-            'organismeDemandeurPersonneContact3' => 'setOrganismeDemandeurPersonneContact3',
-            'organismeDemandeurTelephone3' => 'setOrganismeDemandeurTelephone3',
-            'organismeDemandeurEmail3' => 'setOrganismeDemandeurEmail3',
+            'organismeDemandeurTelephone' => 'setOrganismeDemandeurTelephone',
+            'organismeDemandeurEmail' => 'setOrganismeDemandeurEmail',
+            'organismeDemandeurPersonneContactPrenomNom1' => 'setOrganismeDemandeurPersonneContactPrenomNom1',
+            'organismeDemandeurPersonneContactTelephonne1' => 'setOrganismeDemandeurPersonneContactTelephonne1',
+            'organismeDemandeurPersonneContactEmail1' => 'setOrganismeDemandeurPersonneContactEmail1',
+            'organismeDemandeurPersonneContactPrenomNom2' => 'setOrganismeDemandeurPersonneContactPrenomNom2',
+            'organismeDemandeurPersonneContactTelephone2' => 'setOrganismeDemandeurPersonneContactTelephone2',
+            'organismeDemandeurPersonneContactEmail2' => 'setOrganismeDemandeurPersonneContactEmail2',
+            'organismeDemandeurPersonneContactPrenomNom3' => 'setOrganismeDemandeurPersonneContactPrenomNom3',
+            'organismeDemandeurPersonneContactTelephone3' => 'setOrganismeDemandeurPersonneContactTelephone3',
+            'organismeDemandeurPersonneContactEmail3' => 'setOrganismeDemandeurPersonneContactEmail3',
         ];
 
         foreach ($map as $key => $setter) {
@@ -395,85 +191,77 @@ class OrganismeDemandeurController extends AbstractController
         }
     }
 
-    /**
-     * Set relations (Pays, NatureOrganismeDemendeur, SecteurActivite) if provided by id.
-     * Accepts keys: paysId, natureOrganismeDemendeurId, secteurActiviteId
-     */
-    private function setRelationsFromData(OrganismeDemandeur $o, array $data): void
+    private function setRelations(OrganismeDemandeur $o, array $data): void
     {
-        // Pays
-        if (array_key_exists('paysId', $data)) {
-            $pays = null;
-            if ($data['paysId'] !== null) {
-                $pays = $this->em->getRepository(Pays::class)->find($data['paysId']);
-                if (!$pays) {
-                    throw new \InvalidArgumentException(sprintf('Pays with id %s not found', $data['paysId']));
-                }
-            }
+        if (!empty($data['paysId'])) {
+            $pays = $this->em->getRepository(Pays::class)->find($data['paysId']);
             $o->setPays($pays);
         }
 
-        // NatureOrganismeDemendeur
-        if (array_key_exists('natureOrganismeDemendeurId', $data)) {
-            $nature = null;
-            if ($data['natureOrganismeDemendeurId'] !== null) {
-                $nature = $this->em->getRepository(NatureOrganismeDemendeur::class)->find($data['natureOrganismeDemendeurId']);
-                if (!$nature) {
-                    throw new \InvalidArgumentException(sprintf('NatureOrganismeDemendeur with id %s not found', $data['natureOrganismeDemendeurId']));
-                }
-            }
+        if (!empty($data['natureOrganismeDemendeurId'])) {
+            $nature = $this->em->getRepository(NatureOrganismeDemendeur::class)->find($data['natureOrganismeDemendeurId']);
             $o->setNatureOrganismeDemendeur($nature);
         }
 
-        // SecteurActivite
-        if (array_key_exists('secteurActiviteId', $data)) {
-            $secteur = null;
-            if ($data['secteurActiviteId'] !== null) {
-                $secteur = $this->em->getRepository(SecteurActivite::class)->find($data['secteurActiviteId']);
-                if (!$secteur) {
-                    throw new \InvalidArgumentException(sprintf('SecteurActivite with id %s not found', $data['secteurActiviteId']));
-                }
-            }
+        if (!empty($data['secteurActiviteId'])) {
+            $secteur = $this->em->getRepository(SecteurActivite::class)->find($data['secteurActiviteId']);
             $o->setSecteurActivite($secteur);
         }
     }
 
-    /**
-     * Convert entity to array for JSON responses (explicit fields only)
-     */
+    private function saveBase64Logo(string $base64): ?string
+    {
+        if (preg_match('#^data:(image/[^;]+);base64,#', $base64, $m)) {
+            $mime = $m[1];
+            $base64 = substr($base64, strpos($base64, ',') + 1);
+            $ext = explode('/', $mime)[1] ?? 'png';
+        } else {
+            $ext = 'png';
+        }
+
+        $decoded = base64_decode($base64, true);
+        if ($decoded === false) {
+            return null;
+        }
+
+        $uploadsDir = rtrim($this->getParameter('uploads_directory'), '/\\') . '/organismes';
+        if (!is_dir($uploadsDir)) {
+            @mkdir($uploadsDir, 0755, true);
+        }
+
+        $safeName = uniqid('org_', true) . '.' . $ext;
+        $path = $uploadsDir . '/' . $safeName;
+        file_put_contents($path, $decoded);
+
+        return '/uploads/organismes/' . $safeName;
+    }
+
     private function toArray(OrganismeDemandeur $o): array
     {
         return [
-            'organismeDemandeurId' => $o->getOrganismeDemandeurId() ?? $o->getId(),
-            'organismeDemandeurLibelle' => $o->getOrganismeDemandeurLibelle(),
+            'organismeDemandeurId' => $o->getOrganismeDemandeurId(),
+            'organismeDemandeurRaisonSociale' => $o->getOrganismeDemandeurRaisonSociale(),
+            'organismeDemandeurRaisonSocialeShort' => $o->getOrganismeDemandeurRaisonSocialeShort(),
             'organismeDemandeurDescription' => $o->getOrganismeDemandeurDescription(),
-            'organismeDemandeurAcronyme' => $o->getOrganismeDemandeurAcronyme(),
             'organismeDemandeurLogo' => $o->getOrganismeDemandeurLogo(),
-            'organismeDemandeurNomCoordinateur' => $o->getOrganismeDemandeurNomCoordinateur(),
-            'organismeDemandeurEmailCoordinateur' => $o->getOrganismeDemandeurEmailCoordinateur(),
-            'organismeDemandeurRaisonSocial' => $o->getOrganismeDemandeurRaisonSocial(),
-            'organismeDemandeurRaisonSocialShort' => $o->getOrganismeDemandeurRaisonSocialShort(),
+            'organismeDemandeurCoordinateurPrenomNom' => $o->getOrganismeDemandeurCoordinateurPrenomNom(),
+            'organismeDemandeurCoordinateurEmail' => $o->getOrganismeDemandeurCoordinateurEmail(),
+            'organismeDemandeurCoordinateurTel' => $o->getOrganismeDemandeurCoordinateurTel(),
             'organismeDemandeurAdresse' => $o->getOrganismeDemandeurAdresse(),
-            'organismeDemandeurPersonneContact1' => $o->getOrganismeDemandeurPersonneContact1(),
-            'organismeDemandeurPersonneTelephonne1' => $o->getOrganismeDemandeurPersonneTelephonne1(),
-            'organismeDemandeurPersonneContact2' => $o->getOrganismeDemandeurPersonneContact2(),
-            'organismeDemandeurTelephone2' => $o->getOrganismeDemandeurTelephone2(),
-            'organismeDemandeurEmail2' => $o->getOrganismeDemandeurEmail2(),
-            'organismeDemandeurPersonneContact3' => $o->getOrganismeDemandeurPersonneContact3(),
-            'organismeDemandeurTelephone3' => $o->getOrganismeDemandeurTelephone3(),
-            'organismeDemandeurEmail3' => $o->getOrganismeDemandeurEmail3(),
-            'pays' => $o->getPays() ? [
-                'paysId' => $o->getPays()->getPaysId(),
-                'paysLibelle' => $o->getPays()->getPaysLibelle(),
-            ] : null,
-            'natureOrganismeDemendeur' => $o->getNatureOrganismeDemendeur() ? [
-                'id' => $o->getNatureOrganismeDemendeur()->getNatureOrganismeDemendeurId(),
-                'libelle' => $o->getNatureOrganismeDemendeur()->getNatureOrganismeDemendeurLibelle(),
-            ] : null,
-            'secteurActivite' => $o->getSecteurActivite() ? [
-                'secteurActiviteId' => $o->getSecteurActivite()->getSecteurActiviteId(),
-                'secteurActiviteLibelle' => $o->getSecteurActivite()->getSecteurActiviteLibelle(),
-            ] : null,
+            'organismeDemandeurTelephone' => $o->getOrganismeDemandeurTelephone(),
+            'organismeDemandeurEmail' => $o->getOrganismeDemandeurEmail(),
+            'organismeDemandeurPersonneContactPrenomNom1' => $o->getOrganismeDemandeurPersonneContactPrenomNom1(),
+            'organismeDemandeurPersonneContactTelephonne1' => $o->getOrganismeDemandeurPersonneContactTelephonne1(),
+            'organismeDemandeurPersonneContactEmail1' => $o->getOrganismeDemandeurPersonneContactEmail1(),
+            'organismeDemandeurPersonneContactPrenomNom2' => $o->getOrganismeDemandeurPersonneContactPrenomNom2(),
+            'organismeDemandeurPersonneContactTelephone2' => $o->getOrganismeDemandeurPersonneContactTelephone2(),
+            'organismeDemandeurPersonneContactEmail2' => $o->getOrganismeDemandeurPersonneContactEmail2(),
+            'organismeDemandeurPersonneContactPrenomNom3' => $o->getOrganismeDemandeurPersonneContactPrenomNom3(),
+            'organismeDemandeurPersonneContactTelephone3' => $o->getOrganismeDemandeurPersonneContactTelephone3(),
+            'organismeDemandeurPersonneContactEmail3' => $o->getOrganismeDemandeurPersonneContactEmail3(),
+            'pays' => $o->getPays()?->getPaysLibelle(),
+            'natureOrganismeDemendeur' => $o->getNatureOrganismeDemendeur()?->getNatureOrganismeDemendeurLibelle(),
+            'secteurActivite' => $o->getSecteurActivite()?->getSecteurActiviteLibelle(),
         ];
     }
 }
