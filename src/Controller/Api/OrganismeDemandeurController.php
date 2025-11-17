@@ -3,125 +3,346 @@
 namespace App\Controller\Api;
 
 use App\Entity\OrganismeDemandeur;
+use App\Entity\Pays;
+use App\Entity\NatureOrganismeDemendeur;
+use App\Entity\SecteurActivite;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
-use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\Security\Core\Security;
-use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
-use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
-use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
+#[Route('/api/organisme-demandeurs', name: 'api_organisme_demandeur_')]
 class OrganismeDemandeurController extends AbstractController
 {
-    
-    #[Route('/api/create/organisme-demandeurs', name: 'api_organisme_demandeur_create', methods: ['POST'])]
-    public function create(Request $request, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
+    private EntityManagerInterface $em;
+    private ValidatorInterface $validator;
+
+    public function __construct(EntityManagerInterface $em, ValidatorInterface $validator)
     {
-        //$this->checkToken($tokenStorage);
-        $data = json_decode($request->getContent(), true);
-
-        // Vérifier si l'organisme demandeur existe déjà
-        $existingOrganismeDemandeur = $entityManager->getRepository(OrganismeDemandeur::class)->findOneBy(['organismeDemandeurLibelle' => $data['organismeDemandeurLibelle'] ?? null]);
-        if ($existingOrganismeDemandeur !== null) {
-            return new JsonResponse('L\'organisme demandeur existe déjà', Response::HTTP_CONFLICT);
-        }
-
-        // Créer un nouvel organisme demandeur
-        $organismeDemandeur = new OrganismeDemandeur();
-        $organismeDemandeur->setOrganismeDemandeurLibelle($data['organismeDemandeurLibelle'] ?? null);
-
-        $entityManager->persist($organismeDemandeur);
-        $entityManager->flush();
-
-        return new JsonResponse('Organisme demandeur créé avec succès', Response::HTTP_CREATED);
+        $this->em = $em;
+        $this->validator = $validator;
     }
 
-    #[Route('/api/getAll/organisme-demandeurs', name: 'api_organisme_demandeur_get_all', methods: ['GET'])]
-    public function getAll(EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
+    #[Route('', name: 'create', methods: ['POST'])]
+    public function create(Request $request): JsonResponse
     {
-        //$this->checkToken($tokenStorage);
-        
-        // Récupérer les organismes demandeurs triés par libellé
-        $organismeDemandeurRepository = $entityManager->getRepository(OrganismeDemandeur::class);
-        $organismeDemandeurs = $organismeDemandeurRepository->findBy([], ['organismeDemandeurLibelle' => 'ASC']);
-        
-        $data = [];
-        foreach ($organismeDemandeurs as $organismeDemandeur) {
-            $data[] = [
-                'organismeDemandeurId' => $organismeDemandeur->getId(),
-                'organismeDemandeurLibelle' => $organismeDemandeur->getOrganismeDemandeurLibelle(),
-            ];
-        }
-    
-        return new JsonResponse($data, Response::HTTP_OK);
-    }
+        $contentType = $request->headers->get('content-type') ?? '';
+        $data = null;
 
-    #[Route('/api/get/organisme-demandeurs/{id}', name: 'api_organisme_demandeur_get', methods: ['GET'])]
-    public function getOne(OrganismeDemandeur $organismeDemandeur, TokenStorageInterface $tokenStorage): JsonResponse
-    {
-        //$this->checkToken($tokenStorage);
-        $data = [
-            'organismeDemandeurId' => $organismeDemandeur->getId(),
-            'organismeDemandeurLibelle' => $organismeDemandeur->getOrganismeDemandeurLibelle(),
+        if (stripos($contentType, 'application/json') !== false) {
+            $data = json_decode($request->getContent(), true);
+        } else {
+            $data = $request->request->all();
+        }
+
+        if (!is_array($data)) {
+            return $this->json(['error' => 'Invalid payload (expected JSON or form-data)'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $required = ['organismeDemandeurRaisonSociale', 'organismeDemandeurRaisonSocialeShort'];
+        $aliases = [
+            'organismeDemandeurRaisonSociale' => ['organismeDemandeurRaisonSociale', 'organisme_demandeur_raison_sociale', 'organismeDemandeurRaisonSocial'],
+            'organismeDemandeurRaisonSocialeShort' => ['organismeDemandeurRaisonSocialeShort', 'organisme_demandeur_raison_sociale_short', 'organismeDemandeurRaisonSocialShort'],
         ];
 
-        return new JsonResponse($data, Response::HTTP_OK);
-    }
-
-    #[Route('/api/put/organisme-demandeurs/{id}', name: 'api_organisme_demandeur_update', methods: ['PUT'])]
-    public function update(Request $request, OrganismeDemandeur $organismeDemandeur, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
-    {
-        //$this->checkToken($tokenStorage);
-        $data = json_decode($request->getContent(), true);
-
-        if (array_key_exists('organismeDemandeurLibelle', $data)) {
-            $organismeDemandeur->setOrganismeDemandeurLibelle($data['organismeDemandeurLibelle']);
-        }
-
-        $entityManager->flush();
-
-        return new JsonResponse('Organisme demandeur mis à jour avec succès', Response::HTTP_OK);
-    }
-
-    #[Route('/api/delete/organisme-demandeurs/{id}', name: 'api_organisme_demandeur_delete', methods: ['DELETE'])]
-    public function delete(OrganismeDemandeur $organismeDemandeur, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
-    {
-        //$this->checkToken($tokenStorage);
-        
-        // Vérifier s'il y a des AppelOffres associés à cet OrganismeDemandeur
-        if ($organismeDemandeur->getAppelOffres()->isEmpty()) {
-            // Aucun AppelOffres associé, supprimer l'entité
-            $entityManager->remove($organismeDemandeur);
-            $entityManager->flush();
-            
-            return new JsonResponse('Organisme demandeur supprimé avec succès', Response::HTTP_OK);
-        } else {
-            // Déréférencer côté AppelOffres puis supprimer l'OrganismeDemandeur
-            foreach ($organismeDemandeur->getAppelOffres() as $appel) {
-                $appel->setAppelOffresOrganismeDemandeurId(null);
-                $entityManager->persist($appel);
+        $missing = [];
+        foreach ($aliases as $fieldKey => $names) {
+            $ok = false;
+            foreach ($names as $n) {
+                if (array_key_exists($n, $data) && $data[$n] !== null && ( !is_string($data[$n]) || trim((string)$data[$n]) !== '' )) {
+                    $ok = true;
+                    $data[$fieldKey] = $data[$n];
+                    break;
+                }
             }
-            $entityManager->flush();
-            
-            $entityManager->remove($organismeDemandeur);
-            $entityManager->flush();
-            
-            return new JsonResponse('Les références à l\'organisme demandeur ont été supprimées des Appels d\'offres associés, et l\'organisme demandeur a été supprimé avec succès.', Response::HTTP_OK);
+            if (!$ok) {
+                $missing[] = $fieldKey;
+            }
+        }
+
+        if (!empty($missing)) {
+            $errors = array_combine($missing, array_fill(0, count($missing), 'This field is required.'));
+            return $this->json(['errors' => $errors], Response::HTTP_BAD_REQUEST);
+        }
+
+        $organisme = new OrganismeDemandeur();
+
+        $this->mapScalars($organisme, $data);
+
+        $logoFile = $request->files->get('organismeDemandeurLogo') ?: $request->files->get('organismeDemandeurLogo');
+        if ($logoFile) {
+            // UploadedFile handling
+            $uploadsDir = rtrim($this->getParameter('uploads_directory'), '/\\') . '/organismes';
+            if (!is_dir($uploadsDir)) {
+                @mkdir($uploadsDir, 0755, true);
+            }
+            $safeName = uniqid('org_', true) . '.' . ($logoFile->guessExtension() ?: 'png');
+            try {
+                $logoFile->move($uploadsDir, $safeName);
+                $organisme->setOrganismeDemandeurLogo('/uploads/organismes/' . $safeName);
+            } catch (\Throwable $e) {
+                return $this->json(['error' => 'Failed to store uploaded logo: '.$e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
+            }
+        } else {
+            // check base64 field (accept snake_case too)
+            $base64Key = $data['organismeDemandeurLogo'] ?? $data['organismeDemandeurLogo'] ?? null;
+            if (!empty($base64Key) && is_string($base64Key)) {
+                $publicPath = $this->saveBase64Logo($base64Key);
+                if ($publicPath === null) {
+                    return $this->json(['error' => 'Invalid base64 image.'], Response::HTTP_BAD_REQUEST);
+                }
+                $organisme->setOrganismeDemandeurLogo($publicPath);
+            }
+        }
+
+        $this->setRelations($organisme, $data);
+
+        $errors = $this->validator->validate($organisme);
+        if (count($errors) > 0) {
+            $payload = [];
+            foreach ($errors as $err) {
+                $payload[$err->getPropertyPath()] = $err->getMessage();
+            }
+            return $this->json(['errors' => $payload], Response::HTTP_BAD_REQUEST);
+        }
+
+        $this->em->persist($organisme);
+        $this->em->flush();
+
+        return $this->json($this->toArray($organisme), Response::HTTP_CREATED);
+    }
+
+
+
+    #[Route('', name: 'list', methods: ['GET'])]
+    public function list(Request $request): JsonResponse
+    {
+        $page = max(1, (int) $request->query->get('page', 1));
+        $limit = max(1, min(100, (int) $request->query->get('limit', 10)));
+        $offset = ($page - 1) * $limit;
+
+        $repo = $this->em->getRepository(OrganismeDemandeur::class);
+        $items = $repo->findBy([], ['organismeDemandeurRaisonSociale' => 'ASC'], $limit, $offset);
+        $total = (int) $this->em->createQueryBuilder()
+            ->select('COUNT(o)')
+            ->from(OrganismeDemandeur::class, 'o')
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        return $this->json([
+            'page' => $page,
+            'limit' => $limit,
+            'total' => $total,
+            'data' => array_map(fn($o) => $this->toArray($o), $items),
+        ], Response::HTTP_OK);
+    }
+
+    #[Route('/all', name: 'all', methods: ['GET'])]
+    public function all(): JsonResponse
+    {
+        $repo = $this->em->getRepository(OrganismeDemandeur::class);
+        $items = $repo->findBy([], ['organismeDemandeurRaisonSociale' => 'ASC']);
+
+        $data = array_map(fn(OrganismeDemandeur $o) => [
+            'organismeDemandeurId' => $o->getOrganismeDemandeurId(),
+            'organismeDemandeurRaisonSociale' => $o->getOrganismeDemandeurRaisonSociale(),
+        ], $items);
+
+        return $this->json($data);
+    }
+
+    #[Route('/{id}', name: 'get', methods: ['GET'])]
+    public function getOne(OrganismeDemandeur $organismeDemandeur): JsonResponse
+    {
+        return $this->json($this->toArray($organismeDemandeur));
+    }
+
+    #[Route('/{id}', name: 'update', methods: ['PUT', 'POST'])]
+    public function update(Request $request, OrganismeDemandeur $organismeDemandeur): JsonResponse
+    {
+        $contentType = $request->headers->get('content-type') ?? '';
+        $data = stripos($contentType, 'application/json') !== false
+            ? json_decode($request->getContent(), true)
+            : $request->request->all();
+
+        if (!is_array($data)) {
+            return $this->json(['error' => 'Invalid payload (expected JSON or form-data)'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $this->mapScalars($organismeDemandeur, $data);
+        $this->setRelations($organismeDemandeur, $data);
+
+        $logoFile = $request->files->get('organismeDemandeurLogo');
+        if ($logoFile instanceof \Symfony\Component\HttpFoundation\File\UploadedFile) {
+            $publicPath = $this->storeUploadedLogo($logoFile, $organismeDemandeur->getOrganismeDemandeurLogo());
+            if ($publicPath === null) {
+                return $this->json(['error' => 'Failed to store uploaded logo.'], Response::HTTP_INTERNAL_SERVER_ERROR);
+            }
+            $organismeDemandeur->setOrganismeDemandeurLogo($publicPath);
+        } else {
+            $base64Key = $data['organismeDemandeurLogo'] ?? $data['organismeDemandeurLogo'] ?? null;
+            if (!empty($base64Key) && is_string($base64Key)) {
+                $publicPath = $this->saveBase64Logo($base64Key, $organismeDemandeur->getOrganismeDemandeurLogo());
+                if ($publicPath === null) {
+                    return $this->json(['error' => 'Invalid base64 image.'], Response::HTTP_BAD_REQUEST);
+                }
+                $organismeDemandeur->setOrganismeDemandeurLogo($publicPath);
+            } elseif (!empty($data['removeLogo']) && in_array($data['removeLogo'], ['1', 1, true, 'true'], true)) {
+                $this->deletePublicLogo($organismeDemandeur->getOrganismeDemandeurLogo());
+                $organismeDemandeur->setOrganismeDemandeurLogo(null);
+            }
+        }
+
+        $errors = $this->validator->validate($organismeDemandeur);
+        if (count($errors) > 0) {
+            $payload = [];
+            foreach ($errors as $err) {
+                $payload[$err->getPropertyPath()] = $err->getMessage();
+            }
+            return $this->json(['errors' => $payload], Response::HTTP_BAD_REQUEST);
+        }
+
+        $this->em->flush();
+
+        return $this->json($this->toArray($organismeDemandeur), Response::HTTP_OK);
+    }
+    private function storeUploadedLogo(\Symfony\Component\HttpFoundation\File\UploadedFile $uploadedLogo, ?string $oldPublicPath = null): ?string
+    {
+        $uploadsDir = rtrim($this->getParameter('uploads_directory'), '/\\') . '/organismes';
+        if (!is_dir($uploadsDir) && !@mkdir($uploadsDir, 0755, true) && !is_dir($uploadsDir)) {
+            return null;
+        }
+
+        $ext = $uploadedLogo->guessExtension() ?: 'png';
+        $safeName = uniqid('org_', true) . '.' . preg_replace('/[^a-z0-9]+/i', '', $ext);
+        try {
+            $uploadedLogo->move($uploadsDir, $safeName);
+            if ($oldPublicPath) {
+                $this->deletePublicLogo($oldPublicPath);
+            }
+            return '/uploads/organismes/' . $safeName;
+        } catch (\Throwable $e) {
+            return null;
         }
     }
 
-    public function checkToken(TokenStorageInterface $tokenStorage): void
+    #[Route('/{id}', name: 'delete', methods: ['DELETE'])]
+    public function delete(OrganismeDemandeur $organismeDemandeur): JsonResponse
     {
-        // Récupérer le token d'authentification de Symfony
-        $token = $tokenStorage->getToken();
-
-        // Vérifier si le token d'authentification est présent et est de type TokenInterface
-        if (!$token instanceof TokenInterface) {
-            throw new AccessDeniedHttpException('Token d\'authentification manquant ou invalide');
+        foreach ($organismeDemandeur->getAppelOffres() as $appel) {
+            $appel->setAppelOffresOrganismeDemandeurId(null);
+            $this->em->persist($appel);
         }
+        $this->em->remove($organismeDemandeur);
+        $this->em->flush();
+
+        return $this->json(['message' => 'OrganismeDemandeur deleted.']);
+    }
+
+    private function mapScalars(OrganismeDemandeur $o, array $data): void
+    {
+        $map = [
+            'organismeDemandeurRaisonSociale' => 'setOrganismeDemandeurRaisonSociale',
+            'organismeDemandeurRaisonSocialeShort' => 'setOrganismeDemandeurRaisonSocialeShort',
+            'organismeDemandeurDescription' => 'setOrganismeDemandeurDescription',
+            'organismeDemandeurCoordinateurPrenomNom' => 'setOrganismeDemandeurCoordinateurPrenomNom',
+            'organismeDemandeurCoordinateurEmail' => 'setOrganismeDemandeurCoordinateurEmail',
+            'organismeDemandeurCoordinateurTel' => 'setOrganismeDemandeurCoordinateurTel',
+            'organismeDemandeurAdresse' => 'setOrganismeDemandeurAdresse',
+            'organismeDemandeurTelephone' => 'setOrganismeDemandeurTelephone',
+            'organismeDemandeurEmail' => 'setOrganismeDemandeurEmail',
+            'organismeDemandeurPersonneContactPrenomNom1' => 'setOrganismeDemandeurPersonneContactPrenomNom1',
+            'organismeDemandeurPersonneContactTelephone1' => 'setOrganismeDemandeurPersonneContactTelephone1',
+            'organismeDemandeurPersonneContactEmail1' => 'setOrganismeDemandeurPersonneContactEmail1',
+            'organismeDemandeurPersonneContactPrenomNom2' => 'setOrganismeDemandeurPersonneContactPrenomNom2',
+            'organismeDemandeurPersonneContactTelephone2' => 'setOrganismeDemandeurPersonneContactTelephone2',
+            'organismeDemandeurPersonneContactEmail2' => 'setOrganismeDemandeurPersonneContactEmail2',
+            'organismeDemandeurPersonneContactPrenomNom3' => 'setOrganismeDemandeurPersonneContactPrenomNom3',
+            'organismeDemandeurPersonneContactTelephone3' => 'setOrganismeDemandeurPersonneContactTelephone3',
+            'organismeDemandeurPersonneContactEmail3' => 'setOrganismeDemandeurPersonneContactEmail3',
+        ];
+
+        foreach ($map as $key => $setter) {
+            if (array_key_exists($key, $data)) {
+                $o->$setter($data[$key]);
+            }
+        }
+    }
+
+    private function setRelations(OrganismeDemandeur $o, array $data): void
+    {
+        if (!empty($data['paysId'])) {
+            $pays = $this->em->getRepository(Pays::class)->find($data['paysId']);
+            $o->setPays($pays);
+        }
+
+        if (!empty($data['natureOrganismeDemendeurId'])) {
+            $nature = $this->em->getRepository(NatureOrganismeDemendeur::class)->find($data['natureOrganismeDemendeurId']);
+            $o->setNatureOrganismeDemendeur($nature);
+        }
+
+        if (!empty($data['secteurActiviteId'])) {
+            $secteur = $this->em->getRepository(SecteurActivite::class)->find($data['secteurActiviteId']);
+            $o->setSecteurActivite($secteur);
+        }
+    }
+
+    private function saveBase64Logo(string $base64): ?string
+    {
+        if (preg_match('#^data:(image/[^;]+);base64,#', $base64, $m)) {
+            $mime = $m[1];
+            $base64 = substr($base64, strpos($base64, ',') + 1);
+            $ext = explode('/', $mime)[1] ?? 'png';
+        } else {
+            $ext = 'png';
+        }
+
+        $decoded = base64_decode($base64, true);
+        if ($decoded === false) {
+            return null;
+        }
+
+        $uploadsDir = rtrim($this->getParameter('uploads_directory'), '/\\') . '/organismes';
+        if (!is_dir($uploadsDir)) {
+            @mkdir($uploadsDir, 0755, true);
+        }
+
+        $safeName = uniqid('org_', true) . '.' . $ext;
+        $path = $uploadsDir . '/' . $safeName;
+        file_put_contents($path, $decoded);
+
+        return '/uploads/organismes/' . $safeName;
+    }
+
+    private function toArray(OrganismeDemandeur $o): array
+    {
+        return [
+            'organismeDemandeurId' => $o->getOrganismeDemandeurId(),
+            'organismeDemandeurRaisonSociale' => $o->getOrganismeDemandeurRaisonSociale(),
+            'organismeDemandeurRaisonSocialeShort' => $o->getOrganismeDemandeurRaisonSocialeShort(),
+            'organismeDemandeurDescription' => $o->getOrganismeDemandeurDescription(),
+            'organismeDemandeurLogo' => $o->getOrganismeDemandeurLogo(),
+            'organismeDemandeurCoordinateurPrenomNom' => $o->getOrganismeDemandeurCoordinateurPrenomNom(),
+            'organismeDemandeurCoordinateurEmail' => $o->getOrganismeDemandeurCoordinateurEmail(),
+            'organismeDemandeurCoordinateurTel' => $o->getOrganismeDemandeurCoordinateurTel(),
+            'organismeDemandeurAdresse' => $o->getOrganismeDemandeurAdresse(),
+            'organismeDemandeurTelephone' => $o->getOrganismeDemandeurTelephone(),
+            'organismeDemandeurEmail' => $o->getOrganismeDemandeurEmail(),
+            'organismeDemandeurPersonneContactPrenomNom1' => $o->getOrganismeDemandeurPersonneContactPrenomNom1(),
+            'organismeDemandeurPersonneContactTelephone1' => $o->getOrganismeDemandeurPersonneContactTelephone1(),
+            'organismeDemandeurPersonneContactEmail1' => $o->getOrganismeDemandeurPersonneContactEmail1(),
+            'organismeDemandeurPersonneContactPrenomNom2' => $o->getOrganismeDemandeurPersonneContactPrenomNom2(),
+            'organismeDemandeurPersonneContactTelephone2' => $o->getOrganismeDemandeurPersonneContactTelephone2(),
+            'organismeDemandeurPersonneContactEmail2' => $o->getOrganismeDemandeurPersonneContactEmail2(),
+            'organismeDemandeurPersonneContactPrenomNom3' => $o->getOrganismeDemandeurPersonneContactPrenomNom3(),
+            'organismeDemandeurPersonneContactTelephone3' => $o->getOrganismeDemandeurPersonneContactTelephone3(),
+            'organismeDemandeurPersonneContactEmail3' => $o->getOrganismeDemandeurPersonneContactEmail3(),
+            'pays' => $o->getPays()?->getPaysLibelle(),
+            'natureOrganismeDemendeur' => $o->getNatureOrganismeDemendeur()?->getNatureOrganismeDemendeurLibelle(),
+            'secteurActivite' => $o->getSecteurActivite()?->getSecteurActiviteLibelle(),
+        ];
     }
 }

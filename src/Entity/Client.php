@@ -65,10 +65,10 @@ private Collection $projets;
 )]
 private Collection $pays;
 
-    #[ORM\ManyToMany(targetEntity: SecteurActivite::class, inversedBy: 'clients')]
+    #[ORM\ManyToMany(targetEntity: SecteurActivite::class, inversedBy: 'clients')] 
     #[ORM\JoinTable(name: 'clientsecteuractivite',
         joinColumns: [new ORM\JoinColumn(name: 'clientId', referencedColumnName: 'clientId')],
-        inverseJoinColumns: [new ORM\JoinColumn(name: 'secteurActiviteId', referencedColumnName: 'secteurActiviteId')]
+        inverseJoinColumns: [new ORM\JoinColumn(name: 'secteur_activite_id', referencedColumnName: 'secteur_activite_id')]
     )]
     private $secteurActivites;
 

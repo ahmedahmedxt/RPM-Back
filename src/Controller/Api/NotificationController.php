@@ -107,7 +107,7 @@ class NotificationController extends AbstractController
             $notificationsArray[] = [
                 'id' => $notification->getId(),
                 'message' => $notification->getMessage(),
-                'dateCreation' => $notification->getDateCreation()->format('Y-m-d H:i:s'),
+                'dateCreation' => $notification->getDateCreation() ? $notification->getDateCreation()->format('Y-m-d H:i:s') : null,
                 'appelOffres' => [
                     'id' => $aop ? $aop->getAppelOffresId() : null,
                     'devis' => $aop ? $aop->getAppelOffreDevis() : null,
