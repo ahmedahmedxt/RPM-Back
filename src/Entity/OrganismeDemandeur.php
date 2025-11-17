@@ -30,7 +30,7 @@ class OrganismeDemandeur
     #[Assert\NotBlank(message: 'La raison sociale est requise.')]
     private ?string $organismeDemandeurRaisonSociale = null;
 
-    #[ORM\Column(name: 'organismeDemandeurRaisonSocialeShort', length: 100, nullable: false)]
+    #[ORM\Column(name: 'organismeDemandeurRaisonSocialeShort', length: 10, nullable: false)]
     #[Assert\NotBlank(message: 'La raison sociale courte est requise.')]
     private ?string $organismeDemandeurRaisonSocialeShort = null;
 
@@ -61,8 +61,8 @@ class OrganismeDemandeur
     #[ORM\Column(name: 'organismeDemandeurPersonneContactPrenomNom1', length: 150, nullable: true)]
     private ?string $organismeDemandeurPersonneContactPrenomNom1 = null;
 
-    #[ORM\Column(name: 'organismeDemandeurPersonneContactTelephonne1', length: 50, nullable: true)]
-    private ?string $organismeDemandeurPersonneContactTelephonne1 = null;
+    #[ORM\Column(name: 'organismeDemandeurPersonneContactTelephone1', length: 50, nullable: true)]
+    private ?string $organismeDemandeurPersonneContactTelephone1 = null;
 
     #[ORM\Column(name: 'organismeDemandeurPersonneContactEmail1', length: 180, nullable: true)]
     private ?string $organismeDemandeurPersonneContactEmail1 = null;
@@ -167,8 +167,8 @@ class OrganismeDemandeur
     public function getOrganismeDemandeurPersonneContactPrenomNom1(): ?string { return $this->organismeDemandeurPersonneContactPrenomNom1; }
     public function setOrganismeDemandeurPersonneContactPrenomNom1(?string $v): self { $this->organismeDemandeurPersonneContactPrenomNom1 = $v; return $this; }
 
-    public function getOrganismeDemandeurPersonneContactTelephonne1(): ?string { return $this->organismeDemandeurPersonneContactTelephonne1; }
-    public function setOrganismeDemandeurPersonneContactTelephonne1(?string $v): self { $this->organismeDemandeurPersonneContactTelephonne1 = $v; return $this; }
+    public function getOrganismeDemandeurPersonneContactTelephone1(): ?string { return $this->organismeDemandeurPersonneContactTelephone1; }
+    public function setOrganismeDemandeurPersonneContactTelephone1(?string $v): self { $this->organismeDemandeurPersonneContactTelephone1 = $v; return $this; }
 
     public function getOrganismeDemandeurPersonneContactEmail1(): ?string { return $this->organismeDemandeurPersonneContactEmail1; }
     public function setOrganismeDemandeurPersonneContactEmail1(?string $v): self { $this->organismeDemandeurPersonneContactEmail1 = $v; return $this; }

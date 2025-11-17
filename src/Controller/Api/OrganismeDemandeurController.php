@@ -29,30 +29,73 @@ class OrganismeDemandeurController extends AbstractController
     #[Route('', name: 'create', methods: ['POST'])]
     public function create(Request $request): JsonResponse
     {
-        $data = json_decode($request->getContent(), true);
+        $contentType = $request->headers->get('content-type') ?? '';
+        $data = null;
+
+        if (stripos($contentType, 'application/json') !== false) {
+            $data = json_decode($request->getContent(), true);
+        } else {
+            $data = $request->request->all();
+        }
+
         if (!is_array($data)) {
-            return $this->json(['error' => 'Invalid JSON payload.'], Response::HTTP_BAD_REQUEST);
+            return $this->json(['error' => 'Invalid payload (expected JSON or form-data)'], Response::HTTP_BAD_REQUEST);
         }
 
         $required = ['organismeDemandeurRaisonSociale', 'organismeDemandeurRaisonSocialeShort'];
-        foreach ($required as $key) {
-            if (empty($data[$key])) {
-                return $this->json([
-                    'errors' => [$key => 'This field is required.']
-                ], Response::HTTP_BAD_REQUEST);
+        $aliases = [
+            'organismeDemandeurRaisonSociale' => ['organismeDemandeurRaisonSociale', 'organisme_demandeur_raison_sociale', 'organismeDemandeurRaisonSocial'],
+            'organismeDemandeurRaisonSocialeShort' => ['organismeDemandeurRaisonSocialeShort', 'organisme_demandeur_raison_sociale_short', 'organismeDemandeurRaisonSocialShort'],
+        ];
+
+        $missing = [];
+        foreach ($aliases as $fieldKey => $names) {
+            $ok = false;
+            foreach ($names as $n) {
+                if (array_key_exists($n, $data) && $data[$n] !== null && ( !is_string($data[$n]) || trim((string)$data[$n]) !== '' )) {
+                    $ok = true;
+                    $data[$fieldKey] = $data[$n];
+                    break;
+                }
             }
+            if (!$ok) {
+                $missing[] = $fieldKey;
+            }
+        }
+
+        if (!empty($missing)) {
+            $errors = array_combine($missing, array_fill(0, count($missing), 'This field is required.'));
+            return $this->json(['errors' => $errors], Response::HTTP_BAD_REQUEST);
         }
 
         $organisme = new OrganismeDemandeur();
 
         $this->mapScalars($organisme, $data);
 
-        if (!empty($data['organismeDemandeurLogo']) && is_string($data['organismeDemandeurLogo'])) {
-            $publicPath = $this->saveBase64Logo($data['organismeDemandeurLogo']);
-            if ($publicPath === null) {
-                return $this->json(['error' => 'Invalid base64 image.'], Response::HTTP_BAD_REQUEST);
+        $logoFile = $request->files->get('organismeDemandeurLogo') ?: $request->files->get('organismeDemandeurLogo');
+        if ($logoFile) {
+            // UploadedFile handling
+            $uploadsDir = rtrim($this->getParameter('uploads_directory'), '/\\') . '/organismes';
+            if (!is_dir($uploadsDir)) {
+                @mkdir($uploadsDir, 0755, true);
             }
-            $organisme->setOrganismeDemandeurLogo($publicPath);
+            $safeName = uniqid('org_', true) . '.' . ($logoFile->guessExtension() ?: 'png');
+            try {
+                $logoFile->move($uploadsDir, $safeName);
+                $organisme->setOrganismeDemandeurLogo('/uploads/organismes/' . $safeName);
+            } catch (\Throwable $e) {
+                return $this->json(['error' => 'Failed to store uploaded logo: '.$e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
+            }
+        } else {
+            // check base64 field (accept snake_case too)
+            $base64Key = $data['organismeDemandeurLogo'] ?? $data['organismeDemandeurLogo'] ?? null;
+            if (!empty($base64Key) && is_string($base64Key)) {
+                $publicPath = $this->saveBase64Logo($base64Key);
+                if ($publicPath === null) {
+                    return $this->json(['error' => 'Invalid base64 image.'], Response::HTTP_BAD_REQUEST);
+                }
+                $organisme->setOrganismeDemandeurLogo($publicPath);
+            }
         }
 
         $this->setRelations($organisme, $data);
@@ -71,6 +114,7 @@ class OrganismeDemandeurController extends AbstractController
 
         return $this->json($this->toArray($organisme), Response::HTTP_CREATED);
     }
+
 
 
     #[Route('', name: 'list', methods: ['GET'])]
@@ -119,18 +163,36 @@ class OrganismeDemandeurController extends AbstractController
     #[Route('/{id}', name: 'update', methods: ['PUT', 'POST'])]
     public function update(Request $request, OrganismeDemandeur $organismeDemandeur): JsonResponse
     {
-        $data = json_decode($request->getContent(), true);
+        $contentType = $request->headers->get('content-type') ?? '';
+        $data = stripos($contentType, 'application/json') !== false
+            ? json_decode($request->getContent(), true)
+            : $request->request->all();
+
         if (!is_array($data)) {
-            return $this->json(['error' => 'Invalid JSON payload.'], Response::HTTP_BAD_REQUEST);
+            return $this->json(['error' => 'Invalid payload (expected JSON or form-data)'], Response::HTTP_BAD_REQUEST);
         }
 
         $this->mapScalars($organismeDemandeur, $data);
         $this->setRelations($organismeDemandeur, $data);
 
-        if (!empty($data['organismeDemandeurLogo']) && is_string($data['organismeDemandeurLogo'])) {
-            $publicPath = $this->saveBase64Logo($data['organismeDemandeurLogo']);
-            if ($publicPath) {
+        $logoFile = $request->files->get('organismeDemandeurLogo');
+        if ($logoFile instanceof \Symfony\Component\HttpFoundation\File\UploadedFile) {
+            $publicPath = $this->storeUploadedLogo($logoFile, $organismeDemandeur->getOrganismeDemandeurLogo());
+            if ($publicPath === null) {
+                return $this->json(['error' => 'Failed to store uploaded logo.'], Response::HTTP_INTERNAL_SERVER_ERROR);
+            }
+            $organismeDemandeur->setOrganismeDemandeurLogo($publicPath);
+        } else {
+            $base64Key = $data['organismeDemandeurLogo'] ?? $data['organismeDemandeurLogo'] ?? null;
+            if (!empty($base64Key) && is_string($base64Key)) {
+                $publicPath = $this->saveBase64Logo($base64Key, $organismeDemandeur->getOrganismeDemandeurLogo());
+                if ($publicPath === null) {
+                    return $this->json(['error' => 'Invalid base64 image.'], Response::HTTP_BAD_REQUEST);
+                }
                 $organismeDemandeur->setOrganismeDemandeurLogo($publicPath);
+            } elseif (!empty($data['removeLogo']) && in_array($data['removeLogo'], ['1', 1, true, 'true'], true)) {
+                $this->deletePublicLogo($organismeDemandeur->getOrganismeDemandeurLogo());
+                $organismeDemandeur->setOrganismeDemandeurLogo(null);
             }
         }
 
@@ -145,7 +207,26 @@ class OrganismeDemandeurController extends AbstractController
 
         $this->em->flush();
 
-        return $this->json($this->toArray($organismeDemandeur));
+        return $this->json($this->toArray($organismeDemandeur), Response::HTTP_OK);
+    }
+    private function storeUploadedLogo(\Symfony\Component\HttpFoundation\File\UploadedFile $uploadedLogo, ?string $oldPublicPath = null): ?string
+    {
+        $uploadsDir = rtrim($this->getParameter('uploads_directory'), '/\\') . '/organismes';
+        if (!is_dir($uploadsDir) && !@mkdir($uploadsDir, 0755, true) && !is_dir($uploadsDir)) {
+            return null;
+        }
+
+        $ext = $uploadedLogo->guessExtension() ?: 'png';
+        $safeName = uniqid('org_', true) . '.' . preg_replace('/[^a-z0-9]+/i', '', $ext);
+        try {
+            $uploadedLogo->move($uploadsDir, $safeName);
+            if ($oldPublicPath) {
+                $this->deletePublicLogo($oldPublicPath);
+            }
+            return '/uploads/organismes/' . $safeName;
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 
     #[Route('/{id}', name: 'delete', methods: ['DELETE'])]
@@ -174,7 +255,7 @@ class OrganismeDemandeurController extends AbstractController
             'organismeDemandeurTelephone' => 'setOrganismeDemandeurTelephone',
             'organismeDemandeurEmail' => 'setOrganismeDemandeurEmail',
             'organismeDemandeurPersonneContactPrenomNom1' => 'setOrganismeDemandeurPersonneContactPrenomNom1',
-            'organismeDemandeurPersonneContactTelephonne1' => 'setOrganismeDemandeurPersonneContactTelephonne1',
+            'organismeDemandeurPersonneContactTelephone1' => 'setOrganismeDemandeurPersonneContactTelephone1',
             'organismeDemandeurPersonneContactEmail1' => 'setOrganismeDemandeurPersonneContactEmail1',
             'organismeDemandeurPersonneContactPrenomNom2' => 'setOrganismeDemandeurPersonneContactPrenomNom2',
             'organismeDemandeurPersonneContactTelephone2' => 'setOrganismeDemandeurPersonneContactTelephone2',
@@ -251,7 +332,7 @@ class OrganismeDemandeurController extends AbstractController
             'organismeDemandeurTelephone' => $o->getOrganismeDemandeurTelephone(),
             'organismeDemandeurEmail' => $o->getOrganismeDemandeurEmail(),
             'organismeDemandeurPersonneContactPrenomNom1' => $o->getOrganismeDemandeurPersonneContactPrenomNom1(),
-            'organismeDemandeurPersonneContactTelephonne1' => $o->getOrganismeDemandeurPersonneContactTelephonne1(),
+            'organismeDemandeurPersonneContactTelephone1' => $o->getOrganismeDemandeurPersonneContactTelephone1(),
             'organismeDemandeurPersonneContactEmail1' => $o->getOrganismeDemandeurPersonneContactEmail1(),
             'organismeDemandeurPersonneContactPrenomNom2' => $o->getOrganismeDemandeurPersonneContactPrenomNom2(),
             'organismeDemandeurPersonneContactTelephone2' => $o->getOrganismeDemandeurPersonneContactTelephone2(),
