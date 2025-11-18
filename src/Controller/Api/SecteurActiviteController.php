@@ -55,25 +55,122 @@ class SecteurActiviteController extends AbstractController
     }
 
     #[Route('', name: 'api_get_all_secteur', methods: ['GET'])]
-    public function getAll(EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
+    public function getAll(EntityManagerInterface $entityManager, Request $request, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        //$this->checkToken($tokenStorage);
+        // //$this->checkToken($tokenStorage);
 
-        // Récupérer les pays triés par nom
         $secteurRepository = $entityManager->getRepository(SecteurActivite::class);
-        $secteur = $secteurRepository->findBy([], ['secteurActiviteLibelle' => 'ASC']);
+
+        // Read query params
+        $page = max(0, (int) $request->query->get('page', 0));       // 0 => no paging
+        $pageSize = max(0, (int) $request->query->get('pageSize', 0));
+        $sort = $request->query->get('sort', null);
+        $dir = strtolower((string) $request->query->get('dir', 'asc')) === 'desc' ? 'DESC' : 'ASC';
+        $search = trim((string) $request->query->get('search', ''));
+
+        // If no paging params provided -> keep old behaviour (return full list)
+        if ($page === 0 || $pageSize === 0) {
+            $secteurs = $secteurRepository->findBy([], ['secteurActiviteLibelle' => 'ASC']);
+
+            $secteurData = [];
+            foreach ($secteurs as $secteurItem) {
+                $secteurData[] = [
+                    'secteurActiviteId' => $secteurItem->getSecteurActiviteId(),
+                    'secteurActiviteLibelle' => $secteurItem->getSecteurActiviteLibelle(),
+                    'secteurActiviteDescription' => $secteurItem->getSecteurActiviteDescription(),
+                ];
+            }
+
+            return new JsonResponse($secteurData, Response::HTTP_OK);
+        }
+
+        // Server-side paging / filtering / sorting
+        $qb = $secteurRepository->createQueryBuilder('s');
+
+        // Filtering (search) on libelle and description
+        if ($search !== '') {
+            $qb->andWhere('LOWER(s.secteurActiviteLibelle) LIKE :q OR LOWER(s.secteurActiviteDescription) LIKE :q')
+            ->setParameter('q', '%' . strtolower($search) . '%');
+        }
+
+        // Accept different column naming variants (snake_case and camelCase)
+        $allowedSortFields = [
+            // id variants -> use the actual entity field name
+            'secteur_activite_id' => 's.secteurActiviteId',
+            'secteurActiviteId' => 's.secteurActiviteId',
+            'secteur_activiteid' => 's.secteurActiviteId',
+            'secteuractiviteid' => 's.secteurActiviteId',
+            'id' => 's.secteurActiviteId',
+
+            // libelle variants
+            'secteur_activite_libelle' => 's.secteurActiviteLibelle',
+            'secteurActiviteLibelle' => 's.secteurActiviteLibelle',
+            'secteuractivitielibelle' => 's.secteurActiviteLibelle',
+
+            // description variants
+            'secteur_activite_description' => 's.secteurActiviteDescription',
+            'secteurActiviteDescription' => 's.secteurActiviteDescription',
+            'secteuractivedescription' => 's.secteurActiviteDescription',
+        ];
+
+        // Normalize requested sort key and set order if allowed
+        $sortKey = $sort !== null ? $sort : '';
+        $appliedOrder = false;
+
+        if ($sortKey && array_key_exists($sortKey, $allowedSortFields)) {
+            $qb->orderBy($allowedSortFields[$sortKey], $dir);
+            $appliedOrder = true;
+        } else {
+            $candidate1 = str_replace('-', '_', $sortKey);                   // replace dashes
+            $candidate2 = strtolower($sortKey);                              // lowercase
+            $candidate3 = preg_replace('/[^a-z0-9_]/i', '', $sortKey);       // strip non-alnum
+            if ($candidate1 && array_key_exists($candidate1, $allowedSortFields)) {
+                $qb->orderBy($allowedSortFields[$candidate1], $dir);
+                $appliedOrder = true;
+            } elseif ($candidate2 && array_key_exists($candidate2, $allowedSortFields)) {
+                $qb->orderBy($allowedSortFields[$candidate2], $dir);
+                $appliedOrder = true;
+            } elseif ($candidate3 && array_key_exists($candidate3, $allowedSortFields)) {
+                $qb->orderBy($allowedSortFields[$candidate3], $dir);
+                $appliedOrder = true;
+            }
+        }
+
+        if (!$appliedOrder) {
+            // default order
+            $qb->orderBy('s.secteurActiviteLibelle', 'ASC');
+        }
+
+        // Count total (without limit) - clone qb, select count on the correct field
+        $countQb = clone $qb;
+        $countQb->select('COUNT(s.secteurActiviteId)');
+        $total = (int) $countQb->getQuery()->getSingleScalarResult();
+
+        // Pagination: page is 1-based expected by frontend
+        $page = max(1, $page);
+        $offset = ($page - 1) * $pageSize;
+        $qb->setFirstResult($offset)
+        ->setMaxResults($pageSize);
+
+        $results = $qb->getQuery()->getResult();
 
         $secteurData = [];
-        foreach ($secteur as $secteurItem) {
+        foreach ($results as $secteurItem) {
             $secteurData[] = [
-                'secteurActiviteId' => $secteurItem->getId(),
+                'secteurActiviteId' => $secteurItem->getSecteurActiviteId(),
                 'secteurActiviteLibelle' => $secteurItem->getSecteurActiviteLibelle(),
                 'secteurActiviteDescription' => $secteurItem->getSecteurActiviteDescription(),
             ];
         }
 
-        return new JsonResponse($secteurData, Response::HTTP_OK);
+        return new JsonResponse([
+            'data' => $secteurData,
+            'total' => $total
+        ], Response::HTTP_OK);
     }
+
+
+
 
     #[Route('/update/{id}', name: 'api_secteur_update', methods: ['PUT'])]
     public function update(Request $request, SecteurActivite $secteurActivite, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
