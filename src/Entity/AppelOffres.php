@@ -23,7 +23,6 @@ class AppelOffres
     #[ORM\Column(name: "appelOffresId", type: "integer")]
     private ?int $appelOffresId = null;
 
-    // Relations - AJOUT inversedBy
     #[ORM\ManyToOne(targetEntity: AppelOffresType::class, inversedBy: "appelOffres")]
     #[ORM\JoinColumn(name: "appelOffresTypeId", referencedColumnName: "appelOffresTypeId", nullable: true)]
     private ?AppelOffresType $appelOffresTypeId = null;
@@ -37,7 +36,7 @@ class AppelOffres
     private ?Pays $appelOffresPaysId = null;
 
     #[ORM\ManyToOne(targetEntity: OrganismeDemandeur::class, inversedBy: "appelOffres")]
-    #[ORM\JoinColumn(name: "appelOffresOrganismeDemandeurId", referencedColumnName: "organismeDemandeurId", nullable: true)]
+    #[ORM\JoinColumn(name: "appelOffresOrganismeDemandeurId", referencedColumnName: "organisme_demandeur_id", nullable: true)]
     private ?OrganismeDemandeur $appelOffresOrganismeDemandeurId = null;
 
     #[ORM\ManyToOne(targetEntity: Devises::class, inversedBy: "appelOffres")]

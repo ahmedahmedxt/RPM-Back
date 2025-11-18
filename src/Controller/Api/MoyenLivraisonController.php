@@ -15,40 +15,70 @@ use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use App\Repository\MoyenLivraisonRepository;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class MoyenLivraisonController extends AbstractController
 {
     
     #[Route('/api/create/moyen-livraisons', name: 'api_moyen_livraison_create', methods: ['POST'])]
-    public function create(Request $request, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage, MoyenLivraisonRepository $moyenLivraisonRepository): JsonResponse
+    public function create(Request $request, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage, MoyenLivraisonRepository $moyenLivraisonRepository, ValidatorInterface $validator): JsonResponse
     {
-        //$this->checkToken($tokenStorage);
         $data = json_decode($request->getContent(), true);
 
-        // Vérifier si le moyen de livraison existe déjà (sur le libellé)
-        $existingMoyenLivraison = $moyenLivraisonRepository->findOneBy(['moyenLivraisonLibelle' => $data['moyenLivraisonLibelle'] ?? null]);
-
-        if ($existingMoyenLivraison) {
-            return new JsonResponse('Le moyen de livraison existe déjà', Response::HTTP_CONFLICT);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return new JsonResponse(['error' => 'Données JSON invalides'], Response::HTTP_BAD_REQUEST);
         }
 
-        // Créer un nouveau moyen de livraison
+        if (!isset($data['moyenLivraisonLibelle']) || empty(trim($data['moyenLivraisonLibelle']))) {
+            return new JsonResponse(['error' => 'Le libellé est requis'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $moyenLivraisonLibelle = trim($data['moyenLivraisonLibelle']);
+        $moyenLivraisonShort = isset($data['moyenLivraisonShort']) ? trim($data['moyenLivraisonShort']) : '';
+
+        if (strlen($moyenLivraisonLibelle) > 255) {
+            return new JsonResponse(['error' => 'Le libellé ne peut pas dépasser 255 caractères'], Response::HTTP_BAD_REQUEST);
+        }
+
+        if (strlen($moyenLivraisonShort) > 10) {
+            return new JsonResponse(['error' => 'L\'acronyme ne peut pas dépasser 10 caractères'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $existingMoyenLivraison = $moyenLivraisonRepository->findOneBy(['moyenLivraisonLibelle' => $moyenLivraisonLibelle]);
+
+        if ($existingMoyenLivraison) {
+            return new JsonResponse(['error' => 'Le moyen de livraison existe déjà'], Response::HTTP_CONFLICT);
+        }
+
         $moyenLivraison = new MoyenLivraison();
-        $moyenLivraison->setMoyenLivraisonLibelle($data['moyenLivraisonLibelle'] ?? null);
-        $moyenLivraison->setMoyenLivraisonShort($data['moyenLivraisonShort'] ?? '');
+        $moyenLivraison->setMoyenLivraisonLibelle($moyenLivraisonLibelle);
+        $moyenLivraison->setMoyenLivraisonShort($moyenLivraisonShort);
 
-        $entityManager->persist($moyenLivraison);
-        $entityManager->flush();
+        $errors = $validator->validate($moyenLivraison);
+        if (count($errors) > 0) {
+            $errorMessages = [];
+            foreach ($errors as $error) {
+                $errorMessages[] = $error->getPropertyPath() . ': ' . $error->getMessage();
+            }
+            return new JsonResponse(['error' => implode(', ', $errorMessages)], Response::HTTP_BAD_REQUEST);
+        }
 
-        return new JsonResponse('Moyen de livraison créé avec succès', Response::HTTP_CREATED);
+        try {
+            $entityManager->persist($moyenLivraison);
+            $entityManager->flush();
+
+            return new JsonResponse([
+                'message' => 'Moyen de livraison créé avec succès',
+                'id' => $moyenLivraison->getMoyenLivraisonId()
+            ], Response::HTTP_CREATED);
+        } catch (\Exception $e) {
+            return new JsonResponse(['error' => 'Erreur lors de la création: ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
     
     #[Route('/api/getAll/moyen-livraisons', name: 'api_moyen_livraison_get_all', methods: ['GET'])]
     public function getAll(EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        //$this->checkToken($tokenStorage);
-        
-        // Récupérer les moyens de livraison triés par libellé
         $moyenLivraisonRepository = $entityManager->getRepository(MoyenLivraison::class);
         $moyenLivraisons = $moyenLivraisonRepository->findBy([], ['moyenLivraisonLibelle' => 'ASC']);
         
@@ -67,7 +97,6 @@ class MoyenLivraisonController extends AbstractController
     #[Route('/api/get/moyen-livraisons/{id}', name: 'api_moyen_livraison_get', methods: ['GET'])]
     public function getOne(MoyenLivraison $moyenLivraison, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        //$this->checkToken($tokenStorage);
         $data = [
             'moyenLivraisonId' => $moyenLivraison->getMoyenLivraisonId(),
             'moyenLivraisonLibelle' => $moyenLivraison->getMoyenLivraisonLibelle(),
@@ -80,37 +109,33 @@ class MoyenLivraisonController extends AbstractController
     #[Route('/api/put/moyen-livraisons/{id}', name: 'api_moyen_livraison_update', methods: ['PUT'])]
     public function update(Request $request, MoyenLivraison $moyenLivraison, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        //$this->checkToken($tokenStorage);
         $data = json_decode($request->getContent(), true);
 
-        if (array_key_exists('moyenLivraisonLibelle', $data)) {
-            $moyenLivraison->setMoyenLivraisonLibelle($data['moyenLivraisonLibelle']);
+        if (array_key_exists('moyenLivraisonLibelle', $data) && !empty(trim($data['moyenLivraisonLibelle']))) {
+            $moyenLivraison->setMoyenLivraisonLibelle(trim($data['moyenLivraisonLibelle']));
         }
         if (array_key_exists('moyenLivraisonShort', $data)) {
-            $moyenLivraison->setMoyenLivraisonShort($data['moyenLivraisonShort'] ?? '');
+            $moyenLivraison->setMoyenLivraisonShort(trim($data['moyenLivraisonShort'] ?? ''));
         }
 
         $entityManager->flush();
 
-        return new JsonResponse('Moyen de livraison mis à jour avec succès', Response::HTTP_OK);
+        return new JsonResponse(['message' => 'Moyen de livraison mis à jour avec succès'], Response::HTTP_OK);
     }
 
     #[Route('/api/delete/moyen-livraisons/{id}', name: 'api_moyen_livraison_delete', methods: ['DELETE'])]
     public function delete(MoyenLivraison $moyenLivraison, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        //$this->checkToken($tokenStorage);
         $entityManager->remove($moyenLivraison);
         $entityManager->flush();
         
-        return new JsonResponse('Les références au Moyen de livraison ont été supprimées des Appels d\'offre associés, et le Moyen de livraison a été supprimé avec succès.', Response::HTTP_OK);
+        return new JsonResponse(['message' => 'Le moyen de livraison a été supprimé avec succès'], Response::HTTP_OK);
     }
 
     public function checkToken(TokenStorageInterface $tokenStorage): void
     {
-        // Récupérer le token d'authentification de Symfony
         $token = $tokenStorage->getToken();
 
-        // Vérifier si le token d'authentification est présent et est de type TokenInterface
         if (!$token instanceof TokenInterface) {
             throw new AccessDeniedHttpException('Token d\'authentification manquant ou invalide');
         }
