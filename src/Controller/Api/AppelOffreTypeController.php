@@ -28,14 +28,12 @@ class AppelOffreTypeController extends AbstractController
             return new JsonResponse('Le libellé du type est requis', Response::HTTP_BAD_REQUEST);
         }
 
-        // Vérifier si un type avec le même libellé existe déjà
         $existingType = $entityManager->getRepository(AppelOffresType::class)
             ->findOneBy(['appelOffresTypeLibelle' => $data['appelOffresTypeLibelle']]);
         if ($existingType) {
             return new JsonResponse('Un type d\'appel d\'offres avec ce libellé existe déjà', Response::HTTP_CONFLICT);
         }
 
-        // Créer un nouveau type d'appel d'offres
         $type = new AppelOffresType();
         $type->setAppelOffresTypeLibelle($data['appelOffresTypeLibelle']);
         $type->setAppelOffresTypeShort($data['appelOffresTypeShort'] ?? null);
@@ -47,16 +45,46 @@ class AppelOffreTypeController extends AbstractController
     }
 
     #[Route('/api/getAll/appeloffres/types', name: 'api_appel_offres_types', methods: ['GET'])]
-    public function index(EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
+    public function index(Request $request, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
     {
         //$this->checkToken($tokenStorage);
 
-        // Récupérer les types triés par libellé
-        $types = $entityManager->getRepository(AppelOffresType::class)
-            ->findBy([], ['appelOffresTypeLibelle' => 'ASC']);
+        $page = max(1, (int) $request->query->get('page', 1));
+        $limit = max(1, min(100, (int) $request->query->get('limit', 10)));
+        $offset = ($page - 1) * $limit;
+
+        $sortField = $request->query->get('sortField', 'appelOffresTypeLibelle');
+        $sortDir = $request->query->get('sortDir', 'ASC');
+        $search = trim($request->query->get('search', ''));
+
+        $allowedSortFields = ['appelOffresTypeLibelle', 'appelOffresTypeShort', 'appelOffresTypeId'];
+        if (!in_array($sortField, $allowedSortFields)) {
+            $sortField = 'appelOffresTypeLibelle';
+        }
+        $sortDir = strtoupper($sortDir) === 'DESC' ? 'DESC' : 'ASC';
+
+        $repo = $entityManager->getRepository(AppelOffresType::class);
+        $qb = $repo->createQueryBuilder('t');
+
+        if (!empty($search)) {
+            $qb->where('t.appelOffresTypeLibelle LIKE :search OR t.appelOffresTypeShort LIKE :search')
+               ->setParameter('search', '%' . $search . '%');
+        }
+
+        $total = (int) (clone $qb)
+            ->select('COUNT(t)')
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        $qb->orderBy('t.' . $sortField, $sortDir);
+
+        $qb->setFirstResult($offset)
+           ->setMaxResults($limit);
+
+        $items = $qb->getQuery()->getResult();
 
         $data = [];
-        foreach ($types as $type) {
+        foreach ($items as $type) {
             $data[] = [
                 'appelOffresTypeId' => $type->getAppelOffresTypeId(),
                 'appelOffresTypeLibelle' => $type->getAppelOffresTypeLibelle(),
@@ -64,7 +92,12 @@ class AppelOffreTypeController extends AbstractController
             ];
         }
 
-        return new JsonResponse($data, Response::HTTP_OK);
+        return new JsonResponse([
+            'page' => $page,
+            'limit' => $limit,
+            'total' => $total,
+            'data' => $data
+        ], Response::HTTP_OK);
     }
 
     #[Route('/api/get/appeloffres/types/{id}', name: 'api_appel_offres_type_show', methods: ['GET'])]
@@ -103,10 +136,8 @@ class AppelOffreTypeController extends AbstractController
     {
         //$this->checkToken($tokenStorage);
 
-        // S'il y a des AppelOffres associés, déréférencer avant suppression
         if (!$type->getAppelOffres()->isEmpty()) {
             foreach ($type->getAppelOffres() as $appel) {
-                // côté AppelOffres: setAppelOffresTypeId(null)
                 $appel->setAppelOffresTypeId(null);
                 $entityManager->persist($appel);
             }

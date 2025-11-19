@@ -25,11 +25,21 @@ class AppelOffresController extends AbstractController
             $data = [];
 
             foreach ($appels as $appel) {
-                $data[] = $this->serializeAppelOffres($appel);
+                try {
+                    $serialized = $this->serializeAppelOffres($appel);
+                    if ($serialized) {
+                        $data[] = $serialized;
+                    }
+                } catch (\Exception $e) {
+                    error_log('Erreur lors de la sérialisation d\'un appel d\'offres (ID: ' . ($appel->getAppelOffresId() ?? 'unknown') . '): ' . $e->getMessage());
+                    error_log('Stack trace: ' . $e->getTraceAsString());
+                    continue;
+                }
             }
 
             return new JsonResponse($data, Response::HTTP_OK);
         } catch (\Exception $e) {
+            error_log('Erreur dans index: ' . $e->getMessage() . ' - Trace: ' . $e->getTraceAsString());
             return new JsonResponse([
                 'error' => 'Erreur lors de la récupération des appels d\'offres',
                 'message' => $e->getMessage()
@@ -43,6 +53,7 @@ class AppelOffresController extends AbstractController
         try {
             return new JsonResponse($this->serializeAppelOffres($appelOffres), Response::HTTP_OK);
         } catch (\Exception $e) {
+            error_log('Erreur dans show: ' . $e->getMessage());
             return new JsonResponse([
                 'error' => 'Erreur lors de la récupération de l\'appel d\'offres',
                 'message' => $e->getMessage()
@@ -56,7 +67,6 @@ class AppelOffresController extends AbstractController
         try {
             $data = json_decode($request->getContent(), true) ?? [];
 
-            // Validation minimale
             if (!isset($data['appelOffresObjet'])) {
                 return new JsonResponse(['error' => 'appelOffresObjet est requis'], Response::HTTP_BAD_REQUEST);
             }
@@ -64,7 +74,6 @@ class AppelOffresController extends AbstractController
             $appel = new AppelOffres();
             $connection = $em->getConnection();
 
-            // ✅ AUTO-CALCUL DU DEVIS (max+1 de l'année en cours)
             $annee = $data['appelOffreAnnee'] ?? (int)date('Y');
             
             $sql = 'SELECT MAX(CAST(appelOffreDevis AS UNSIGNED)) as maxDevis 
@@ -78,10 +87,24 @@ class AppelOffresController extends AbstractController
             $maxDevis = $result->fetchOne();
             
             $nouveauDevis = ($maxDevis ? (int)$maxDevis : 0) + 1;
+            
+            $sqlCheck = 'SELECT COUNT(*) as count 
+                         FROM appel_offres 
+                         WHERE appelOffreAnnee = :annee 
+                         AND appelOffreDevis = :devis';
+            $stmtCheck = $connection->prepare($sqlCheck);
+            $resultCheck = $stmtCheck->executeQuery(['annee' => $annee, 'devis' => (string)$nouveauDevis]);
+            $count = $resultCheck->fetchOne();
+            
+            while ($count > 0) {
+                $nouveauDevis++;
+                $resultCheck = $stmtCheck->executeQuery(['annee' => $annee, 'devis' => (string)$nouveauDevis]);
+                $count = $resultCheck->fetchOne();
+            }
+            
             $appel->setAppelOffreDevis((string)$nouveauDevis);
             $appel->setAppelOffreAnnee($annee);
 
-            // ✅ AUTO-CALCUL DU DEVIS PARTICIPATION (si participation = Oui)
             $participation = isset($data['appelOffresParticipation']) ? (int)$data['appelOffresParticipation'] : 0;
 
             if ($participation === 1 && !empty($data['appelOffresDateParticipation'])) {
@@ -99,12 +122,32 @@ class AppelOffresController extends AbstractController
                 $maxDevisParticipation = $resultParticipation->fetchOne();
                 
                 $nouveauDevisParticipation = ($maxDevisParticipation ? (int)$maxDevisParticipation : 0) + 1;
+                
+                $sqlCheckParticipation = 'SELECT COUNT(*) as count 
+                                          FROM appel_offres 
+                                          WHERE YEAR(appelOffresDateParticipation) = :anneeParticipation 
+                                          AND appelOffresNumeroDevisParticipation = :devisParticipation';
+                $stmtCheckParticipation = $connection->prepare($sqlCheckParticipation);
+                $resultCheckParticipation = $stmtCheckParticipation->executeQuery([
+                    'anneeParticipation' => $anneeParticipation,
+                    'devisParticipation' => (string)$nouveauDevisParticipation
+                ]);
+                $countParticipation = $resultCheckParticipation->fetchOne();
+                
+                while ($countParticipation > 0) {
+                    $nouveauDevisParticipation++;
+                    $resultCheckParticipation = $stmtCheckParticipation->executeQuery([
+                        'anneeParticipation' => $anneeParticipation,
+                        'devisParticipation' => (string)$nouveauDevisParticipation
+                    ]);
+                    $countParticipation = $resultCheckParticipation->fetchOne();
+                }
+                
                 $appel->setAppelOffresNumeroDevisParticipation((string)$nouveauDevisParticipation);
             } else {
                 $appel->setAppelOffresNumeroDevisParticipation(null);
             }
 
-            // Champs simples
             $appel->setAppelOffresObjet($data['appelOffresObjet'] ?? null);
             $appel->setAppelOffresCCRetire(isset($data['appelOffresCCRetire']) ? (int)$data['appelOffresCCRetire'] : null);
             $appel->setAppelOffresLienAnnonce($data['appelOffresLienAnnonce'] ?? null);
@@ -116,13 +159,11 @@ class AppelOffresController extends AbstractController
             $appel->setAppelOffresResultatRang(isset($data['appelOffresResultatRang']) ? (int)$data['appelOffresResultatRang'] : null);
             $appel->setAppelOffresResultatRangTotal(isset($data['appelOffresResultatRangTotal']) ? (int)$data['appelOffresResultatRangTotal'] : null);
 
-            // Dates/Heures
             $appel->setAppelOffreDateRemise(!empty($data['appelOffreDateRemise']) ? new \DateTime($data['appelOffreDateRemise']) : null);
             $appel->setAppelOffresDateLimiteRemise(!empty($data['appelOffresDateLimiteRemise']) ? new \DateTime($data['appelOffresDateLimiteRemise']) : null);
             $appel->setAppelOffresHeureLimiteRemise(!empty($data['appelOffresHeureLimiteRemise']) ? new \DateTime($data['appelOffresHeureLimiteRemise']) : null);
             $appel->setAppelOffresDateParticipation(!empty($data['appelOffresDateParticipation']) ? new \DateTime($data['appelOffresDateParticipation']) : null);
 
-            // Relations
             if (!empty($data['appelOffresTypeId'])) {
                 $type = $em->getRepository(AppelOffresType::class)->find($data['appelOffresTypeId']);
                 if ($type) { $appel->setAppelOffresTypeId($type); }
@@ -143,7 +184,6 @@ class AppelOffresController extends AbstractController
                 $dev = $em->getRepository(Devises::class)->find($data['appelOffresDevisesId']);
                 if ($dev) { $appel->setAppelOffresDevisesId($dev); }
             }
-            // ✅ NOUVEAU: Devise de caution
             if (!empty($data['appelOffresCautionBancaireDeviseId'])) {
                 $cautionDev = $em->getRepository(Devises::class)->find($data['appelOffresCautionBancaireDeviseId']);
                 if ($cautionDev) { $appel->setAppelOffresCautionBancaireDeviseId($cautionDev); }
@@ -173,23 +213,192 @@ class AppelOffresController extends AbstractController
     {
         try {
             $data = json_decode($request->getContent(), true) ?? [];
-
-            // Champs simples
+    
             if (array_key_exists('appelOffresObjet', $data)) $appel->setAppelOffresObjet($data['appelOffresObjet']);
-            if (array_key_exists('appelOffreDevis', $data)) $appel->setAppelOffreDevis($data['appelOffreDevis']);
-            if (array_key_exists('appelOffreAnnee', $data)) $appel->setAppelOffreAnnee($data['appelOffreAnnee']);
+            
+            if (array_key_exists('appelOffreAnnee', $data)) {
+                $nouvelleAnnee = $data['appelOffreAnnee'];
+                $appel->setAppelOffreAnnee($nouvelleAnnee);
+                
+                if (array_key_exists('appelOffreDevis', $data) && !empty($data['appelOffreDevis'])) {
+                    $connection = $em->getConnection();
+                    $devisPropose = $data['appelOffreDevis'];
+                    
+                    $sqlCheck = 'SELECT COUNT(*) as count 
+                                 FROM appel_offres 
+                                 WHERE appelOffreAnnee = :annee 
+                                 AND appelOffreDevis = :devis
+                                 AND appelOffresId != :currentId';
+                    $stmtCheck = $connection->prepare($sqlCheck);
+                    $resultCheck = $stmtCheck->executeQuery([
+                        'annee' => $nouvelleAnnee,
+                        'devis' => (string)$devisPropose,
+                        'currentId' => $appel->getAppelOffresId()
+                    ]);
+                    $count = $resultCheck->fetchOne();
+                    
+                    if ($count > 0) {
+                        $sql = 'SELECT MAX(CAST(appelOffreDevis AS UNSIGNED)) as maxDevis 
+                                FROM appel_offres 
+                                WHERE appelOffreAnnee = :annee 
+                                AND appelOffreDevis IS NOT NULL 
+                                AND appelOffreDevis != ""
+                                AND appelOffresId != :currentId';
+                        $stmt = $connection->prepare($sql);
+                        $result = $stmt->executeQuery([
+                            'annee' => $nouvelleAnnee,
+                            'currentId' => $appel->getAppelOffresId()
+                        ]);
+                        $maxDevis = $result->fetchOne();
+                        $nouveauDevis = ($maxDevis ? (int)$maxDevis : 0) + 1;
+                        
+                        $resultCheck = $stmtCheck->executeQuery([
+                            'annee' => $nouvelleAnnee,
+                            'devis' => (string)$nouveauDevis,
+                            'currentId' => $appel->getAppelOffresId()
+                        ]);
+                        $count = $resultCheck->fetchOne();
+                        
+                        while ($count > 0) {
+                            $nouveauDevis++;
+                            $resultCheck = $stmtCheck->executeQuery([
+                                'annee' => $nouvelleAnnee,
+                                'devis' => (string)$nouveauDevis,
+                                'currentId' => $appel->getAppelOffresId()
+                            ]);
+                            $count = $resultCheck->fetchOne();
+                        }
+                        
+                        $appel->setAppelOffreDevis((string)$nouveauDevis);
+                    } else {
+                        $appel->setAppelOffreDevis($data['appelOffreDevis']);
+                    }
+                } else {
+                    $connection = $em->getConnection();
+                    $sql = 'SELECT MAX(CAST(appelOffreDevis AS UNSIGNED)) as maxDevis 
+                            FROM appel_offres 
+                            WHERE appelOffreAnnee = :annee 
+                            AND appelOffreDevis IS NOT NULL 
+                            AND appelOffreDevis != ""
+                            AND appelOffresId != :currentId';
+                    $stmt = $connection->prepare($sql);
+                    $result = $stmt->executeQuery([
+                        'annee' => $nouvelleAnnee,
+                        'currentId' => $appel->getAppelOffresId()
+                    ]);
+                    $maxDevis = $result->fetchOne();
+                    $nouveauDevis = ($maxDevis ? (int)$maxDevis : 0) + 1;
+                    
+                    $sqlCheck = 'SELECT COUNT(*) as count 
+                                 FROM appel_offres 
+                                 WHERE appelOffreAnnee = :annee 
+                                 AND appelOffreDevis = :devis
+                                 AND appelOffresId != :currentId';
+                    $stmtCheck = $connection->prepare($sqlCheck);
+                    $resultCheck = $stmtCheck->executeQuery([
+                        'annee' => $nouvelleAnnee,
+                        'devis' => (string)$nouveauDevis,
+                        'currentId' => $appel->getAppelOffresId()
+                    ]);
+                    $count = $resultCheck->fetchOne();
+                    
+                    while ($count > 0) {
+                        $nouveauDevis++;
+                        $resultCheck = $stmtCheck->executeQuery([
+                            'annee' => $nouvelleAnnee,
+                            'devis' => (string)$nouveauDevis,
+                            'currentId' => $appel->getAppelOffresId()
+                        ]);
+                        $count = $resultCheck->fetchOne();
+                    }
+                    
+                    $appel->setAppelOffreDevis((string)$nouveauDevis);
+                }
+            } else {
+                if (array_key_exists('appelOffreDevis', $data)) {
+                    $appel->setAppelOffreDevis($data['appelOffreDevis']);
+                }
+            }
+            
             if (array_key_exists('appelOffresCCRetire', $data)) $appel->setAppelOffresCCRetire((int)$data['appelOffresCCRetire']);
             if (array_key_exists('appelOffresLienAnnonce', $data)) $appel->setAppelOffresLienAnnonce($data['appelOffresLienAnnonce']);
             if (array_key_exists('appelOffresCautionBancaire', $data)) $appel->setAppelOffresCautionBancaire((int)$data['appelOffresCautionBancaire']);
             if (array_key_exists('appelOffresTypeParticipationId', $data)) $appel->setAppelOffresTypeParticipationId($data['appelOffresTypeParticipationId']);
             if (array_key_exists('appelOffresRemarque', $data)) $appel->setAppelOffresRemarque($data['appelOffresRemarque']);
-            if (array_key_exists('appelOffresParticipation', $data)) $appel->setAppelOffresParticipation((int)$data['appelOffresParticipation']);
+            
+            if (array_key_exists('appelOffresParticipation', $data)) {
+                $participation = (int)$data['appelOffresParticipation'];
+                $appel->setAppelOffresParticipation($participation);
+                
+                if ($participation === 1) {
+                    $dateParticipation = null;
+                    
+                    if (array_key_exists('appelOffresDateParticipation', $data) && !empty($data['appelOffresDateParticipation'])) {
+                        $dateParticipation = new \DateTime($data['appelOffresDateParticipation']);
+                    } else {
+                        $dateParticipation = $appel->getAppelOffresDateParticipation();
+                    }
+                    
+                    if ($dateParticipation) {
+                        $anneeParticipation = (int)$dateParticipation->format('Y');
+                        $connection = $em->getConnection();
+                        
+                        if (empty($appel->getAppelOffresNumeroDevisParticipation())) {
+                            $sqlParticipation = 'SELECT MAX(CAST(appelOffresNumeroDevisParticipation AS UNSIGNED)) as maxDevisParticipation 
+                                                 FROM appel_offres 
+                                                 WHERE YEAR(appelOffresDateParticipation) = :anneeParticipation 
+                                                 AND appelOffresNumeroDevisParticipation IS NOT NULL 
+                                                 AND appelOffresNumeroDevisParticipation != ""
+                                                 AND appelOffresId != :currentId';
+                            
+                            $stmtParticipation = $connection->prepare($sqlParticipation);
+                            $resultParticipation = $stmtParticipation->executeQuery([
+                                'anneeParticipation' => $anneeParticipation,
+                                'currentId' => $appel->getAppelOffresId()
+                            ]);
+                            $maxDevisParticipation = $resultParticipation->fetchOne();
+                            
+                            $nouveauDevisParticipation = ($maxDevisParticipation ? (int)$maxDevisParticipation : 0) + 1;
+                            
+                            $sqlCheckParticipation = 'SELECT COUNT(*) as count 
+                                                       FROM appel_offres 
+                                                       WHERE YEAR(appelOffresDateParticipation) = :anneeParticipation 
+                                                       AND appelOffresNumeroDevisParticipation = :devisParticipation
+                                                       AND appelOffresId != :currentId';
+                            $stmtCheckParticipation = $connection->prepare($sqlCheckParticipation);
+                            $resultCheckParticipation = $stmtCheckParticipation->executeQuery([
+                                'anneeParticipation' => $anneeParticipation,
+                                'devisParticipation' => (string)$nouveauDevisParticipation,
+                                'currentId' => $appel->getAppelOffresId()
+                            ]);
+                            $countParticipation = $resultCheckParticipation->fetchOne();
+                            
+                            while ($countParticipation > 0) {
+                                $nouveauDevisParticipation++;
+                                $resultCheckParticipation = $stmtCheckParticipation->executeQuery([
+                                    'anneeParticipation' => $anneeParticipation,
+                                    'devisParticipation' => (string)$nouveauDevisParticipation,
+                                    'currentId' => $appel->getAppelOffresId()
+                                ]);
+                                $countParticipation = $resultCheckParticipation->fetchOne();
+                            }
+                            
+                            $appel->setAppelOffresNumeroDevisParticipation((string)$nouveauDevisParticipation);
+                        }
+                    }
+                } else {
+                    $appel->setAppelOffresNumeroDevisParticipation(null);
+                }
+            } else {
+                if (array_key_exists('appelOffresNumeroDevisParticipation', $data)) {
+                    $appel->setAppelOffresNumeroDevisParticipation($data['appelOffresNumeroDevisParticipation']);
+                }
+            }
+            
             if (array_key_exists('appelOffresEtat', $data)) $appel->setAppelOffresEtat($data['appelOffresEtat']);
             if (array_key_exists('appelOffresResultatRang', $data)) $appel->setAppelOffresResultatRang((int)$data['appelOffresResultatRang']);
             if (array_key_exists('appelOffresResultatRangTotal', $data)) $appel->setAppelOffresResultatRangTotal((int)$data['appelOffresResultatRangTotal']);
-            if (array_key_exists('appelOffresNumeroDevisParticipation', $data)) $appel->setAppelOffresNumeroDevisParticipation($data['appelOffresNumeroDevisParticipation']);
-
-            // Dates/Heures
+    
             if (array_key_exists('appelOffreDateRemise', $data)) {
                 $appel->setAppelOffreDateRemise(!empty($data['appelOffreDateRemise']) ? new \DateTime($data['appelOffreDateRemise']) : null);
             }
@@ -202,8 +411,7 @@ class AppelOffresController extends AbstractController
             if (array_key_exists('appelOffresDateParticipation', $data)) {
                 $appel->setAppelOffresDateParticipation(!empty($data['appelOffresDateParticipation']) ? new \DateTime($data['appelOffresDateParticipation']) : null);
             }
-
-            // Relations
+    
             if (array_key_exists('appelOffresTypeId', $data)) {
                 $type = !empty($data['appelOffresTypeId']) ? $em->getRepository(AppelOffresType::class)->find($data['appelOffresTypeId']) : null;
                 $appel->setAppelOffresTypeId($type);
@@ -224,19 +432,18 @@ class AppelOffresController extends AbstractController
                 $d = !empty($data['appelOffresDevisesId']) ? $em->getRepository(Devises::class)->find($data['appelOffresDevisesId']) : null;
                 $appel->setAppelOffresDevisesId($d);
             }
-            // ✅ NOUVEAU: Devise de caution
             if (array_key_exists('appelOffresCautionBancaireDeviseId', $data)) {
                 $cautionDev = !empty($data['appelOffresCautionBancaireDeviseId']) ? $em->getRepository(Devises::class)->find($data['appelOffresCautionBancaireDeviseId']) : null;
                 $appel->setAppelOffresCautionBancaireDeviseId($cautionDev);
             }
-
+    
             $em->flush();
-
+    
             return new JsonResponse([
                 'message' => 'AppelOffres modifié avec succès',
                 'data' => $this->serializeAppelOffres($appel)
             ], Response::HTTP_OK);
-
+    
         } catch (\Exception $e) {
             return new JsonResponse([
                 'error' => 'Erreur lors de la mise à jour',
@@ -263,67 +470,133 @@ class AppelOffresController extends AbstractController
 
     private function serializeAppelOffres(AppelOffres $appel): array
     {
-        $partenaires = [];
-        foreach ($appel->getAppelOffresPartenaires() as $aop) {
-            $p = $aop->getPartenaire();
-            if ($p) {
-                $partenaires[] = [
-                    'id' => $aop->getId(),
-                    'partenaireId' => $p->getPartenaireId(),
-                    'partenaireLibelle' => $p->getPartenaireLibelle(),
-                    'partenaireAcronyme' => $p->getPartenaireAcronyme(),
-                    'role' => $aop->getRole(),
-                ];
+        try {
+            $partenaires = [];
+            try {
+                if (method_exists($appel, 'getAppelOffresPartenaires')) {
+                    $partenairesCollection = $appel->getAppelOffresPartenaires();
+                    if ($partenairesCollection) {
+                        foreach ($partenairesCollection as $aop) {
+                            try {
+                                $p = $aop->getPartenaire();
+                                if ($p) {
+                                    $partenaires[] = [
+                                        'id' => $aop->getId(),
+                                        'partenaireId' => $p->getPartenaireId(),
+                                        'partenaireLibelle' => $p->getPartenaireLibelle() ?? '',
+                                        'partenaireAcronyme' => $p->getPartenaireAcronyme() ?? '',
+                                        'role' => $aop->getRole() ?? '',
+                                    ];
+                                }
+                            } catch (\Exception $e) {
+                                continue;
+                            }
+                        }
+                    }
+                }
+            } catch (\Exception $e) {
+                error_log('Erreur lors de la récupération des partenaires: ' . $e->getMessage());
             }
+
+            $type = null;
+            $moyen = null;
+            $pays = null;
+            $organisme = null;
+            $devise = null;
+            $cautionDevise = null;
+
+            try {
+                $type = $appel->getAppelOffresTypeId();
+            } catch (\Exception $e) {
+                error_log('Erreur getAppelOffresTypeId: ' . $e->getMessage());
+            }
+
+            try {
+                $moyen = $appel->getAppelOffresMoyenLivraisonId();
+            } catch (\Exception $e) {
+                error_log('Erreur getAppelOffresMoyenLivraisonId: ' . $e->getMessage());
+            }
+
+            try {
+                $pays = $appel->getAppelOffresPaysId();
+            } catch (\Exception $e) {
+                error_log('Erreur getAppelOffresPaysId: ' . $e->getMessage());
+            }
+
+            try {
+                $organisme = $appel->getAppelOffresOrganismeDemandeurId();
+            } catch (\Exception $e) {
+                error_log('Erreur getAppelOffresOrganismeDemandeurId: ' . $e->getMessage());
+            }
+
+            try {
+                $devise = $appel->getAppelOffresDevisesId();
+            } catch (\Exception $e) {
+                error_log('Erreur getAppelOffresDevisesId: ' . $e->getMessage());
+            }
+
+            try {
+                $cautionDevise = $appel->getAppelOffresCautionBancaireDeviseId();
+            } catch (\Exception $e) {
+                error_log('Erreur getAppelOffresCautionBancaireDeviseId: ' . $e->getMessage());
+            }
+
+            $organismeLibelle = null;
+            if ($organisme) {
+                try {
+                    $organismeLibelle = $organisme->getOrganismeDemandeurRaisonSociale();
+                } catch (\Exception $e) {
+                    error_log('Erreur getOrganismeDemandeurRaisonSociale: ' . $e->getMessage());
+                    try {
+                        $organismeLibelle = $organisme->getOrganismeDemandeurLibelle();
+                    } catch (\Exception $e2) {
+                        error_log('Erreur getOrganismeDemandeurLibelle: ' . $e2->getMessage());
+                    }
+                }
+            }
+
+            return [
+                'appelOffresId' => $appel->getAppelOffresId(),
+                'appelOffreDevis' => $appel->getAppelOffreDevis(),
+                'appelOffresObjet' => $appel->getAppelOffresObjet(),
+                'appelOffreDateRemise' => $appel->getAppelOffreDateRemise()?->format('Y-m-d'),
+                'appelOffresDateLimiteRemise' => $appel->getAppelOffresDateLimiteRemise()?->format('Y-m-d'),
+                'appelOffresHeureLimiteRemise' => $appel->getAppelOffresHeureLimiteRemise()?->format('H:i:s'),
+                'appelOffresCCRetire' => $appel->getAppelOffresCCRetire(),
+                'appelOffresLienAnnonce' => $appel->getAppelOffresLienAnnonce(),
+                'appelOffresCautionBancaire' => $appel->getAppelOffresCautionBancaire(),
+                'appelOffresTypeParticipationId' => $appel->getAppelOffresTypeParticipationId(),
+                'appelOffresRemarque' => $appel->getAppelOffresRemarque(),
+                'appelOffresParticipation' => $appel->getAppelOffresParticipation(),
+                'appelOffresDateParticipation' => $appel->getAppelOffresDateParticipation()?->format('Y-m-d'),
+                'appelOffresEtat' => $appel->getAppelOffresEtat(),
+                'appelOffresResultatRang' => $appel->getAppelOffresResultatRang(),
+                'appelOffresResultatRangTotal' => $appel->getAppelOffresResultatRangTotal(),
+                'appelOffresNumeroDevisParticipation' => $appel->getAppelOffresNumeroDevisParticipation(),
+                'appelOffreAnnee' => $appel->getAppelOffreAnnee(),
+
+                'appelOffresTypeId' => $type?->getAppelOffresTypeId(),
+                'appelOffresMoyenLivraisonId' => $moyen?->getMoyenLivraisonId(),
+                'appelOffresPaysId' => $pays?->getPaysId(),
+                'appelOffresOrganismeDemandeurId' => $organisme?->getOrganismeDemandeurId(),
+                'appelOffresDevisesId' => $devise?->getDevisesId(),
+                'appelOffresCautionBancaireDeviseId' => $cautionDevise?->getDevisesId(),
+
+                'appelOffreTypeLibelle' => $type?->getAppelOffresTypeLibelle(),
+                'appelOffreTypeShort' => $type?->getAppelOffresTypeShort(),
+                'moyenLivraisonLibelle' => $moyen?->getMoyenLivraisonLibelle(),
+                'moyenLivraisonShort' => $moyen?->getMoyenLivraisonShort(),
+                'paysLibelle' => $pays?->getPaysLibelle(),
+                'organismeDemandeurLibelle' => $organismeLibelle,
+                'devisesLibelle' => $devise?->getDevisesLibelle(),
+                'devisesAcronyme' => $devise?->getDevisesAcronyme(),
+
+                'partenaires' => $partenaires,
+            ];
+        } catch (\Exception $e) {
+            error_log('Erreur dans serializeAppelOffres: ' . $e->getMessage());
+            error_log('Stack trace: ' . $e->getTraceAsString());
+            throw $e;
         }
-
-        // ✅ Extraire les entités relations
-        $type = $appel->getAppelOffresTypeId();
-        $moyen = $appel->getAppelOffresMoyenLivraisonId();
-        $pays = $appel->getAppelOffresPaysId();
-        $organisme = $appel->getAppelOffresOrganismeDemandeurId();
-        $devise = $appel->getAppelOffresDevisesId();
-        $cautionDevise = $appel->getAppelOffresCautionBancaireDeviseId();  // ✅ NOUVEAU
-
-        return [
-            'appelOffresId' => $appel->getAppelOffresId(),
-            'appelOffreDevis' => $appel->getAppelOffreDevis(),
-            'appelOffresObjet' => $appel->getAppelOffresObjet(),
-            'appelOffreDateRemise' => $appel->getAppelOffreDateRemise()?->format('Y-m-d'),
-            'appelOffresDateLimiteRemise' => $appel->getAppelOffresDateLimiteRemise()?->format('Y-m-d'),
-            'appelOffresHeureLimiteRemise' => $appel->getAppelOffresHeureLimiteRemise()?->format('H:i:s'),
-            'appelOffresCCRetire' => $appel->getAppelOffresCCRetire(),
-            'appelOffresLienAnnonce' => $appel->getAppelOffresLienAnnonce(),
-            'appelOffresCautionBancaire' => $appel->getAppelOffresCautionBancaire(),
-            'appelOffresTypeParticipationId' => $appel->getAppelOffresTypeParticipationId(),
-            'appelOffresRemarque' => $appel->getAppelOffresRemarque(),
-            'appelOffresParticipation' => $appel->getAppelOffresParticipation(),
-            'appelOffresDateParticipation' => $appel->getAppelOffresDateParticipation()?->format('Y-m-d'),
-            'appelOffresEtat' => $appel->getAppelOffresEtat(),
-            'appelOffresResultatRang' => $appel->getAppelOffresResultatRang(),
-            'appelOffresResultatRangTotal' => $appel->getAppelOffresResultatRangTotal(),
-            'appelOffresNumeroDevisParticipation' => $appel->getAppelOffresNumeroDevisParticipation(),
-            'appelOffreAnnee' => $appel->getAppelOffreAnnee(),
-
-            // Relations - IDs
-            'appelOffresTypeId' => $type?->getAppelOffresTypeId(),
-            'appelOffresMoyenLivraisonId' => $moyen?->getMoyenLivraisonId(),
-            'appelOffresPaysId' => $pays?->getPaysId(),
-            'appelOffresOrganismeDemandeurId' => $organisme?->getId(),
-            'appelOffresDevisesId' => $devise?->getDevisesId(),
-            'appelOffresCautionBancaireDeviseId' => $cautionDevise?->getDevisesId(),  // ✅ NOUVEAU
-
-            // ✅ LIBELLÉS ENRICHIS
-            'appelOffreTypeLibelle' => $type?->getAppelOffresTypeLibelle(),
-            'appelOffreTypeShort' => $type?->getAppelOffresTypeShort(),
-            'moyenLivraisonLibelle' => $moyen?->getMoyenLivraisonLibelle(),
-            'moyenLivraisonShort' => $moyen?->getMoyenLivraisonShort(),
-            'paysLibelle' => $pays?->getPaysLibelle(),
-            'organismeDemandeurLibelle' => $organisme?->getOrganismeDemandeurLibelle(),
-            'devisesLibelle' => $devise?->getDevisesLibelle(),
-            'devisesAcronyme' => $devise?->getDevisesAcronyme(),
-
-            'partenaires' => $partenaires,
-        ];
     }
 }
