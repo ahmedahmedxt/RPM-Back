@@ -14,6 +14,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
+
 #[Route('/api/organisme-demandeurs', name: 'api_organisme_demandeur_')]
 class OrganismeDemandeurController extends AbstractController
 {
@@ -180,6 +181,106 @@ class OrganismeDemandeurController extends AbstractController
         }
     }
 
+    #[Route('/search', name: 'search', methods: ['GET'])]
+    public function search(Request $request): JsonResponse
+    {
+        $page = max(1, (int) $request->query->get('page', 1));
+        $limit = max(1, min(100, (int) $request->query->get('limit', 10)));
+        $offset = ($page - 1) * $limit;
+
+        $q = trim((string) $request->query->get('q', ''));
+
+        $paysId = $request->query->get('paysId');
+        $natureId = $request->query->get('natureOrganismeDemendeurId');
+        $secteurId = $request->query->get('secteurActiviteId');
+
+        $qb = $this->em->createQueryBuilder()
+            ->select('o')
+            ->from(OrganismeDemandeur::class, 'o');
+
+        $andX = $qb->expr()->andX();
+
+        if ($q !== '') {
+            $andX->add(
+                $qb->expr()->orX(
+                    $qb->expr()->like('LOWER(o.organismeDemandeurRaisonSociale)', ':q'),
+                    $qb->expr()->like('LOWER(o.organismeDemandeurRaisonSocialeShort)', ':q'),
+                    $qb->expr()->like('LOWER(o.organismeDemandeurDescription)', ':q')
+                )
+            );
+            $qb->setParameter('q', '%' . mb_strtolower($q) . '%');
+        }
+
+        if (!empty($paysId)) {
+            $andX->add($qb->expr()->eq('o.pays', ':paysId'));
+            $qb->setParameter('paysId', (int)$paysId);
+        }
+
+        if (!empty($natureId)) {
+            $andX->add($qb->expr()->eq('o.natureOrganismeDemendeur', ':natureId'));
+            $qb->setParameter('natureId', (int)$natureId);
+        }
+
+        if (!empty($secteurId)) {
+            $andX->add($qb->expr()->eq('o.secteurActivite', ':secteurId'));
+            $qb->setParameter('secteurId', (int)$secteurId);
+        }
+
+        if ($andX->count() > 0) {
+            $qb->where($andX);
+        }
+
+        $qb->orderBy('o.organismeDemandeurRaisonSociale', 'ASC')
+        ->setFirstResult($offset)
+        ->setMaxResults($limit);
+
+        $items = $qb->getQuery()->getResult();
+
+        $countQb = $this->em->createQueryBuilder()
+            ->select('COUNT(o)')
+            ->from(OrganismeDemandeur::class, 'o');
+
+        if ($andX->count() > 0) {
+            $countAnd = $countQb->expr()->andX();
+
+            if ($q !== '') {
+                $countAnd->add(
+                    $countQb->expr()->orX(
+                        $countQb->expr()->like('LOWER(o.organismeDemandeurRaisonSociale)', ':q'),
+                        $countQb->expr()->like('LOWER(o.organismeDemandeurRaisonSocialeShort)', ':q'),
+                        $countQb->expr()->like('LOWER(o.organismeDemandeurDescription)', ':q')
+                    )
+                );
+                $countQb->setParameter('q', '%' . mb_strtolower($q) . '%');
+            }
+            if (!empty($paysId)) {
+                $countAnd->add($countQb->expr()->eq('o.pays', ':paysId'));
+                $countQb->setParameter('paysId', (int)$paysId);
+            }
+            if (!empty($natureId)) {
+                $countAnd->add($countQb->expr()->eq('o.natureOrganismeDemendeur', ':natureId'));
+                $countQb->setParameter('natureId', (int)$natureId);
+            }
+            if (!empty($secteurId)) {
+                $countAnd->add($countQb->expr()->eq('o.secteurActivite', ':secteurId'));
+                $countQb->setParameter('secteurId', (int)$secteurId);
+            }
+
+            if ($countAnd->count() > 0) {
+                $countQb->where($countAnd);
+            }
+        }
+
+        $total = (int) $countQb->getQuery()->getSingleScalarResult();
+
+        return $this->json([
+            'page'  => $page,
+            'limit' => $limit,
+            'total' => $total,
+            'data'  => array_map(fn($o) => $this->toArray($o), $items),
+        ], Response::HTTP_OK);
+    }
+
     #[Route('/{id}', name: 'get', methods: ['GET'])]
     public function getOne(OrganismeDemandeur $organismeDemandeur): JsonResponse
     {
@@ -187,12 +288,15 @@ class OrganismeDemandeurController extends AbstractController
     }
 
     #[Route('/{id}', name: 'update', methods: ['PUT', 'POST'])]
-    public function update(Request $request, OrganismeDemandeur $organismeDemandeur): JsonResponse
-    {
+    public function update(Request $request, OrganismeDemandeur $organismeDemandeur): JsonResponse{
         $contentType = $request->headers->get('content-type') ?? '';
-        $data = stripos($contentType, 'application/json') !== false
-            ? json_decode($request->getContent(), true)
-            : $request->request->all();
+        $data = null;
+
+        if (stripos($contentType, 'application/json') !== false) {
+            $data = json_decode($request->getContent(), true);
+        } else {
+            $data = $request->request->all();
+        }
 
         if (!is_array($data)) {
             return $this->json(['error' => 'Invalid payload (expected JSON or form-data)'], Response::HTTP_BAD_REQUEST);
@@ -201,24 +305,40 @@ class OrganismeDemandeurController extends AbstractController
         $this->mapScalars($organismeDemandeur, $data);
         $this->setRelations($organismeDemandeur, $data);
 
+        /** @var UploadedFile|null $logoFile */
         $logoFile = $request->files->get('organismeDemandeurLogo');
-        if ($logoFile instanceof \Symfony\Component\HttpFoundation\File\UploadedFile) {
-            $publicPath = $this->storeUploadedLogo($logoFile, $organismeDemandeur->getOrganismeDemandeurLogo());
-            if ($publicPath === null) {
-                return $this->json(['error' => 'Failed to store uploaded logo.'], Response::HTTP_INTERNAL_SERVER_ERROR);
+
+        $removeLogo = (bool) $request->request->get('removeLogo', false);
+
+        if ($logoFile instanceof UploadedFile) {
+            $uploadsDir = rtrim($this->getParameter('uploads_directory'), '/\\') . '/organismes';
+            if (!is_dir($uploadsDir)) {
+                @mkdir($uploadsDir, 0755, true);
             }
-            $organismeDemandeur->setOrganismeDemandeurLogo($publicPath);
+
+            $safeName = uniqid('org_', true) . '.' . ($logoFile->guessExtension() ?: 'png');
+
+            try {
+                $logoFile->move($uploadsDir, $safeName);
+            } catch (\Throwable $e) {
+                return $this->json(['error' => 'Failed to store uploaded logo: '.$e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
+            }
+
+            $this->deleteExistingLogoFile($organismeDemandeur);
+
+            $organismeDemandeur->setOrganismeDemandeurLogo('/uploads/organismes/' . $safeName);
+        } elseif ($removeLogo) {
+            $this->deleteExistingLogoFile($organismeDemandeur);
+            $organismeDemandeur->setOrganismeDemandeurLogo(null);
         } else {
-            $base64Key = $data['organismeDemandeurLogo'] ?? $data['organismeDemandeurLogo'] ?? null;
+            $base64Key = $data['organismeDemandeurLogo'] ?? ($data['organisme_demandeur_raison_sociale_logo'] ?? null);
             if (!empty($base64Key) && is_string($base64Key)) {
-                $publicPath = $this->saveBase64Logo($base64Key, $organismeDemandeur->getOrganismeDemandeurLogo());
+                $publicPath = $this->saveBase64Logo($base64Key);
                 if ($publicPath === null) {
                     return $this->json(['error' => 'Invalid base64 image.'], Response::HTTP_BAD_REQUEST);
                 }
+                $this->deleteExistingLogoFile($organismeDemandeur);
                 $organismeDemandeur->setOrganismeDemandeurLogo($publicPath);
-            } elseif (!empty($data['removeLogo']) && in_array($data['removeLogo'], ['1', 1, true, 'true'], true)) {
-                $this->deletePublicLogo($organismeDemandeur->getOrganismeDemandeurLogo());
-                $organismeDemandeur->setOrganismeDemandeurLogo(null);
             }
         }
 
@@ -233,28 +353,23 @@ class OrganismeDemandeurController extends AbstractController
 
         $this->em->flush();
 
-        return $this->json($this->toArray($organismeDemandeur), Response::HTTP_OK);
+        return $this->json($this->toArray($organismeDemandeur));
     }
 
-    private function storeUploadedLogo(\Symfony\Component\HttpFoundation\File\UploadedFile $uploadedLogo, ?string $oldPublicPath = null): ?string
+
+    private function deleteExistingLogoFile(OrganismeDemandeur $organisme)
     {
-        $uploadsDir = rtrim($this->getParameter('uploads_directory'), '/\\') . '/organismes';
-        if (!is_dir($uploadsDir) && !@mkdir($uploadsDir, 0755, true) && !is_dir($uploadsDir)) {
-            return null;
-        }
+        $existingPath = $organisme->getOrganismeDemandeurLogo();
+        if (!$existingPath) return;
 
-        $ext = $uploadedLogo->guessExtension() ?: 'png';
-        $safeName = uniqid('org_', true) . '.' . preg_replace('/[^a-z0-9]+/i', '', $ext);
-        try {
-            $uploadedLogo->move($uploadsDir, $safeName);
-            if ($oldPublicPath) {
-                $this->deletePublicLogo($oldPublicPath);
+        if (str_starts_with($existingPath, '/uploads/organismes/')) {
+            $full = $this->getParameter('kernel.project_dir') . '/public' . $existingPath;
+            if (file_exists($full)) {
+                @unlink($full);
             }
-            return '/uploads/organismes/' . $safeName;
-        } catch (\Throwable $e) {
-            return null;
         }
     }
+
 
     #[Route('/{id}', name: 'delete', methods: ['DELETE'])]
     public function delete(OrganismeDemandeur $organismeDemandeur): JsonResponse
@@ -408,4 +523,7 @@ class OrganismeDemandeurController extends AbstractController
             ];
         }
     }
+
+    
+
 }
