@@ -18,7 +18,7 @@ class OrganismeDemandeur
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column(name: 'organisme_demandeur_id', type: 'integer')]
+    #[ORM\Column(name: 'organismeDemandeurId', type: 'integer')]
     private ?int $organismeDemandeurId = null;
 
     public function getId(): ?int
@@ -26,28 +26,24 @@ class OrganismeDemandeur
         return $this->organismeDemandeurId;
     }
 
-    #[ORM\Column(name: 'organismeDemandeurLibelle', length: 255, nullable: true)]
-    private ?string $organismeDemandeurLibelle = null;
-
-    #[ORM\Column(name: 'organismeDemandeurRaisonSocial', length: 255, nullable: true)]
+    #[ORM\Column(name: 'organismeDemandeurRaisonSociale', length: 255, nullable: false)]
+    #[Assert\NotBlank(message: 'La raison sociale est requise.')]
     private ?string $organismeDemandeurRaisonSociale = null;
 
-    #[ORM\Column(name: 'organismeDemandeurRaisonSocialShort', length: 100, nullable: true)]
+    #[ORM\Column(name: 'organismeDemandeurRaisonSocialeShort', length: 10, nullable: false)]
+    #[Assert\NotBlank(message: 'La raison sociale courte est requise.')]
     private ?string $organismeDemandeurRaisonSocialeShort = null;
 
     #[ORM\Column(name: 'organismeDemandeurDescription', type: 'text', nullable: true)]
     private ?string $organismeDemandeurDescription = null;
 
-    #[ORM\Column(name: 'organismeDemandeurAcronyme', length: 100, nullable: true)]
-    private ?string $organismeDemandeurAcronyme = null;
-
     #[ORM\Column(name: 'organismeDemandeurLogo', length: 255, nullable: true)]
     private ?string $organismeDemandeurLogo = null;
 
-    #[ORM\Column(name: 'organismeDemandeurNomCoordinateur', length: 150, nullable: true)]
+    #[ORM\Column(name: 'organismeDemandeurCoordinateurPrenomNom', length: 150, nullable: true)]
     private ?string $organismeDemandeurCoordinateurPrenomNom = null;
 
-    #[ORM\Column(name: 'organismeDemandeurEmailCoordinateur', length: 180, nullable: true)]
+    #[ORM\Column(name: 'organismeDemandeurCoordinateurEmail', length: 180, nullable: true)]
     private ?string $organismeDemandeurCoordinateurEmail = null;
 
     #[ORM\Column(name: 'organismeDemandeurCoordinateurTel', length: 50, nullable: true)]
@@ -62,31 +58,31 @@ class OrganismeDemandeur
     #[ORM\Column(name: 'organismeDemandeurEmail', length: 180, nullable: true)]
     private ?string $organismeDemandeurEmail = null;
 
-    #[ORM\Column(name: 'organismeDemandeurPersonneContact1', length: 150, nullable: true)]
+    #[ORM\Column(name: 'organismeDemandeurPersonneContactPrenomNom1', length: 150, nullable: true)]
     private ?string $organismeDemandeurPersonneContactPrenomNom1 = null;
 
-    #[ORM\Column(name: 'organismeDemandeurPersonneTelephonne1', length: 50, nullable: true)]
+    #[ORM\Column(name: 'organismeDemandeurPersonneContactTelephone1', length: 50, nullable: true)]
     private ?string $organismeDemandeurPersonneContactTelephone1 = null;
 
     #[ORM\Column(name: 'organismeDemandeurPersonneContactEmail1', length: 180, nullable: true)]
     private ?string $organismeDemandeurPersonneContactEmail1 = null;
 
-    #[ORM\Column(name: 'organismeDemandeurPersonneContact2', length: 150, nullable: true)]
+    #[ORM\Column(name: 'organismeDemandeurPersonneContactPrenomNom2', length: 150, nullable: true)]
     private ?string $organismeDemandeurPersonneContactPrenomNom2 = null;
 
-    #[ORM\Column(name: 'organismeDemandeurTelephone2', length: 50, nullable: true)]
+    #[ORM\Column(name: 'organismeDemandeurPersonneContactTelephone2', length: 50, nullable: true)]
     private ?string $organismeDemandeurPersonneContactTelephone2 = null;
 
-    #[ORM\Column(name: 'organismeDemandeurEmail2', length: 180, nullable: true)]
+    #[ORM\Column(name: 'organismeDemandeurPersonneContactEmail2', length: 180, nullable: true)]
     private ?string $organismeDemandeurPersonneContactEmail2 = null;
 
-    #[ORM\Column(name: 'organismeDemandeurPersonneContact3', length: 150, nullable: true)]
+    #[ORM\Column(name: 'organismeDemandeurPersonneContactPrenomNom3', length: 150, nullable: true)]
     private ?string $organismeDemandeurPersonneContactPrenomNom3 = null;
 
-    #[ORM\Column(name: 'organismeDemandeurTelephone3', length: 50, nullable: true)]
+    #[ORM\Column(name: 'organismeDemandeurPersonneContactTelephone3', length: 50, nullable: true)]
     private ?string $organismeDemandeurPersonneContactTelephone3 = null;
 
-    #[ORM\Column(name: 'organismeDemandeurEmail3', length: 180, nullable: true)]
+    #[ORM\Column(name: 'organismeDemandeurPersonneContactEmail3', length: 180, nullable: true)]
     private ?string $organismeDemandeurPersonneContactEmail3 = null;
 
     #[ORM\ManyToOne(targetEntity: Pays::class)]
@@ -94,11 +90,11 @@ class OrganismeDemandeur
     private ?Pays $pays = null;
 
     #[ORM\ManyToOne(targetEntity: NatureOrganismeDemendeur::class, inversedBy: 'organismesDemandeurs')]
-    #[ORM\JoinColumn(name: 'nature_organisme_demendeur_id', referencedColumnName: 'nature_organisme_demendeur_id', nullable: true, onDelete: 'SET NULL')]
+    #[ORM\JoinColumn(name: 'natureOrganismeDemendeurId', referencedColumnName: 'nature_organisme_demendeur_id', nullable: true, onDelete: 'SET NULL')]
     private ?NatureOrganismeDemendeur $natureOrganismeDemendeur = null;
 
     #[ORM\ManyToOne(targetEntity: SecteurActivite::class, inversedBy: 'organismesDemandeurs')]
-    #[ORM\JoinColumn(name: 'secteur_activite_id', referencedColumnName: 'secteur_activite_id', nullable: true, onDelete: 'SET NULL')]
+    #[ORM\JoinColumn(name: 'secteurActiviteId', referencedColumnName: 'secteur_activite_id', nullable: true, onDelete: 'SET NULL')]
     private ?SecteurActivite $secteurActivite = null;
 
     #[ORM\OneToMany(targetEntity: AppelOffres::class, mappedBy: 'appelOffresOrganismeDemandeurId', cascade: ['persist', 'remove'])]
@@ -111,23 +107,14 @@ class OrganismeDemandeur
 
     public function __toString(): string
     {
-        return (string) ($this->organismeDemandeurRaisonSociale ?? $this->organismeDemandeurRaisonSocialeShort ?? $this->organismeDemandeurLibelle ?? '');
+        return (string) ($this->organismeDemandeurRaisonSociale ?? $this->organismeDemandeurRaisonSocialeShort ?? '');
     }
+
+    // ---------------- Getters / Setters ----------------
 
     public function getOrganismeDemandeurId(): ?int
     {
         return $this->organismeDemandeurId;
-    }
-
-    public function getOrganismeDemandeurLibelle(): ?string
-    {
-        return $this->organismeDemandeurLibelle;
-    }
-
-    public function setOrganismeDemandeurLibelle(?string $v): self
-    {
-        $this->organismeDemandeurLibelle = $v;
-        return $this;
     }
 
     public function getOrganismeDemandeurRaisonSociale(): ?string
@@ -135,7 +122,7 @@ class OrganismeDemandeur
         return $this->organismeDemandeurRaisonSociale;
     }
 
-    public function setOrganismeDemandeurRaisonSociale(?string $v): self
+    public function setOrganismeDemandeurRaisonSociale(string $v): self
     {
         $this->organismeDemandeurRaisonSociale = $v;
         return $this;
@@ -146,7 +133,7 @@ class OrganismeDemandeur
         return $this->organismeDemandeurRaisonSocialeShort;
     }
 
-    public function setOrganismeDemandeurRaisonSocialeShort(?string $v): self
+    public function setOrganismeDemandeurRaisonSocialeShort(string $v): self
     {
         $this->organismeDemandeurRaisonSocialeShort = $v;
         return $this;
@@ -154,9 +141,6 @@ class OrganismeDemandeur
 
     public function getOrganismeDemandeurDescription(): ?string { return $this->organismeDemandeurDescription; }
     public function setOrganismeDemandeurDescription(?string $v): self { $this->organismeDemandeurDescription = $v; return $this; }
-
-    public function getOrganismeDemandeurAcronyme(): ?string { return $this->organismeDemandeurAcronyme; }
-    public function setOrganismeDemandeurAcronyme(?string $v): self { $this->organismeDemandeurAcronyme = $v; return $this; }
 
     public function getOrganismeDemandeurLogo(): ?string { return $this->organismeDemandeurLogo; }
     public function setOrganismeDemandeurLogo(?string $v): self { $this->organismeDemandeurLogo = $v; return $this; }
@@ -179,6 +163,7 @@ class OrganismeDemandeur
     public function getOrganismeDemandeurEmail(): ?string { return $this->organismeDemandeurEmail; }
     public function setOrganismeDemandeurEmail(?string $v): self { $this->organismeDemandeurEmail = $v; return $this; }
 
+    // Contact 1
     public function getOrganismeDemandeurPersonneContactPrenomNom1(): ?string { return $this->organismeDemandeurPersonneContactPrenomNom1; }
     public function setOrganismeDemandeurPersonneContactPrenomNom1(?string $v): self { $this->organismeDemandeurPersonneContactPrenomNom1 = $v; return $this; }
 
@@ -215,6 +200,9 @@ class OrganismeDemandeur
     public function getSecteurActivite(): ?SecteurActivite { return $this->secteurActivite; }
     public function setSecteurActivite(?SecteurActivite $s): self { $this->secteurActivite = $s; return $this; }
 
+    /**
+     * @return Collection<int, AppelOffres>
+     */
     public function getAppelOffres(): Collection { return $this->appelOffres; }
 
     public function addAppelOffres(AppelOffres $appel): self {
