@@ -2,9 +2,7 @@
 
 namespace App\Controller\Api;
 
-use App\Entity\BailleurFond;
 use App\Entity\Role;
-use App\Repository\BailleurFondRepository;
 use App\Repository\RoleRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -15,103 +13,170 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
-use Symfony\Component\Serializer\SerializerInterface;
 
-#[Route('/api/role', name: 'api_role_')]
+#[Route('/api', name: 'api_role_')]
 class RoleController extends AbstractController
 {
     private $entityManager;
-    private $serializer;
 
-    public function __construct(EntityManagerInterface $entityManager, SerializerInterface $serializer)
+    public function __construct(EntityManagerInterface $entityManager)
     {
         $this->entityManager = $entityManager;
-        $this->serializer = $serializer;
     }
 
-    #[Route('', name: 'get_all', methods: ['GET'])]
+    #[Route('/getAll/roles', name: 'get_all_roles', methods: ['GET'])]
+    public function getAllRoles(RoleRepository $repository, TokenStorageInterface $tokenStorage): JsonResponse
+    {
+        try {
+            $roles = $repository->findAll();
+            
+            $data = [];
+            foreach ($roles as $role) {
+                $data[] = [
+                    'roleId' => $role->getRoleId(),
+                    'roleLibelle' => $role->getRoleLibelle() ?? '',
+                    'roleShort' => $role->getRoleShort() ?? '',
+                ];
+            }
+
+            return new JsonResponse($data, Response::HTTP_OK);
+
+        } catch (\Exception $e) {
+            return new JsonResponse([
+                'error' => $e->getMessage(),
+                'data' => []
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    #[Route('/role', name: 'get_all', methods: ['GET'])]
     public function getAll(RoleRepository $repository, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        //$this->checkToken($tokenStorage);
-        $roles = $repository->findAll();
-        $data = $this->serializer->serialize($roles, 'json');
+        try {
+            $roles = $repository->findAll();
+            
+            $data = [];
+            foreach ($roles as $role) {
+                $data[] = [
+                    'roleId' => $role->getRoleId(),
+                    'roleLibelle' => $role->getRoleLibelle() ?? '',
+                    'roleShort' => $role->getRoleShort() ?? '',
+                ];
+            }
 
-        return new JsonResponse($data, Response::HTTP_OK, [], true);
+            return new JsonResponse($data, Response::HTTP_OK);
+
+        } catch (\Exception $e) {
+            return new JsonResponse([
+                'error' => $e->getMessage(),
+                'data' => []
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
 
-    #[Route('/{id}', name: 'get_by_id', methods: ['GET'])]
+    #[Route('/role/{id}', name: 'get_by_id', methods: ['GET'])]
     public function getById(int $id, RoleRepository $repository, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        //$this->checkToken($tokenStorage);
-        $role = $repository->find($id);
+        try {
+            $role = $repository->find($id);
 
-        if (!$role) {
-            return new JsonResponse(['message' => 'Role not found'], Response::HTTP_NOT_FOUND);
+            if (!$role) {
+                return new JsonResponse(['message' => 'Role not found'], Response::HTTP_NOT_FOUND);
+            }
+
+            $data = [
+                'roleId' => $role->getRoleId(),
+                'roleLibelle' => $role->getRoleLibelle() ?? '',
+                'roleShort' => $role->getRoleShort() ?? '',
+            ];
+
+            return new JsonResponse($data, Response::HTTP_OK);
+
+        } catch (\Exception $e) {
+            return new JsonResponse([
+                'error' => $e->getMessage(),
+                'message' => 'Erreur lors de la récupération du rôle'
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
-
-        $data = $this->serializer->serialize($role, 'json');
-
-        return new JsonResponse($data, Response::HTTP_OK, [], true);
     }
 
-    #[Route('', name: 'create', methods: ['POST'])]
+    #[Route('/role', name: 'create', methods: ['POST'])]
     public function create(Request $request, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        //$this->checkToken($tokenStorage);
-        $data = json_decode($request->getContent(), true);
+        try {
+            $data = json_decode($request->getContent(), true);
 
-        $role = new Role();
-        $role->setRoleLibelle($data['roleLibelle'] ?? null);
-        $role->setRoleShort($data['roleShort'] ?? null);
+            $role = new Role();
+            $role->setRoleLibelle($data['roleLibelle'] ?? null);
+            $role->setRoleShort($data['roleShort'] ?? null);
 
-        $this->entityManager->persist($role);
-        $this->entityManager->flush();
+            $this->entityManager->persist($role);
+            $this->entityManager->flush();
 
-        return new JsonResponse(['message' => 'Role created'], Response::HTTP_CREATED);
+            return new JsonResponse(['message' => 'Role created'], Response::HTTP_CREATED);
+
+        } catch (\Exception $e) {
+            return new JsonResponse([
+                'error' => $e->getMessage(),
+                'message' => 'Erreur lors de la création du rôle'
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
 
-    #[Route('/{id}', name: 'update', methods: ['PUT'])]
+    #[Route('/role/{id}', name: 'update', methods: ['PUT'])]
     public function update(int $id, Request $request, RoleRepository $repository, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        //$this->checkToken($tokenStorage);
-        $role = $repository->find($id);
+        try {
+            $role = $repository->find($id);
 
-        if (!$role) {
-            return new JsonResponse(['message' => 'Role not found'], Response::HTTP_NOT_FOUND);
+            if (!$role) {
+                return new JsonResponse(['message' => 'Role not found'], Response::HTTP_NOT_FOUND);
+            }
+
+            $data = json_decode($request->getContent(), true);
+
+            $role->setRoleLibelle($data['roleLibelle'] ?? $role->getRoleLibelle());
+            $role->setRoleShort($data['roleShort'] ?? $role->getRoleShort());
+
+            $this->entityManager->flush();
+
+            return new JsonResponse(['message' => 'Role updated'], Response::HTTP_OK);
+
+        } catch (\Exception $e) {
+            return new JsonResponse([
+                'error' => $e->getMessage(),
+                'message' => 'Erreur lors de la mise à jour du rôle'
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
-
-        $data = json_decode($request->getContent(), true);
-
-        $role->setRoleLibelle($data['roleLibelle'] ?? $role->getRoleLibelle());
-        $role->setRoleShort($data['roleShort'] ?? $role->getRoleShort());
-
-        $this->entityManager->flush();
-
-        return new JsonResponse(['message' => 'Role updated'], Response::HTTP_OK);
     }
 
-    #[Route('/{id}', name: 'delete', methods: ['DELETE'])]
+    #[Route('/role/{id}', name: 'delete', methods: ['DELETE'])]
     public function delete(int $id, RoleRepository $repository, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        //$this->checkToken($tokenStorage);
-        $role = $repository->find($id);
+        try {
+            $role = $repository->find($id);
 
-        if (!$role) {
-            return new JsonResponse(['message' => 'Role not found'], Response::HTTP_NOT_FOUND);
+            if (!$role) {
+                return new JsonResponse(['message' => 'Role not found'], Response::HTTP_NOT_FOUND);
+            }
+
+            $this->entityManager->remove($role);
+            $this->entityManager->flush();
+
+            return new JsonResponse(['message' => 'Role deleted'], Response::HTTP_OK);
+
+        } catch (\Exception $e) {
+            return new JsonResponse([
+                'error' => $e->getMessage(),
+                'message' => 'Erreur lors de la suppression du rôle'
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
-
-        $this->entityManager->remove($role);
-        $this->entityManager->flush();
-
-        return new JsonResponse(['message' => 'Role deleted'], Response::HTTP_OK);
     }
 
     public function checkToken(TokenStorageInterface $tokenStorage): void
     {
-        // Récupérer le token d'authentification de Symfony
         $token = $tokenStorage->getToken();
 
-        // Vérifier si le token d'authentification est présent et est de type TokenInterface
         if (!$token instanceof TokenInterface) {
             throw new AccessDeniedHttpException('Token d\'authentification manquant ou invalide');
         }
