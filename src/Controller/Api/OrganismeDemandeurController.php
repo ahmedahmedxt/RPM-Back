@@ -115,27 +115,82 @@ class OrganismeDemandeurController extends AbstractController
     }
 
     #[Route('', name: 'list', methods: ['GET'])]
-    public function list(Request $request): JsonResponse
+    public function list(Request $request, EntityManagerInterface $entityManager): JsonResponse
     {
-        $page = max(1, (int) $request->query->get('page', 1));
-        $limit = max(1, min(100, (int) $request->query->get('limit', 10)));
+        $page = max(1, (int)$request->query->get('page', 1));
+        $limit = max(1, min(100, (int)$request->query->get('limit', 10)));
         $offset = ($page - 1) * $limit;
 
-        $repo = $this->em->getRepository(OrganismeDemandeur::class);
-        $items = $repo->findBy([], ['organismeDemandeurRaisonSociale' => 'ASC'], $limit, $offset);
-        $total = (int) $this->em->createQueryBuilder()
-            ->select('COUNT(o)')
-            ->from(OrganismeDemandeur::class, 'o')
+        $sortField = $request->query->get('sortField', 'organismeDemandeurRaisonSociale');
+        $sortDir = strtoupper($request->query->get('sortDir', 'ASC')) === 'DESC' ? 'DESC' : 'ASC';
+        $search = trim((string)$request->query->get('search', ''));
+
+        $allowedSortFields = [
+            'organismeDemandeurRaisonSociale' => 't.organismeDemandeurRaisonSociale',
+            'organismeDemandeurRaisonSocialeShort' => 't.organismeDemandeurRaisonSocialeShort',
+            'organismeDemandeurCoordinateurPrenomNom' => 't.organismeDemandeurCoordinateurPrenomNom',
+            'organismeDemandeurAdresse' => 't.organismeDemandeurAdresse',
+            'organismeDemandeurTelephone' => 't.organismeDemandeurTelephone',
+            'organismeDemandeurId' => 't.organismeDemandeurId',
+        ];
+
+        if (!array_key_exists($sortField, $allowedSortFields) && $sortField !== 'paysId') {
+            $sortField = 'organismeDemandeurRaisonSociale';
+        }
+
+        $repo = $entityManager->getRepository(OrganismeDemandeur::class);
+
+        $applyFilters = function(\Doctrine\ORM\QueryBuilder $qb) use ($search) {
+            if ($search === '') {
+                return;
+            }
+
+            $qb->leftJoin('t.pays', 'p');
+
+            $qb->andWhere(
+                $qb->expr()->orX(
+                    $qb->expr()->like('t.organismeDemandeurRaisonSociale', ':search'),
+                    $qb->expr()->like('t.organismeDemandeurRaisonSocialeShort', ':search'),
+                    $qb->expr()->like('t.organismeDemandeurCoordinateurPrenomNom', ':search'),
+                    $qb->expr()->like('t.organismeDemandeurAdresse', ':search'),
+                    $qb->expr()->like('t.organismeDemandeurTelephone', ':search'),
+                    $qb->expr()->like('p.paysLibelle', ':search')
+                )
+            )
+            ->setParameter('search', '%' . $search . '%');
+        };
+
+        $qbCount = $repo->createQueryBuilder('t');
+        $applyFilters($qbCount);
+        $total = (int) $qbCount
+            ->select('COUNT(t.organismeDemandeurId)')
             ->getQuery()
             ->getSingleScalarResult();
 
-        return $this->json([
+        $qbData = $repo->createQueryBuilder('t');
+        $applyFilters($qbData);
+
+        if ($sortField === 'paysId') {
+            $qbData->leftJoin('t.pays', 'p');
+            $qbData->orderBy('p.paysLibelle', $sortDir);
+        } else {
+            $qbData->orderBy($allowedSortFields[$sortField], $sortDir);
+        }
+
+        $qbData->setFirstResult($offset)
+            ->setMaxResults($limit);
+
+        $items = $qbData->getQuery()->getResult();
+
+        return new JsonResponse([
             'page' => $page,
             'limit' => $limit,
             'total' => $total,
             'data' => array_map(fn($o) => $this->toArray($o), $items),
         ], Response::HTTP_OK);
     }
+
+  
 
     #[Route('/all', name: 'all', methods: ['GET'])]
     public function all(): JsonResponse
@@ -150,106 +205,6 @@ class OrganismeDemandeurController extends AbstractController
         ], $items);
 
         return $this->json($data);
-    }
-
-    #[Route('/search', name: 'search', methods: ['GET'])]
-    public function search(Request $request): JsonResponse
-    {
-        $page = max(1, (int) $request->query->get('page', 1));
-        $limit = max(1, min(100, (int) $request->query->get('limit', 10)));
-        $offset = ($page - 1) * $limit;
-
-        $q = trim((string) $request->query->get('q', ''));
-
-        $paysId = $request->query->get('paysId');
-        $natureId = $request->query->get('natureOrganismeDemendeurId');
-        $secteurId = $request->query->get('secteurActiviteId');
-
-        $qb = $this->em->createQueryBuilder()
-            ->select('o')
-            ->from(OrganismeDemandeur::class, 'o');
-
-        $andX = $qb->expr()->andX();
-
-        if ($q !== '') {
-            $andX->add(
-                $qb->expr()->orX(
-                    $qb->expr()->like('LOWER(o.organismeDemandeurRaisonSociale)', ':q'),
-                    $qb->expr()->like('LOWER(o.organismeDemandeurRaisonSocialeShort)', ':q'),
-                    $qb->expr()->like('LOWER(o.organismeDemandeurDescription)', ':q')
-                )
-            );
-            $qb->setParameter('q', '%' . mb_strtolower($q) . '%');
-        }
-
-        if (!empty($paysId)) {
-            $andX->add($qb->expr()->eq('o.pays', ':paysId'));
-            $qb->setParameter('paysId', (int)$paysId);
-        }
-
-        if (!empty($natureId)) {
-            $andX->add($qb->expr()->eq('o.natureOrganismeDemendeur', ':natureId'));
-            $qb->setParameter('natureId', (int)$natureId);
-        }
-
-        if (!empty($secteurId)) {
-            $andX->add($qb->expr()->eq('o.secteurActivite', ':secteurId'));
-            $qb->setParameter('secteurId', (int)$secteurId);
-        }
-
-        if ($andX->count() > 0) {
-            $qb->where($andX);
-        }
-
-        $qb->orderBy('o.organismeDemandeurRaisonSociale', 'ASC')
-        ->setFirstResult($offset)
-        ->setMaxResults($limit);
-
-        $items = $qb->getQuery()->getResult();
-
-        $countQb = $this->em->createQueryBuilder()
-            ->select('COUNT(o)')
-            ->from(OrganismeDemandeur::class, 'o');
-
-        if ($andX->count() > 0) {
-            $countAnd = $countQb->expr()->andX();
-
-            if ($q !== '') {
-                $countAnd->add(
-                    $countQb->expr()->orX(
-                        $countQb->expr()->like('LOWER(o.organismeDemandeurRaisonSociale)', ':q'),
-                        $countQb->expr()->like('LOWER(o.organismeDemandeurRaisonSocialeShort)', ':q'),
-                        $countQb->expr()->like('LOWER(o.organismeDemandeurDescription)', ':q')
-                    )
-                );
-                $countQb->setParameter('q', '%' . mb_strtolower($q) . '%');
-            }
-            if (!empty($paysId)) {
-                $countAnd->add($countQb->expr()->eq('o.pays', ':paysId'));
-                $countQb->setParameter('paysId', (int)$paysId);
-            }
-            if (!empty($natureId)) {
-                $countAnd->add($countQb->expr()->eq('o.natureOrganismeDemendeur', ':natureId'));
-                $countQb->setParameter('natureId', (int)$natureId);
-            }
-            if (!empty($secteurId)) {
-                $countAnd->add($countQb->expr()->eq('o.secteurActivite', ':secteurId'));
-                $countQb->setParameter('secteurId', (int)$secteurId);
-            }
-
-            if ($countAnd->count() > 0) {
-                $countQb->where($countAnd);
-            }
-        }
-
-        $total = (int) $countQb->getQuery()->getSingleScalarResult();
-
-        return $this->json([
-            'page'  => $page,
-            'limit' => $limit,
-            'total' => $total,
-            'data'  => array_map(fn($o) => $this->toArray($o), $items),
-        ], Response::HTTP_OK);
     }
 
     #[Route('/{id}', name: 'get', methods: ['GET'])]
