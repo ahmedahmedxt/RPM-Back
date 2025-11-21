@@ -129,7 +129,6 @@ class OrganismeDemandeurController extends AbstractController
             'organismeDemandeurRaisonSociale' => 't.organismeDemandeurRaisonSociale',
             'organismeDemandeurRaisonSocialeShort' => 't.organismeDemandeurRaisonSocialeShort',
             'organismeDemandeurCoordinateurPrenomNom' => 't.organismeDemandeurCoordinateurPrenomNom',
-            'organismeDemandeurAdresse' => 't.organismeDemandeurAdresse',
             'organismeDemandeurTelephone' => 't.organismeDemandeurTelephone',
             'organismeDemandeurId' => 't.organismeDemandeurId',
         ];
@@ -152,7 +151,6 @@ class OrganismeDemandeurController extends AbstractController
                     $qb->expr()->like('t.organismeDemandeurRaisonSociale', ':search'),
                     $qb->expr()->like('t.organismeDemandeurRaisonSocialeShort', ':search'),
                     $qb->expr()->like('t.organismeDemandeurCoordinateurPrenomNom', ':search'),
-                    $qb->expr()->like('t.organismeDemandeurAdresse', ':search'),
                     $qb->expr()->like('t.organismeDemandeurTelephone', ':search'),
                     $qb->expr()->like('p.paysLibelle', ':search')
                 )
