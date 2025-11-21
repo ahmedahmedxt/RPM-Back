@@ -5,7 +5,6 @@ namespace App\Controller\Api;
 use App\Entity\Technologie;
 use App\Repository\TechnologieRepository;
 use Doctrine\ORM\EntityManagerInterface;
-use Knp\Component\Pager\PaginatorInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -16,7 +15,7 @@ use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInt
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Serializer\SerializerInterface;
 
-#[Route('/api/technologie', name: 'api_technologie_')]
+#[Route('/api', name: 'api_technologie_')]
 class TechnologieController extends AbstractController
 {
     private $entityManager;
@@ -28,20 +27,44 @@ class TechnologieController extends AbstractController
         $this->serializer = $serializer;
     }
 
-    #[Route('', name: 'get_all', methods: ['GET'])]
+    #[Route('/getAll/technologies', name: 'get_all', methods: ['GET'])]
     public function getAll(TechnologieRepository $repository, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        //$this->checkToken($tokenStorage);
+        try {
+            $technologies = $repository->findAll();
+            
+            // Construire le tableau de données de manière simple
+            $data = [];
+            foreach ($technologies as $technologie) {
+                $data[] = [
+                    'technologieId' => $technologie->getTechnologieId(),
+                    'referenceTechnologieLibelle' => $technologie->getReferenceTechnologieLibelle() ?? '',
+                    'referenceTechnologieDescription' => $technologie->getReferenceTechnologieDescription() ?? '',
+                ];
+            }
+
+            return new JsonResponse($data, Response::HTTP_OK);
+
+        } catch (\Exception $e) {
+            return new JsonResponse([
+                'error' => $e->getMessage(),
+                'data' => []
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    #[Route('/technologie', name: 'get_all_legacy', methods: ['GET'])]
+    public function getAllLegacy(TechnologieRepository $repository, TokenStorageInterface $tokenStorage): JsonResponse
+    {
         $technologies = $repository->findAll();
         $data = $this->serializer->serialize($technologies, 'json');
 
         return new JsonResponse($data, Response::HTTP_OK, [], true);
     }
 
-    #[Route('/{id}', name: 'get_by_id', methods: ['GET'])]
+    #[Route('/technologie/{id}', name: 'get_by_id', methods: ['GET'])]
     public function getById(int $id, TechnologieRepository $repository, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        //$this->checkToken($tokenStorage);
         $technologie = $repository->find($id);
 
         if (!$technologie) {
@@ -53,10 +76,9 @@ class TechnologieController extends AbstractController
         return new JsonResponse($data, Response::HTTP_OK, [], true);
     }
 
-    #[Route('', name: 'create', methods: ['POST'])]
+    #[Route('/technologie', name: 'create', methods: ['POST'])]
     public function create(Request $request, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        //$this->checkToken($tokenStorage);
         $data = json_decode($request->getContent(), true);
 
         $technologie = new Technologie();
@@ -69,10 +91,9 @@ class TechnologieController extends AbstractController
         return new JsonResponse(['message' => 'Technologie created'], Response::HTTP_CREATED);
     }
 
-    #[Route('/{id}', name: 'update', methods: ['PUT'])]
+    #[Route('/technologie/{id}', name: 'update', methods: ['PUT'])]
     public function update(int $id, Request $request, TechnologieRepository $repository, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        //$this->checkToken($tokenStorage);
         $technologie = $repository->find($id);
 
         if (!$technologie) {
@@ -89,10 +110,9 @@ class TechnologieController extends AbstractController
         return new JsonResponse(['message' => 'Technologie updated'], Response::HTTP_OK);
     }
 
-    #[Route('/{id}', name: 'delete', methods: ['DELETE'])]
+    #[Route('/technologie/{id}', name: 'delete', methods: ['DELETE'])]
     public function delete(int $id, TechnologieRepository $repository, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        //$this->checkToken($tokenStorage);
         $technologie = $repository->find($id);
 
         if (!$technologie) {
@@ -107,10 +127,8 @@ class TechnologieController extends AbstractController
 
     public function checkToken(TokenStorageInterface $tokenStorage): void
     {
-        // Récupérer le token d'authentification de Symfony
         $token = $tokenStorage->getToken();
 
-        // Vérifier si le token d'authentification est présent et est de type TokenInterface
         if (!$token instanceof TokenInterface) {
             throw new AccessDeniedHttpException('Token d\'authentification manquant ou invalide');
         }

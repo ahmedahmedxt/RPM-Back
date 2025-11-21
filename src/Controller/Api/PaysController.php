@@ -71,29 +71,80 @@ class PaysController extends AbstractController
         return new JsonResponse($data, Response::HTTP_OK);
     }
     #[Route('/api/getAll/pays', name: 'api_get_all_pays', methods: ['GET'])]
-public function getAll(EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
-{
-    //$this->checkToken($tokenStorage);
-    
-    // Récupérer les pays triés par nom
-    $paysRepository = $entityManager->getRepository(Pays::class);
-    $pays = $paysRepository->findBy([], ['paysLibelle' => 'ASC']);
-    
-    $paysData = [];
-    foreach ($pays as $paysItem) {
-        $continent = $paysItem->getContinent();
-        $continentName = ($continent) ? $continent->getContinentName() : 'Continent non spécifié';
+    public function getAll(Request $request, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
+    {
+        try {
+            $page = max(1, (int) $request->query->get('page', 1));
+            $limit = max(1, min(100, (int) $request->query->get('limit', 10)));
+            $offset = ($page - 1) * $limit;
 
-        $paysData[] = [
-            'paysId' => $paysItem->getId(),
-            'paysLibelle' => $paysItem->getPaysLibelle(),
-            'paysCapitale' => $paysItem->getPaysCapitale(),
-            'continentName' => $continentName,
-        ];
+            $sortField = $request->query->get('sortField', 'paysLibelle');
+            $sortDir = $request->query->get('sortDir', 'ASC');
+            $search = trim($request->query->get('search', ''));
+
+            $allowedSortFields = ['paysLibelle', 'paysCapitale', 'continentName', 'paysId'];
+            if (!in_array($sortField, $allowedSortFields)) {
+                $sortField = 'paysLibelle';
+            }
+            $sortDir = strtoupper($sortDir) === 'DESC' ? 'DESC' : 'ASC';
+
+            $repo = $entityManager->getRepository(Pays::class);
+            $qb = $repo->createQueryBuilder('p');
+
+            if (!empty($search)) {
+                $qb->leftJoin('p.continent', 'c')
+                   ->where('p.paysLibelle LIKE :search OR p.paysCapitale LIKE :search OR c.continentName LIKE :search')
+                   ->setParameter('search', '%' . $search . '%');
+            } else {
+                $qb->leftJoin('p.continent', 'c');
+            }
+
+            $total = (int) (clone $qb)
+                ->select('COUNT(p)')
+                ->getQuery()
+                ->getSingleScalarResult();
+
+            if ($sortField === 'continentName') {
+                $qb->orderBy('c.continentName', $sortDir);
+            } else {
+                $qb->orderBy('p.' . $sortField, $sortDir);
+            }
+
+            $qb->setFirstResult($offset)
+               ->setMaxResults($limit);
+
+            $items = $qb->getQuery()->getResult();
+
+            $data = [];
+            foreach ($items as $paysItem) {
+                $continent = $paysItem->getContinent();
+                $continentName = ($continent) ? $continent->getContinentName() : 'Continent non spécifié';
+
+                $data[] = [
+                    'paysId' => $paysItem->getId(),
+                    'paysLibelle' => $paysItem->getPaysLibelle() ?? '',
+                    'paysCapitale' => $paysItem->getPaysCapitale() ?? '',
+                    'continentName' => $continentName,
+                ];
+            }
+
+            return new JsonResponse([
+                'page' => $page,
+                'limit' => $limit,
+                'total' => $total,
+                'data' => $data
+            ], Response::HTTP_OK);
+
+        } catch (\Exception $e) {
+            return new JsonResponse([
+                'error' => $e->getMessage(),
+                'page' => 1,
+                'limit' => 10,
+                'total' => 0,
+                'data' => []
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
-
-    return new JsonResponse($paysData, Response::HTTP_OK);
-}
  
     #[Route('/api/put/pays/{id}', name: 'api_pays_update', methods: ['PUT'])]
     public function update(Request $request, Pays $pays, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
@@ -113,33 +164,70 @@ public function getAll(EntityManagerInterface $entityManager, TokenStorageInterf
     }
 
     #[Route('/api/delete/pays/{id}', name: 'api_pays_delete', methods: ['DELETE'])]
-    public function delete(Pays $pays, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
+    public function delete(int $id, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        // Récupérer tous les appels d'offre qui ont ce pays
-        $lieux = $entityManager->getRepository(Lieu::class)->findBy(['pays' => $pays]);
-        $clients = $entityManager->getRepository(Client::class)->findBy(['pays' => $pays]);
+        try {
+            $pays = $entityManager->getRepository(Pays::class)->find($id);
 
-        if ($lieux != null) {
-            foreach ($lieux as $lieu) {
-                $lieu->setPays(null);
-                $entityManager->persist($lieu);
+            if (!$pays) {
+                return new JsonResponse(['message' => 'Pays non trouvé'], Response::HTTP_NOT_FOUND);
             }
-            $entityManager->flush();
-        }
 
-        if ($clients != null) {
-            foreach ($clients as $client) {
-                $client->setPays(null);
-                $entityManager->persist($client);
+            $paysId = $pays->getId();
+
+            $lieuxRepo = $entityManager->getRepository(Lieu::class);
+            $lieux = $lieuxRepo->createQueryBuilder('l')
+                ->where('l.pays = :paysId')
+                ->setParameter('paysId', $paysId)
+                ->getQuery()
+                ->getResult();
+
+            if ($lieux && count($lieux) > 0) {
+                foreach ($lieux as $lieu) {
+                    $lieu->setPays(null);
+                    $entityManager->persist($lieu);
+                }
             }
+
+            $clientsRepo = $entityManager->getRepository(Client::class);
+            $allClients = $clientsRepo->findAll();
+            $clientsToUpdate = [];
+            
+            foreach ($allClients as $client) {
+                if ($client->getPays()->contains($pays)) {
+                    $clientsToUpdate[] = $client;
+                }
+            }
+
+            if (count($clientsToUpdate) > 0) {
+                foreach ($clientsToUpdate as $client) {
+                    $client->getPays()->removeElement($pays);
+                    $entityManager->persist($client);
+                }
+            }
+
+            if (($lieux && count($lieux) > 0) || count($clientsToUpdate) > 0) {
+                $entityManager->flush();
+            }
+
+            $entityManager->remove($pays);
             $entityManager->flush();
+
+            return new JsonResponse(['message' => 'Pays supprimé avec succès'], Response::HTTP_OK);
+
+        } catch (\Doctrine\DBAL\Exception\ForeignKeyConstraintViolationException $e) {
+            return new JsonResponse([
+                'error' => 'Impossible de supprimer ce pays car il est utilisé dans d\'autres enregistrements',
+                'message' => 'Ce pays ne peut pas être supprimé car il est référencé ailleurs'
+            ], Response::HTTP_CONFLICT);
+        } catch (\Exception $e) {
+            error_log('Erreur suppression pays: ' . $e->getMessage());
+            error_log('Stack trace: ' . $e->getTraceAsString());
+            return new JsonResponse([
+                'error' => $e->getMessage(),
+                'message' => 'Erreur lors de la suppression du pays'
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
-
-        // Supprimer le pays
-        $entityManager->remove($pays);
-        $entityManager->flush();
-
-        return new JsonResponse(['message' => 'Pays supprimé avec succès'], Response::HTTP_OK);
     }
 
 

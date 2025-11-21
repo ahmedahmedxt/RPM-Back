@@ -31,86 +31,131 @@ class MethodologieController extends AbstractController
     #[Route('', name: 'get_all', methods: ['GET'])]
     public function getAll(MethodologieRepository $repository, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        //$this->checkToken($tokenStorage);
-        $methodologies = $repository->findAll();
-        $data = $this->serializer->serialize($methodologies, 'json');
+        try {
+            $methodologies = $repository->findAll();
+            
+            $data = [];
+            foreach ($methodologies as $methodologie) {
+                $data[] = [
+                    'methodologieId' => $methodologie->getMethodologieId(),
+                    'methodologieLibelle' => $methodologie->getMethodologieLibelle() ?? '',
+                    'methodologieDescription' => $methodologie->getMethodologieDescription() ?? '',
+                ];
+            }
 
-        return new JsonResponse($data, Response::HTTP_OK, [], true);
+            return new JsonResponse($data, Response::HTTP_OK);
+
+        } catch (\Exception $e) {
+            return new JsonResponse([
+                'error' => $e->getMessage(),
+                'data' => []
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
 
     #[Route('/{id}', name: 'get_by_id', methods: ['GET'])]
     public function getById(int $id, MethodologieRepository $repository, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        //$this->checkToken($tokenStorage);
-        $methodologie = $repository->find($id);
+        try {
+            $methodologie = $repository->find($id);
 
-        if (!$methodologie) {
-            return new JsonResponse(['message' => 'Methodologie not found'], Response::HTTP_NOT_FOUND);
+            if (!$methodologie) {
+                return new JsonResponse(['message' => 'Methodologie not found'], Response::HTTP_NOT_FOUND);
+            }
+
+            $data = [
+                'methodologieId' => $methodologie->getMethodologieId(),
+                'methodologieLibelle' => $methodologie->getMethodologieLibelle() ?? '',
+                'methodologieDescription' => $methodologie->getMethodologieDescription() ?? '',
+            ];
+
+            return new JsonResponse($data, Response::HTTP_OK);
+
+        } catch (\Exception $e) {
+            return new JsonResponse([
+                'error' => $e->getMessage(),
+                'message' => 'Erreur lors de la récupération de la méthodologie'
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
-
-        $data = $this->serializer->serialize($methodologie, 'json');
-
-        return new JsonResponse($data, Response::HTTP_OK, [], true);
     }
 
     #[Route('', name: 'create', methods: ['POST'])]
     public function create(Request $request, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        //$this->checkToken($tokenStorage);
-        $data = json_decode($request->getContent(), true);
+        try {
+            $data = json_decode($request->getContent(), true);
 
-        $methodologie = new Methodologie();
-        $methodologie->setMethodologieLibelle($data['methodologieLibelle'] ?? null);
-        $methodologie->setMethodologieDescription($data['methodologieDescription'] ?? null);
+            $methodologie = new Methodologie();
+            $methodologie->setMethodologieLibelle($data['methodologieLibelle'] ?? null);
+            $methodologie->setMethodologieDescription($data['methodologieDescription'] ?? null);
 
-        $this->entityManager->persist($methodologie);
-        $this->entityManager->flush();
+            $this->entityManager->persist($methodologie);
+            $this->entityManager->flush();
 
-        return new JsonResponse(['message' => 'Methodologie created'], Response::HTTP_CREATED);
+            return new JsonResponse(['message' => 'Methodologie created'], Response::HTTP_CREATED);
+
+        } catch (\Exception $e) {
+            return new JsonResponse([
+                'error' => $e->getMessage(),
+                'message' => 'Erreur lors de la création de la méthodologie'
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
 
     #[Route('/{id}', name: 'update', methods: ['PUT'])]
     public function update(int $id, Request $request, MethodologieRepository $repository, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        //$this->checkToken($tokenStorage);
-        $methodologie = $repository->find($id);
+        try {
+            $methodologie = $repository->find($id);
 
-        if (!$methodologie) {
-            return new JsonResponse(['message' => 'Methodologie not found'], Response::HTTP_NOT_FOUND);
+            if (!$methodologie) {
+                return new JsonResponse(['message' => 'Methodologie not found'], Response::HTTP_NOT_FOUND);
+            }
+
+            $data = json_decode($request->getContent(), true);
+
+            $methodologie->setMethodologieLibelle($data['methodologieLibelle'] ?? $methodologie->getMethodologieLibelle());
+            $methodologie->setMethodologieDescription($data['methodologieDescription'] ?? $methodologie->getMethodologieDescription());
+
+            $this->entityManager->flush();
+
+            return new JsonResponse(['message' => 'Methodologie updated'], Response::HTTP_OK);
+
+        } catch (\Exception $e) {
+            return new JsonResponse([
+                'error' => $e->getMessage(),
+                'message' => 'Erreur lors de la mise à jour de la méthodologie'
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
-
-        $data = json_decode($request->getContent(), true);
-
-        $methodologie->setMethodologieLibelle($data['methodologieLibelle'] ?? $methodologie->getMethodologieLibelle());
-        $methodologie->setMethodologieDescription($data['methodologieDescription'] ?? $methodologie->getMethodologieDescription());
-
-        $this->entityManager->flush();
-
-        return new JsonResponse(['message' => 'Methodologie updated'], Response::HTTP_OK);
     }
 
     #[Route('/{id}', name: 'delete', methods: ['DELETE'])]
     public function delete(int $id, MethodologieRepository $repository, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        //$this->checkToken($tokenStorage);
-        $methodologie = $repository->find($id);
+        try {
+            $methodologie = $repository->find($id);
 
-        if (!$methodologie) {
-            return new JsonResponse(['message' => 'Methodologie not found'], Response::HTTP_NOT_FOUND);
+            if (!$methodologie) {
+                return new JsonResponse(['message' => 'Methodologie not found'], Response::HTTP_NOT_FOUND);
+            }
+
+            $this->entityManager->remove($methodologie);
+            $this->entityManager->flush();
+
+            return new JsonResponse(['message' => 'Methodologie deleted'], Response::HTTP_OK);
+
+        } catch (\Exception $e) {
+            return new JsonResponse([
+                'error' => $e->getMessage(),
+                'message' => 'Erreur lors de la suppression de la méthodologie'
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
-
-        $this->entityManager->remove($methodologie);
-        $this->entityManager->flush();
-
-        return new JsonResponse(['message' => 'Methodologie deleted'], Response::HTTP_OK);
     }
 
     public function checkToken(TokenStorageInterface $tokenStorage): void
     {
-        // Récupérer le token d'authentification de Symfony
         $token = $tokenStorage->getToken();
 
-        // Vérifier si le token d'authentification est présent et est de type TokenInterface
         if (!$token instanceof TokenInterface) {
             throw new AccessDeniedHttpException('Token d\'authentification manquant ou invalide');
         }
