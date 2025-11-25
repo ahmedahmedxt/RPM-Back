@@ -95,7 +95,7 @@ class EtatController extends AbstractController
                    
                     <tr>
                         <th>Devis</th>
-                        <td>' . ($appelOffres->getAppelOffreDevis() ?? '-') . '</td>
+                        <td>' . ($appelOffres->getAppelOffresNumero() ?? '-') . '</td>
                     </tr>
                     <tr>
                         <th>Objet</th>
@@ -172,7 +172,7 @@ class EtatController extends AbstractController
         $row = 4;
         $data = [
             ['Champ', 'Valeur'],
-            ['Devis', $appelOffres->getAppelOffreDevis() ?? '-'],
+            ['Devis', $appelOffres->getAppelOffresNumero() ?? '-'],
             ['Objet', $appelOffres->getAppelOffresObjet() ?? '-'],
             ['Date de remise', $appelOffres->getAppelOffreDateRemise() ? $appelOffres->getAppelOffreDateRemise()->format('Y-m-d') : '-'],
             ['Retiré', $appelOffres->getAppelOffresCCRetire() ? 'Oui' : 'Non'],

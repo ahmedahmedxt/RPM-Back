@@ -45,7 +45,7 @@ class AppelOffresRepository extends ServiceEntityRepository
         return $this->createQueryBuilder('a')
             ->andWhere('a.appelOffresPaysId = :paysId')
             ->setParameter('paysId', $paysId)
-            ->orderBy('a.appelOffreDateRemise', 'ASC')
+            ->orderBy('a.appelOffresNumero', 'ASC')
             ->getQuery()
             ->getResult();
     }
@@ -70,9 +70,9 @@ class AppelOffresRepository extends ServiceEntityRepository
         $conn = $this->getEntityManager()->getConnection();
 
         $sql = "
-            SELECT MAX(CAST(appelOffreDevis AS UNSIGNED)) AS max_num
+            SELECT MAX(CAST(appelOffresNumero AS UNSIGNED)) AS max_num
             FROM appel_offres
-            WHERE appelOffreDevis REGEXP '^[0-9]+$'
+            WHERE appelOffresNumero REGEXP '^[0-9]+$'
         ";
 
         $result = $conn->executeQuery($sql)->fetchAssociative();
@@ -123,7 +123,7 @@ class AppelOffresRepository extends ServiceEntityRepository
     {
         return (int) $this->createQueryBuilder('a')
             ->select('COUNT(a.appelOffresId)')
-            ->where('a.appelOffreDevis = :ref')
+            ->where('a.appelOffresNumero = :ref')
             ->setParameter('ref', $reference)
             ->getQuery()
             ->getSingleScalarResult() > 0;
@@ -257,9 +257,9 @@ class AppelOffresRepository extends ServiceEntityRepository
     public function getStatistiquesParAnnee(): array
     {
         $results = $this->createQueryBuilder('a')
-            ->select('a.appelOffreAnnee as annee, COUNT(a.appelOffresId) as total')
-            ->where('a.appelOffreAnnee IS NOT NULL')
-            ->groupBy('a.appelOffreAnnee')
+            ->select('a.appelOffresAnnee as annee, COUNT(a.appelOffresId) as total')
+            ->where('a.appelOffresAnnee IS NOT NULL')
+            ->groupBy('a.appelOffresAnnee')
             ->orderBy('annee', 'DESC')
             ->getQuery()
             ->getResult();

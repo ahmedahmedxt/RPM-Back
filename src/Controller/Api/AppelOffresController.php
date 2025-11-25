@@ -18,10 +18,50 @@ use Symfony\Component\Routing\Annotation\Route;
 class AppelOffresController extends AbstractController
 {
     #[Route('/api/getAll/appelOffres', name: 'api_appel_offres_index', methods: ['GET'])]
-    public function index(EntityManagerInterface $em): JsonResponse
+    public function index(Request $request, EntityManagerInterface $em): JsonResponse
     {
         try {
-            $appels = $em->getRepository(AppelOffres::class)->findAll();
+            $page = max(1, (int)$request->query->get('page', 1));
+            $limit = max(1, min(100, (int)$request->query->get('limit', 10)));
+            $sortField = $request->query->get('sortField', 'appelOffresNumero');
+            $sortDir = strtoupper($request->query->get('sortDir', 'DESC')) === 'ASC' ? 'ASC' : 'DESC';
+            $search = $request->query->get('search', '');
+            $etatFilter = $request->query->get('etat', '');
+
+            $allowedSortFields = [
+                'appelOffresId' => 'a.appelOffresId',
+                'appelOffresNumero' => 'a.appelOffresNumero',
+                'appelOffresObjet' => 'a.appelOffresObjet',
+                'appelOffresDateLimiteRemise' => 'a.appelOffresDateLimiteRemise',
+                'appelOffresAnnee' => 'a.appelOffresAnnee',
+                'appelOffresEtat' => 'a.appelOffresEtat',
+            ];
+
+            if (!array_key_exists($sortField, $allowedSortFields)) {
+                $sortField = 'appelOffresNumero';
+            }
+
+            $qb = $em->getRepository(AppelOffres::class)->createQueryBuilder('a');
+
+            if (!empty($search)) {
+                $qb->andWhere('a.appelOffresObjet LIKE :search OR a.appelOffresNumero LIKE :search')
+                   ->setParameter('search', '%' . $search . '%');
+            }
+
+            if (!empty($etatFilter)) {
+                $qb->andWhere('a.appelOffresEtat = :etat')
+                   ->setParameter('etat', $etatFilter);
+            }
+
+            $qb->orderBy($allowedSortFields[$sortField], $sortDir);
+
+            $total = (int)$qb->select('COUNT(a.appelOffresId)')->getQuery()->getSingleScalarResult();
+
+            $qb->select('a')
+               ->setFirstResult(($page - 1) * $limit)
+               ->setMaxResults($limit);
+
+            $appels = $qb->getQuery()->getResult();
             $data = [];
 
             foreach ($appels as $appel) {
@@ -37,7 +77,12 @@ class AppelOffresController extends AbstractController
                 }
             }
 
-            return new JsonResponse($data, Response::HTTP_OK);
+            return new JsonResponse([
+                'data' => $data,
+                'total' => $total,
+                'page' => $page,
+                'limit' => $limit
+            ], Response::HTTP_OK);
         } catch (\Exception $e) {
             error_log('Erreur dans index: ' . $e->getMessage() . ' - Trace: ' . $e->getTraceAsString());
             return new JsonResponse([
@@ -74,36 +119,36 @@ class AppelOffresController extends AbstractController
             $appel = new AppelOffres();
             $connection = $em->getConnection();
 
-            $annee = $data['appelOffreAnnee'] ?? (int)date('Y');
+            $annee = $data['appelOffresAnnee'] ?? (int)date('Y');
             
-            $sql = 'SELECT MAX(CAST(appelOffreDevis AS UNSIGNED)) as maxDevis 
+            $sql = 'SELECT MAX(CAST(appelOffresNumero AS UNSIGNED)) as maxNumero 
                     FROM appel_offres 
-                    WHERE appelOffreAnnee = :annee 
-                    AND appelOffreDevis IS NOT NULL 
-                    AND appelOffreDevis != ""';
+                    WHERE appelOffresAnnee = :annee 
+                    AND appelOffresNumero IS NOT NULL 
+                    AND appelOffresNumero != ""';
             
             $stmt = $connection->prepare($sql);
             $result = $stmt->executeQuery(['annee' => $annee]);
-            $maxDevis = $result->fetchOne();
+            $maxNumero = $result->fetchOne();
             
-            $nouveauDevis = ($maxDevis ? (int)$maxDevis : 0) + 1;
+            $nouveauNumero = ($maxNumero ? (int)$maxNumero : 0) + 1;
             
             $sqlCheck = 'SELECT COUNT(*) as count 
                          FROM appel_offres 
-                         WHERE appelOffreAnnee = :annee 
-                         AND appelOffreDevis = :devis';
+                         WHERE appelOffresAnnee = :annee 
+                         AND appelOffresNumero = :numero';
             $stmtCheck = $connection->prepare($sqlCheck);
-            $resultCheck = $stmtCheck->executeQuery(['annee' => $annee, 'devis' => (string)$nouveauDevis]);
+            $resultCheck = $stmtCheck->executeQuery(['annee' => $annee, 'numero' => (string)$nouveauNumero]);
             $count = $resultCheck->fetchOne();
             
             while ($count > 0) {
-                $nouveauDevis++;
-                $resultCheck = $stmtCheck->executeQuery(['annee' => $annee, 'devis' => (string)$nouveauDevis]);
+                $nouveauNumero++;
+                $resultCheck = $stmtCheck->executeQuery(['annee' => $annee, 'numero' => (string)$nouveauNumero]);
                 $count = $resultCheck->fetchOne();
             }
             
-            $appel->setAppelOffreDevis((string)$nouveauDevis);
-            $appel->setAppelOffreAnnee($annee);
+            $appel->setAppelOffresNumero((string)$nouveauNumero);
+            $appel->setAppelOffresAnnee($annee);
 
             $participation = isset($data['appelOffresParticipation']) ? (int)$data['appelOffresParticipation'] : 0;
 
@@ -159,7 +204,6 @@ class AppelOffresController extends AbstractController
             $appel->setAppelOffresResultatRang(isset($data['appelOffresResultatRang']) ? (int)$data['appelOffresResultatRang'] : null);
             $appel->setAppelOffresResultatRangTotal(isset($data['appelOffresResultatRangTotal']) ? (int)$data['appelOffresResultatRangTotal'] : null);
 
-            $appel->setAppelOffreDateRemise(!empty($data['appelOffreDateRemise']) ? new \DateTime($data['appelOffreDateRemise']) : null);
             $appel->setAppelOffresDateLimiteRemise(!empty($data['appelOffresDateLimiteRemise']) ? new \DateTime($data['appelOffresDateLimiteRemise']) : null);
             $appel->setAppelOffresHeureLimiteRemise(!empty($data['appelOffresHeureLimiteRemise']) ? new \DateTime($data['appelOffresHeureLimiteRemise']) : null);
             $appel->setAppelOffresDateParticipation(!empty($data['appelOffresDateParticipation']) ? new \DateTime($data['appelOffresDateParticipation']) : null);
@@ -195,7 +239,7 @@ class AppelOffresController extends AbstractController
             return new JsonResponse([
                 'message' => 'AppelOffres créé avec succès',
                 'id' => $appel->getAppelOffresId(),
-                'devis' => $appel->getAppelOffreDevis(),
+                'numero' => $appel->getAppelOffresNumero(),
                 'devisParticipation' => $appel->getAppelOffresNumeroDevisParticipation(),
                 'data' => $this->serializeAppelOffres($appel),
             ], Response::HTTP_CREATED);
@@ -216,107 +260,106 @@ class AppelOffresController extends AbstractController
     
             if (array_key_exists('appelOffresObjet', $data)) $appel->setAppelOffresObjet($data['appelOffresObjet']);
             
-            if (array_key_exists('appelOffreAnnee', $data)) {
-                $nouvelleAnnee = $data['appelOffreAnnee'];
-                $appel->setAppelOffreAnnee($nouvelleAnnee);
+            if (array_key_exists('appelOffresAnnee', $data)) {
+                $nouvelleAnnee = $data['appelOffresAnnee'];
+                $appel->setAppelOffresAnnee($nouvelleAnnee);
                 
-                if (array_key_exists('appelOffreDevis', $data) && !empty($data['appelOffreDevis'])) {
-                    $connection = $em->getConnection();
-                    $devisPropose = $data['appelOffreDevis'];
+                if (array_key_exists('appelOffresNumero', $data) && !empty($data['appelOffresNumero'])) {
+                    $numeroPropose = $data['appelOffresNumero'];
                     
                     $sqlCheck = 'SELECT COUNT(*) as count 
                                  FROM appel_offres 
-                                 WHERE appelOffreAnnee = :annee 
-                                 AND appelOffreDevis = :devis
+                                 WHERE appelOffresAnnee = :annee 
+                                 AND appelOffresNumero = :numero
                                  AND appelOffresId != :currentId';
                     $stmtCheck = $connection->prepare($sqlCheck);
                     $resultCheck = $stmtCheck->executeQuery([
                         'annee' => $nouvelleAnnee,
-                        'devis' => (string)$devisPropose,
+                        'numero' => (string)$numeroPropose,
                         'currentId' => $appel->getAppelOffresId()
                     ]);
                     $count = $resultCheck->fetchOne();
                     
                     if ($count > 0) {
-                        $sql = 'SELECT MAX(CAST(appelOffreDevis AS UNSIGNED)) as maxDevis 
+                        $sql = 'SELECT MAX(CAST(appelOffresNumero AS UNSIGNED)) as maxNumero 
                                 FROM appel_offres 
-                                WHERE appelOffreAnnee = :annee 
-                                AND appelOffreDevis IS NOT NULL 
-                                AND appelOffreDevis != ""
+                                WHERE appelOffresAnnee = :annee 
+                                AND appelOffresNumero IS NOT NULL 
+                                AND appelOffresNumero != ""
                                 AND appelOffresId != :currentId';
                         $stmt = $connection->prepare($sql);
                         $result = $stmt->executeQuery([
                             'annee' => $nouvelleAnnee,
                             'currentId' => $appel->getAppelOffresId()
                         ]);
-                        $maxDevis = $result->fetchOne();
-                        $nouveauDevis = ($maxDevis ? (int)$maxDevis : 0) + 1;
+                        $maxNumero = $result->fetchOne();
+                        $nouveauNumero = ($maxNumero ? (int)$maxNumero : 0) + 1;
                         
                         $resultCheck = $stmtCheck->executeQuery([
                             'annee' => $nouvelleAnnee,
-                            'devis' => (string)$nouveauDevis,
+                            'numero' => (string)$nouveauNumero,
                             'currentId' => $appel->getAppelOffresId()
                         ]);
                         $count = $resultCheck->fetchOne();
                         
                         while ($count > 0) {
-                            $nouveauDevis++;
+                            $nouveauNumero++;
                             $resultCheck = $stmtCheck->executeQuery([
                                 'annee' => $nouvelleAnnee,
-                                'devis' => (string)$nouveauDevis,
+                                'numero' => (string)$nouveauNumero,
                                 'currentId' => $appel->getAppelOffresId()
                             ]);
                             $count = $resultCheck->fetchOne();
                         }
                         
-                        $appel->setAppelOffreDevis((string)$nouveauDevis);
+                        $appel->setAppelOffresNumero((string)$nouveauNumero);
                     } else {
-                        $appel->setAppelOffreDevis($data['appelOffreDevis']);
+                        $appel->setAppelOffresNumero($data['appelOffresNumero']);
                     }
                 } else {
                     $connection = $em->getConnection();
-                    $sql = 'SELECT MAX(CAST(appelOffreDevis AS UNSIGNED)) as maxDevis 
+                    $sql = 'SELECT MAX(CAST(appelOffresNumero AS UNSIGNED)) as maxNumero 
                             FROM appel_offres 
-                            WHERE appelOffreAnnee = :annee 
-                            AND appelOffreDevis IS NOT NULL 
-                            AND appelOffreDevis != ""
+                            WHERE appelOffresAnnee = :annee 
+                            AND appelOffresNumero IS NOT NULL 
+                            AND appelOffresNumero != ""
                             AND appelOffresId != :currentId';
                     $stmt = $connection->prepare($sql);
                     $result = $stmt->executeQuery([
                         'annee' => $nouvelleAnnee,
                         'currentId' => $appel->getAppelOffresId()
                     ]);
-                    $maxDevis = $result->fetchOne();
-                    $nouveauDevis = ($maxDevis ? (int)$maxDevis : 0) + 1;
+                    $maxNumero = $result->fetchOne();
+                    $nouveauNumero = ($maxNumero ? (int)$maxNumero : 0) + 1;
                     
                     $sqlCheck = 'SELECT COUNT(*) as count 
                                  FROM appel_offres 
-                                 WHERE appelOffreAnnee = :annee 
-                                 AND appelOffreDevis = :devis
+                                 WHERE appelOffresAnnee = :annee 
+                                 AND appelOffresNumero = :numero
                                  AND appelOffresId != :currentId';
                     $stmtCheck = $connection->prepare($sqlCheck);
                     $resultCheck = $stmtCheck->executeQuery([
                         'annee' => $nouvelleAnnee,
-                        'devis' => (string)$nouveauDevis,
+                        'numero' => (string)$nouveauNumero,
                         'currentId' => $appel->getAppelOffresId()
                     ]);
                     $count = $resultCheck->fetchOne();
                     
                     while ($count > 0) {
-                        $nouveauDevis++;
+                        $nouveauNumero++;
                         $resultCheck = $stmtCheck->executeQuery([
                             'annee' => $nouvelleAnnee,
-                            'devis' => (string)$nouveauDevis,
+                            'numero' => (string)$nouveauNumero,
                             'currentId' => $appel->getAppelOffresId()
                         ]);
                         $count = $resultCheck->fetchOne();
                     }
                     
-                    $appel->setAppelOffreDevis((string)$nouveauDevis);
+                    $appel->setAppelOffresNumero((string)$nouveauNumero);
                 }
             } else {
-                if (array_key_exists('appelOffreDevis', $data)) {
-                    $appel->setAppelOffreDevis($data['appelOffreDevis']);
+                if (array_key_exists('appelOffresNumero', $data)) {
+                    $appel->setAppelOffresNumero($data['appelOffresNumero']);
                 }
             }
             
@@ -399,9 +442,6 @@ class AppelOffresController extends AbstractController
             if (array_key_exists('appelOffresResultatRang', $data)) $appel->setAppelOffresResultatRang((int)$data['appelOffresResultatRang']);
             if (array_key_exists('appelOffresResultatRangTotal', $data)) $appel->setAppelOffresResultatRangTotal((int)$data['appelOffresResultatRangTotal']);
     
-            if (array_key_exists('appelOffreDateRemise', $data)) {
-                $appel->setAppelOffreDateRemise(!empty($data['appelOffreDateRemise']) ? new \DateTime($data['appelOffreDateRemise']) : null);
-            }
             if (array_key_exists('appelOffresDateLimiteRemise', $data)) {
                 $appel->setAppelOffresDateLimiteRemise(!empty($data['appelOffresDateLimiteRemise']) ? new \DateTime($data['appelOffresDateLimiteRemise']) : null);
             }
@@ -557,9 +597,8 @@ class AppelOffresController extends AbstractController
 
             return [
                 'appelOffresId' => $appel->getAppelOffresId(),
-                'appelOffreDevis' => $appel->getAppelOffreDevis(),
+                'appelOffresNumero' => $appel->getAppelOffresNumero(),
                 'appelOffresObjet' => $appel->getAppelOffresObjet(),
-                'appelOffreDateRemise' => $appel->getAppelOffreDateRemise()?->format('Y-m-d'),
                 'appelOffresDateLimiteRemise' => $appel->getAppelOffresDateLimiteRemise()?->format('Y-m-d'),
                 'appelOffresHeureLimiteRemise' => $appel->getAppelOffresHeureLimiteRemise()?->format('H:i:s'),
                 'appelOffresCCRetire' => $appel->getAppelOffresCCRetire(),
@@ -573,7 +612,7 @@ class AppelOffresController extends AbstractController
                 'appelOffresResultatRang' => $appel->getAppelOffresResultatRang(),
                 'appelOffresResultatRangTotal' => $appel->getAppelOffresResultatRangTotal(),
                 'appelOffresNumeroDevisParticipation' => $appel->getAppelOffresNumeroDevisParticipation(),
-                'appelOffreAnnee' => $appel->getAppelOffreAnnee(),
+                'appelOffresAnnee' => $appel->getAppelOffresAnnee(),
 
                 'appelOffresTypeId' => $type?->getAppelOffresTypeId(),
                 'appelOffresMoyenLivraisonId' => $moyen?->getMoyenLivraisonId(),

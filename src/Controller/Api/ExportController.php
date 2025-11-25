@@ -62,13 +62,13 @@ class ExportController extends AbstractController
    <Column ss:Width="350"/>
    <Row ss:StyleID="header">
     <Cell ss:MergeAcross="1">
-     <Data ss:Type="String">DÉTAILS APPEL D\'OFFRE - ' . htmlspecialchars($getVal(fn() => $appelOffre->getAppelOffreDevis())) . '</Data>
+     <Data ss:Type="String">DÉTAILS APPEL D\'OFFRE - ' . htmlspecialchars($getVal(fn() => $appelOffre->getAppelOffresNumero())) . '</Data>
     </Cell>
    </Row>
    <Row/>
    <Row>
     <Cell ss:StyleID="label"><Data ss:Type="String">Référence</Data></Cell>
-    <Cell><Data ss:Type="String">' . htmlspecialchars($getVal(fn() => $appelOffre->getAppelOffreDevis())) . '</Data></Cell>
+    <Cell><Data ss:Type="String">' . htmlspecialchars($getVal(fn() => $appelOffre->getAppelOffresNumero())) . '</Data></Cell>
    </Row>
    <Row>
     <Cell ss:StyleID="label"><Data ss:Type="String">Type</Data></Cell>
@@ -136,13 +136,13 @@ class ExportController extends AbstractController
    </Row>
    <Row>
     <Cell ss:StyleID="label"><Data ss:Type="String">Année</Data></Cell>
-    <Cell><Data ss:Type="String">' . htmlspecialchars($getVal(fn() => $appelOffre->getAppelOffreAnnee())) . '</Data></Cell>
+    <Cell><Data ss:Type="String">' . htmlspecialchars($getVal(fn() => $appelOffre->getAppelOffresAnnee())) . '</Data></Cell>
    </Row>
   </Table>
  </Worksheet>
 </Workbook>';
 
-            $filename = 'AO_' . ($appelOffre->getAppelOffreDevis() ?? $id) . '_' . date('Ymd_His') . '.xls';
+            $filename = 'AO_' . ($appelOffre->getAppelOffresNumero() ?? $id) . '_' . date('Ymd_His') . '.xls';
 
             $response = new Response($excelContent);
             $response->headers->set('Content-Type', 'application/vnd.ms-excel');
@@ -198,7 +198,7 @@ class ExportController extends AbstractController
             foreach ($appelOffres as $ao) {
                 $excelContent .= '
    <Row>
-    <Cell><Data ss:Type="String">' . htmlspecialchars($ao->getAppelOffreDevis() ?? 'N/A') . '</Data></Cell>
+    <Cell><Data ss:Type="String">' . htmlspecialchars($ao->getAppelOffresNumero() ?? 'N/A') . '</Data></Cell>
     <Cell><Data ss:Type="String">' . htmlspecialchars($ao->getAppelOffresTypeId()?->getAppelOffresTypeLibelle() ?? 'N/A') . '</Data></Cell>
     <Cell><Data ss:Type="String">' . htmlspecialchars($ao->getAppelOffresObjet() ?? 'N/A') . '</Data></Cell>
     <Cell><Data ss:Type="String">' . htmlspecialchars($ao->getAppelOffresOrganismeDemandeurId()?->getOrganismeDemandeurLibelle() ?? 'N/A') . '</Data></Cell>
@@ -206,7 +206,7 @@ class ExportController extends AbstractController
     <Cell><Data ss:Type="String">' . htmlspecialchars($ao->getAppelOffresDateLimiteRemise()?->format('d/m/Y') ?? 'N/A') . '</Data></Cell>
     <Cell><Data ss:Type="String">' . htmlspecialchars($ao->getAppelOffresEtat() ?? 'N/A') . '</Data></Cell>
     <Cell><Data ss:Type="String">' . ($ao->getAppelOffresParticipation() ? 'Oui' : 'Non') . '</Data></Cell>
-    <Cell><Data ss:Type="String">' . htmlspecialchars($ao->getAppelOffreAnnee() ?? 'N/A') . '</Data></Cell>
+    <Cell><Data ss:Type="String">' . htmlspecialchars($ao->getAppelOffresAnnee() ?? 'N/A') . '</Data></Cell>
    </Row>';
             }
 
@@ -257,7 +257,7 @@ class ExportController extends AbstractController
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Appel d\'Offre - ' . htmlspecialchars($appelOffre->getAppelOffreDevis() ?? $id) . '</title>
+    <title>Appel d\'Offre - ' . htmlspecialchars($appelOffre->getAppelOffresNumero() ?? $id) . '</title>
     <style>
         body { 
             font-family: Arial, sans-serif; 
@@ -325,7 +325,7 @@ class ExportController extends AbstractController
     <h1>DÉTAILS APPEL D\'OFFRE</h1>
     
     <div class="info-box">
-        <strong>Référence :</strong> ' . htmlspecialchars($getVal(fn() => $appelOffre->getAppelOffreDevis())) . '<br>
+        <strong>Référence :</strong> ' . htmlspecialchars($getVal(fn() => $appelOffre->getAppelOffresNumero())) . '<br>
         <strong>Date d\'export :</strong> ' . date('d/m/Y H:i') . '
     </div>
     
@@ -396,7 +396,7 @@ class ExportController extends AbstractController
         </tr>
         <tr>
             <td class="label">Année</td>
-            <td class="value">' . htmlspecialchars($getVal(fn() => $appelOffre->getAppelOffreAnnee())) . '</td>
+            <td class="value">' . htmlspecialchars($getVal(fn() => $appelOffre->getAppelOffresAnnee())) . '</td>
         </tr>
     </table>
     

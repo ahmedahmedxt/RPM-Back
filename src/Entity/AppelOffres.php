@@ -95,15 +95,11 @@ class AppelOffres
     #[ORM\Column(name: "appelOffresNumeroDevisParticipation", type: "string", length: 50, nullable: true)]
     private ?string $appelOffresNumeroDevisParticipation = null;
 
-    // Champs existants conservés
-    #[ORM\Column(name: "appelOffreDateRemise", type: "date", nullable: true)]
-    private ?\DateTimeInterface $appelOffreDateRemise = null;
+    #[ORM\Column(name: "appelOffresNumero", type: "string", length: 50, nullable: true)]
+    private ?string $appelOffresNumero = null;
 
-    #[ORM\Column(name: "appelOffreDevis", type: "string", length: 50, nullable: true)]
-    private ?string $appelOffreDevis = null;
-
-    #[ORM\Column(name: "appelOffreAnnee", type: "integer", nullable: true)]
-    private ?int $appelOffreAnnee = null;
+    #[ORM\Column(name: "appelOffresAnnee", type: "integer", nullable: true)]
+    private ?int $appelOffresAnnee = null;
 
     public const ETATS = [
         'EN_ATTENTE' => 'En Attente du résultat',
@@ -182,15 +178,11 @@ class AppelOffres
     public function getAppelOffresNumeroDevisParticipation(): ?string { return $this->appelOffresNumeroDevisParticipation; }
     public function setAppelOffresNumeroDevisParticipation(?string $v): self { $this->appelOffresNumeroDevisParticipation = $v; return $this; }
 
-    // Champs non listés mais conservés
-    public function getAppelOffreDateRemise(): ?\DateTimeInterface { return $this->appelOffreDateRemise; }
-    public function setAppelOffreDateRemise(?\DateTimeInterface $v): self { $this->appelOffreDateRemise = $v; return $this; }
+    public function getAppelOffresNumero(): ?string { return $this->appelOffresNumero; }
+    public function setAppelOffresNumero(?string $v): self { $this->appelOffresNumero = $v; return $this; }
 
-    public function getAppelOffreDevis(): ?string { return $this->appelOffreDevis; }
-    public function setAppelOffreDevis(?string $v): self { $this->appelOffreDevis = $v; return $this; }
-
-    public function getAppelOffreAnnee(): ?int { return $this->appelOffreAnnee; }
-    public function setAppelOffreAnnee(?int $v): self { $this->appelOffreAnnee = $v; return $this; }
+    public function getAppelOffresAnnee(): ?int { return $this->appelOffresAnnee; }
+    public function setAppelOffresAnnee(?int $v): self { $this->appelOffresAnnee = $v; return $this; }
 
     // Partenaires
     public function getAppelOffresPartenaires(): Collection { return $this->appelOffresPartenaires; }
