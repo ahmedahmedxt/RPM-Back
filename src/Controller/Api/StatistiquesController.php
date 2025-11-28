@@ -28,11 +28,11 @@ class StatistiquesController extends AbstractController
                 'total' => $this->appelOffresRepository->count([]),
                 'participes' => $this->appelOffresRepository->count(['appelOffresParticipation' => 1]),
                 'nonParticipes' => $this->appelOffresRepository->count(['appelOffresParticipation' => 0]),
-                'gagnes' => $this->appelOffresRepository->count(['appelOffresEtat' => 'GAGNE']),
+                'gagnes' => $this->appelOffresRepository->count(['appelOffresResultatEtat' => 'GAGNE']),
                 'perdus' => $this->appelOffresRepository->countPerdus(),
-                'enAttente' => $this->appelOffresRepository->count(['appelOffresEtat' => 'EN_ATTENTE']),
-                'annules' => $this->appelOffresRepository->count(['appelOffresEtat' => 'ANNULE']),
-                'reportes' => $this->appelOffresRepository->count(['appelOffresEtat' => 'REPORTE']),
+                'enAttente' => $this->appelOffresRepository->count(['appelOffresResultatEtat' => 'EN_ATTENTE']),
+                'annules' => $this->appelOffresRepository->count(['appelOffresResultatEtat' => 'ANNULE']),
+                'reportes' => $this->appelOffresRepository->count(['appelOffresResultatEtat' => 'REPORTE']),
             ];
 
             return $this->json($stats);
@@ -125,7 +125,7 @@ class StatistiquesController extends AbstractController
     {
         try {
             $participes = $this->appelOffresRepository->count(['appelOffresParticipation' => 1]);
-            $gagnes = $this->appelOffresRepository->count(['appelOffresEtat' => 'GAGNE']);
+            $gagnes = $this->appelOffresRepository->count(['appelOffresResultatEtat' => 'GAGNE']);
             
             $tauxSucces = $participes > 0 ? round(($gagnes / $participes) * 100, 2) : 0;
 

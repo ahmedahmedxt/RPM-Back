@@ -6,9 +6,6 @@ use App\Entity\Partenaire;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
-/**
- * @extends ServiceEntityRepository<Partenaire>
- */
 class PartenaireRepository extends ServiceEntityRepository
 {
     public function __construct(ManagerRegistry $registry)
@@ -34,28 +31,12 @@ class PartenaireRepository extends ServiceEntityRepository
         }
     }
 
-    /**
-     * Rechercher des partenaires par libellé
-     */
-    public function findByLibelle(string $search): array
+    public function findByRaisonSociale(string $search): array
     {
         return $this->createQueryBuilder('p')
-            ->andWhere('p.partenaireLibelle LIKE :search')
+            ->andWhere('p.partenaireRaisonSociale LIKE :search')
             ->setParameter('search', '%' . $search . '%')
-            ->orderBy('p.partenaireLibelle', 'ASC')
-            ->getQuery()
-            ->getResult();
-    }
-
-    /**
-     * Rechercher par rôle
-     */
-    public function findByRole(string $role): array
-    {
-        return $this->createQueryBuilder('p')
-            ->andWhere('p.partenaireRole = :role')
-            ->setParameter('role', $role)
-            ->orderBy('p.partenaireLibelle', 'ASC')
+            ->orderBy('p.partenaireRaisonSociale', 'ASC')
             ->getQuery()
             ->getResult();
     }

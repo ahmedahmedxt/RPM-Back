@@ -18,9 +18,6 @@ class AppelOffresPartenaireController extends AbstractController
     {
     }
 
-    /**
-     * Ajouter un partenaire à un appel d'offres avec son rôle
-     */
     #[Route('/api/appeloffres/{id}/add-partenaire', name: 'appeloffres_add_partenaire', methods: ['POST'])]
     public function addPartenaire(int $id, Request $request): JsonResponse
     {
@@ -41,7 +38,6 @@ class AppelOffresPartenaireController extends AbstractController
                 return $this->json(['error' => 'Partenaire non trouvé'], Response::HTTP_NOT_FOUND);
             }
 
-            // Vérifier si le partenaire n'est pas déjà associé
             $existing = $this->em->getRepository(AppelOffresPartenaire::class)->findOneBy([
                 'appelOffres' => $appelOffres,
                 'partenaire' => $partenaire
@@ -51,7 +47,6 @@ class AppelOffresPartenaireController extends AbstractController
                 return $this->json(['error' => 'Ce partenaire est déjà associé à cet appel d\'offres'], Response::HTTP_CONFLICT);
             }
 
-            // Créer la liaison avec le rôle
             $aop = new AppelOffresPartenaire();
             $aop->setAppelOffres($appelOffres);
             $aop->setPartenaire($partenaire);
@@ -65,8 +60,8 @@ class AppelOffresPartenaireController extends AbstractController
                 'data' => [
                     'id' => $aop->getId(),
                     'partenaireId' => $partenaire->getPartenaireId(),
-                    'partenaireLibelle' => $partenaire->getPartenaireLibelle(),
-                    'partenaireAcronyme' => $partenaire->getPartenaireAcronyme(),
+                    'partenaireRaisonSociale' => $partenaire->getPartenaireRaisonSociale(),
+                    'partenaireRaisonSocialeShort' => $partenaire->getPartenaireRaisonSocialeShort(),
                     'role' => $aop->getRole()
                 ]
             ], Response::HTTP_CREATED);
@@ -79,9 +74,6 @@ class AppelOffresPartenaireController extends AbstractController
         }
     }
 
-    /**
-     * Récupérer tous les partenaires d'un appel d'offres avec leurs rôles
-     */
     #[Route('/api/appeloffres/{id}/partenaires', name: 'appeloffres_get_partenaires', methods: ['GET'])]
     public function getPartenaires(int $id): JsonResponse
     {
@@ -98,8 +90,8 @@ class AppelOffresPartenaireController extends AbstractController
                     $partenaires[] = [
                         'id' => $aop->getId(),
                         'partenaireId' => $p->getPartenaireId(),
-                        'partenaireLibelle' => $p->getPartenaireLibelle(),
-                        'partenaireAcronyme' => $p->getPartenaireAcronyme(),
+                        'partenaireRaisonSociale' => $p->getPartenaireRaisonSociale(),
+                        'partenaireRaisonSocialeShort' => $p->getPartenaireRaisonSocialeShort(),
                         'role' => $aop->getRole()
                     ];
                 }
@@ -115,9 +107,6 @@ class AppelOffresPartenaireController extends AbstractController
         }
     }
 
-    /**
-     * Supprimer un partenaire d'un appel d'offres
-     */
     #[Route('/api/appeloffres/partenaire/{id}', name: 'appeloffres_remove_partenaire', methods: ['DELETE'])]
     public function removePartenaire(int $id): JsonResponse
     {
@@ -141,9 +130,6 @@ class AppelOffresPartenaireController extends AbstractController
         }
     }
 
-    /**
-     * Mettre à jour le rôle d'un partenaire dans un appel d'offres
-     */
     #[Route('/api/appeloffres/partenaire/{id}/role', name: 'appeloffres_update_role', methods: ['PUT'])]
     public function updateRole(int $id, Request $request): JsonResponse
     {

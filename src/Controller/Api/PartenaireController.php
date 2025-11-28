@@ -28,9 +28,6 @@ class PartenaireController extends AbstractController
         $this->serializer = $serializer;
     }
 
-    /**
-     * Récupérer tous les partenaires
-     */
     #[Route('/api/getAll/partenaires', name: 'partenaire_getAll', methods: ['GET'])]
     public function getAll(): JsonResponse
     {
@@ -52,9 +49,6 @@ class PartenaireController extends AbstractController
         }
     }
 
-    /**
-     * Récupérer un partenaire par ID
-     */
     #[Route('/api/get/partenaire/{id}', name: 'partenaire_get', methods: ['GET'])]
     public function getOne(int $id): JsonResponse
     {
@@ -82,41 +76,35 @@ class PartenaireController extends AbstractController
         }
     }
 
-    /**
-     * Créer un nouveau partenaire
-     */
     #[Route('/api/create/partenaire', name: 'partenaire_create', methods: ['POST'])]
     public function create(Request $request): JsonResponse
     {
         try {
             $data = json_decode($request->getContent(), true) ?? [];
 
-            // Validation
-            if (empty($data['partenaireLibelle'])) {
+            if (empty($data['partenaireRaisonSociale'])) {
                 return $this->json([
-                    'error' => 'Le libellé du partenaire est obligatoire'
+                    'error' => 'La raison sociale du partenaire est obligatoire'
                 ], Response::HTTP_BAD_REQUEST);
             }
 
             $partenaire = new Partenaire();
-            $partenaire->setPartenaireLibelle($data['partenaireLibelle']);
+            $partenaire->setPartenaireRaisonSociale($data['partenaireRaisonSociale']);
 
-            if (isset($data['partenaireAcronyme'])) {
-                $partenaire->setPartenaireAcronyme($data['partenaireAcronyme']);
+            if (isset($data['partenaireRaisonSocialeShort'])) {
+                $partenaire->setPartenaireRaisonSocialeShort($data['partenaireRaisonSocialeShort']);
             }
 
-            // Champs harmonisés (noms "partenaire...") + rétrocompat
-            $partenaire->setPartenairePremierResponsable($data['partenairePremierResponsable'] ?? ($data['premierResponsable'] ?? null));
-            $partenaire->setPartenairePremierResponsableEmail($data['partenairePremierResponsableEmail'] ?? ($data['prEmail'] ?? null));
-            $partenaire->setPartenairePremierResponsableTelephone($data['partenairePremierResponsableTelephone'] ?? ($data['prTel'] ?? null));
-            $partenaire->setPartenairePremierResponsableAdresse($data['partenairePremierResponsableAdresse'] ?? ($data['adresse'] ?? null));
-
-            $partenaire->setPartenairePays($data['partenairePays'] ?? ($data['pays'] ?? null));
-            $partenaire->setPartenaireEmail($data['partenaireEmail'] ?? ($data['email'] ?? null));
-            $partenaire->setPartenaireTelephone1($data['partenaireTelephone1'] ?? ($data['tel1'] ?? null));
-            $partenaire->setPartenaireTelephone2($data['partenaireTelephone2'] ?? ($data['tel2'] ?? null));
-            $partenaire->setPartenaireSiteWeb($data['partenaireSiteWeb'] ?? ($data['siteWeb'] ?? null));
-            $partenaire->setPartenaireLinkedIn($data['partenaireLinkedIn'] ?? ($data['linkedIn'] ?? null));
+            $partenaire->setPartenairePremierResponsable($data['partenairePremierResponsable'] ?? null);
+            $partenaire->setPartenairePremierResponsableEmail($data['partenairePremierResponsableEmail'] ?? null);
+            $partenaire->setPartenairePremierResponsableTelephone($data['partenairePremierResponsableTelephone'] ?? null);
+            $partenaire->setPartenaireAdresse($data['partenaireAdresse'] ?? null);
+            $partenaire->setPartenaireEmail($data['partenaireEmail'] ?? null);
+            $partenaire->setPartenaireTelephone1($data['partenaireTelephone1'] ?? null);
+            $partenaire->setPartenaireTelephone2($data['partenaireTelephone2'] ?? null);
+            $partenaire->setPartenaireSiteWeb($data['partenaireSiteWeb'] ?? null);
+            $partenaire->setPartenaireLinkedIn($data['partenaireLinkedIn'] ?? null);
+            $partenaire->setPartenaireFacebook($data['partenaireFacebook'] ?? null);
 
             $this->entityManager->persist($partenaire);
             $this->entityManager->flush();
@@ -136,9 +124,6 @@ class PartenaireController extends AbstractController
         }
     }
 
-    /**
-     * Modifier un partenaire
-     */
     #[Route('/api/edit/partenaire/{id}', name: 'partenaire_edit', methods: ['PUT'])]
     public function edit(int $id, Request $request): JsonResponse
     {
@@ -153,44 +138,41 @@ class PartenaireController extends AbstractController
 
             $data = json_decode($request->getContent(), true) ?? [];
 
-            if (isset($data['partenaireLibelle'])) {
-                $partenaire->setPartenaireLibelle($data['partenaireLibelle']);
+            if (isset($data['partenaireRaisonSociale'])) {
+                $partenaire->setPartenaireRaisonSociale($data['partenaireRaisonSociale']);
             }
-            if (isset($data['partenaireAcronyme'])) {
-                $partenaire->setPartenaireAcronyme($data['partenaireAcronyme']);
+            if (isset($data['partenaireRaisonSocialeShort'])) {
+                $partenaire->setPartenaireRaisonSocialeShort($data['partenaireRaisonSocialeShort']);
             }
-
-            // Champs harmonisés (noms "partenaire...") + rétrocompat
-            if (array_key_exists('partenairePremierResponsable', $data) || array_key_exists('premierResponsable', $data)) {
-                $partenaire->setPartenairePremierResponsable($data['partenairePremierResponsable'] ?? ($data['premierResponsable'] ?? null));
+            if (array_key_exists('partenairePremierResponsable', $data)) {
+                $partenaire->setPartenairePremierResponsable($data['partenairePremierResponsable']);
             }
-            if (array_key_exists('partenairePremierResponsableEmail', $data) || array_key_exists('prEmail', $data)) {
-                $partenaire->setPartenairePremierResponsableEmail($data['partenairePremierResponsableEmail'] ?? ($data['prEmail'] ?? null));
+            if (array_key_exists('partenairePremierResponsableEmail', $data)) {
+                $partenaire->setPartenairePremierResponsableEmail($data['partenairePremierResponsableEmail']);
             }
-            if (array_key_exists('partenairePremierResponsableTelephone', $data) || array_key_exists('prTel', $data)) {
-                $partenaire->setPartenairePremierResponsableTelephone($data['partenairePremierResponsableTelephone'] ?? ($data['prTel'] ?? null));
+            if (array_key_exists('partenairePremierResponsableTelephone', $data)) {
+                $partenaire->setPartenairePremierResponsableTelephone($data['partenairePremierResponsableTelephone']);
             }
-            if (array_key_exists('partenairePremierResponsableAdresse', $data) || array_key_exists('adresse', $data)) {
-                $partenaire->setPartenairePremierResponsableAdresse($data['partenairePremierResponsableAdresse'] ?? ($data['adresse'] ?? null));
+            if (array_key_exists('partenaireAdresse', $data)) {
+                $partenaire->setPartenaireAdresse($data['partenaireAdresse']);
             }
-
-            if (array_key_exists('partenairePays', $data) || array_key_exists('pays', $data)) {
-                $partenaire->setPartenairePays($data['partenairePays'] ?? ($data['pays'] ?? null));
+            if (array_key_exists('partenaireEmail', $data)) {
+                $partenaire->setPartenaireEmail($data['partenaireEmail']);
             }
-            if (array_key_exists('partenaireEmail', $data) || array_key_exists('email', $data)) {
-                $partenaire->setPartenaireEmail($data['partenaireEmail'] ?? ($data['email'] ?? null));
+            if (array_key_exists('partenaireTelephone1', $data)) {
+                $partenaire->setPartenaireTelephone1($data['partenaireTelephone1']);
             }
-            if (array_key_exists('partenaireTelephone1', $data) || array_key_exists('tel1', $data)) {
-                $partenaire->setPartenaireTelephone1($data['partenaireTelephone1'] ?? ($data['tel1'] ?? null));
+            if (array_key_exists('partenaireTelephone2', $data)) {
+                $partenaire->setPartenaireTelephone2($data['partenaireTelephone2']);
             }
-            if (array_key_exists('partenaireTelephone2', $data) || array_key_exists('tel2', $data)) {
-                $partenaire->setPartenaireTelephone2($data['partenaireTelephone2'] ?? ($data['tel2'] ?? null));
+            if (array_key_exists('partenaireSiteWeb', $data)) {
+                $partenaire->setPartenaireSiteWeb($data['partenaireSiteWeb']);
             }
-            if (array_key_exists('partenaireSiteWeb', $data) || array_key_exists('siteWeb', $data)) {
-                $partenaire->setPartenaireSiteWeb($data['partenaireSiteWeb'] ?? ($data['siteWeb'] ?? null));
+            if (array_key_exists('partenaireLinkedIn', $data)) {
+                $partenaire->setPartenaireLinkedIn($data['partenaireLinkedIn']);
             }
-            if (array_key_exists('partenaireLinkedIn', $data) || array_key_exists('linkedIn', $data)) {
-                $partenaire->setPartenaireLinkedIn($data['partenaireLinkedIn'] ?? ($data['linkedIn'] ?? null));
+            if (array_key_exists('partenaireFacebook', $data)) {
+                $partenaire->setPartenaireFacebook($data['partenaireFacebook']);
             }
 
             $this->entityManager->flush();
@@ -210,9 +192,6 @@ class PartenaireController extends AbstractController
         }
     }
 
-    /**
-     * Supprimer un partenaire
-     */
     #[Route('/api/delete/partenaire/{id}', name: 'partenaire_delete', methods: ['DELETE'])]
     public function delete(int $id): JsonResponse
     {
@@ -239,16 +218,13 @@ class PartenaireController extends AbstractController
         }
     }
 
-    /**
-     * Rechercher des partenaires par libellé
-     */
     #[Route('/api/search/partenaires', name: 'partenaire_search', methods: ['GET'])]
     public function search(Request $request): JsonResponse
     {
         try {
             $searchTerm = $request->query->get('q', '');
             
-            $partenaires = $this->partenaireRepository->findByLibelle($searchTerm);
+            $partenaires = $this->partenaireRepository->findByRaisonSociale($searchTerm);
 
             $data = $this->serializer->serialize(
                 $partenaires,

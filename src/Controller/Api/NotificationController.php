@@ -47,20 +47,20 @@ class NotificationController extends AbstractController
             }
 
             // Convertir la date de remise en utilisant le fuseau horaire de la Tunisie
-            $appelOffresDateRemise = $appelOffresItem->getAppelOffreDateRemise();
-            if ($appelOffresDateRemise) {
-                $appelOffresDateRemise->setTimezone(new \DateTimeZone('Africa/Tunis'));
+            $appelOffresDateLimiteRemise = $appelOffresItem->getAppelOffresDateLimiteRemise();
+            if ($appelOffresDateLimiteRemise) {
+                $appelOffresDateLimiteRemise->setTimezone(new \DateTimeZone('Africa/Tunis'));
             }
             
             // Vérifier si la date d'achèvement est dans les 10 jours à partir de la date actuelle
             $limiteNotification = (clone $dateActuelle)->add(new \DateInterval('P10D'));
-            if ($appelOffresDateRemise && $appelOffresDateRemise <= $limiteNotification && $appelOffresDateRemise > $dateActuelle) {
-                // Calculer la différence entre la date d'achèvement et la date actuelle
-                $diff = date_diff($dateActuelle, $appelOffresDateRemise);
+            if ($appelOffresDateLimiteRemise && $appelOffresDateLimiteRemise <= $limiteNotification && $appelOffresDateLimiteRemise > $dateActuelle) {
+                // Calculer la différence entre la date limite et la date actuelle
+                $diff = date_diff($dateActuelle, $appelOffresDateLimiteRemise);
                 $joursRestants = $diff->days;
     
                 // Construire le message de la notification avec le nombre de jours restants
-                $message = "La date d'achèvement de l'appel d'offres est dans $joursRestants jours.";
+                $message = "La date limite de remise de l'appel d'offres est dans $joursRestants jours.";
     
                 // Créer une nouvelle notification
                 $notification = new Notification();
@@ -110,9 +110,10 @@ class NotificationController extends AbstractController
                 'dateCreation' => $notification->getDateCreation() ? $notification->getDateCreation()->format('Y-m-d H:i:s') : null,
                 'appelOffres' => [
                     'id' => $aop ? $aop->getAppelOffresId() : null,
-                    'devis' => $aop ? $aop->getAppelOffreDevis() : null,
+                    'numero' => $aop ? $aop->getAppelOffresNumero() : null,
+                    'devis' => $aop ? $aop->getAppelOffresNumeroDevisParticipation() : null,
                     'objet' => $aop ? $aop->getAppelOffresObjet() : null,
-                    'dateRemise' => $aop && $aop->getAppelOffreDateRemise() ? $aop->getAppelOffreDateRemise()->format('Y-m-d') : null,
+                    'annee' => $aop ? $aop->getAppelOffresAnnee() : null,
                 ],
             ];
         }
