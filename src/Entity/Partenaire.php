@@ -19,13 +19,13 @@ class Partenaire
     #[Groups(['partenaire:read', 'appeloffres:read'])]
     private ?int $partenaireId = null;
 
-    #[ORM\Column(name: 'partenaireLibelle', type: 'string', length: 255)]
+    #[ORM\Column(name: 'partenaireRaisonSociale', type: 'string', length: 255)]
     #[Groups(['partenaire:read', 'partenaire:write', 'appeloffres:read'])]
-    private ?string $partenaireLibelle = null;
+    private ?string $partenaireRaisonSociale = null;
 
-    #[ORM\Column(name: 'partenaireAcronyme', type: 'string', length: 50, nullable: true)]
+    #[ORM\Column(name: 'partenaireRaisonSocialeShort', type: 'string', length: 50, nullable: true)]
     #[Groups(['partenaire:read', 'partenaire:write', 'appeloffres:read'])]
-    private ?string $partenaireAcronyme = null;
+    private ?string $partenaireRaisonSocialeShort = null;
 
     #[ORM\Column(name: 'partenairePremierResponsable', type: 'string', length: 255, nullable: true)]
     #[Groups(['partenaire:read', 'partenaire:write'])]
@@ -35,29 +35,25 @@ class Partenaire
     #[Groups(['partenaire:read', 'partenaire:write'])]
     private ?string $partenairePremierResponsableEmail = null;
 
-    #[ORM\Column(name: 'partenairePremierResponsableTelephone', type: 'string', length: 50, nullable: true)]
+    #[ORM\Column(name: 'partenairePremierResponsableTelephone', type: 'integer', nullable: true)]
     #[Groups(['partenaire:read', 'partenaire:write'])]
-    private ?string $partenairePremierResponsableTelephone = null;
+    private ?int $partenairePremierResponsableTelephone = null;
 
-    #[ORM\Column(name: 'partenairePremierResponsableAdresse', type: 'text', nullable: true)]
+    #[ORM\Column(name: 'partenaireAdresse', type: 'text', nullable: true)]
     #[Groups(['partenaire:read', 'partenaire:write'])]
-    private ?string $partenairePremierResponsableAdresse = null;
-
-    #[ORM\Column(name: 'partenairePays', type: 'string', length: 100, nullable: true)]
-    #[Groups(['partenaire:read', 'partenaire:write'])]
-    private ?string $partenairePays = null;
+    private ?string $partenaireAdresse = null;
 
     #[ORM\Column(name: 'partenaireEmail', type: 'string', length: 255, nullable: true)]
     #[Groups(['partenaire:read', 'partenaire:write'])]
     private ?string $partenaireEmail = null;
 
-    #[ORM\Column(name: 'partenaireTelephone1', type: 'string', length: 50, nullable: true)]
+    #[ORM\Column(name: 'partenaireTelephone1', type: 'integer', nullable: true)]
     #[Groups(['partenaire:read', 'partenaire:write'])]
-    private ?string $partenaireTelephone1 = null;
+    private ?int $partenaireTelephone1 = null;
 
-    #[ORM\Column(name: 'partenaireTelephone2', type: 'string', length: 50, nullable: true)]
+    #[ORM\Column(name: 'partenaireTelephone2', type: 'integer', nullable: true)]
     #[Groups(['partenaire:read', 'partenaire:write'])]
-    private ?string $partenaireTelephone2 = null;
+    private ?int $partenaireTelephone2 = null;
 
     #[ORM\Column(name: 'partenaireSiteWeb', type: 'string', length: 255, nullable: true)]
     #[Groups(['partenaire:read', 'partenaire:write'])]
@@ -67,6 +63,10 @@ class Partenaire
     #[Groups(['partenaire:read', 'partenaire:write'])]
     private ?string $partenaireLinkedIn = null;
 
+    #[ORM\Column(name: 'partenaireFacebook', type: 'string', length: 255, nullable: true)]
+    #[Groups(['partenaire:read', 'partenaire:write'])]
+    private ?string $partenaireFacebook = null;
+
     #[ORM\OneToMany(mappedBy: 'partenaire', targetEntity: AppelOffresPartenaire::class, cascade: ['persist', 'remove'])]
     private Collection $appelOffresPartenaires;
 
@@ -75,32 +75,30 @@ class Partenaire
         $this->appelOffresPartenaires = new ArrayCollection();
     }
 
-    // Getters / Setters
-
     public function getPartenaireId(): ?int
     {
         return $this->partenaireId;
     }
 
-    public function getPartenaireLibelle(): ?string
+    public function getPartenaireRaisonSociale(): ?string
     {
-        return $this->partenaireLibelle;
+        return $this->partenaireRaisonSociale;
     }
 
-    public function setPartenaireLibelle(string $partenaireLibelle): self
+    public function setPartenaireRaisonSociale(string $partenaireRaisonSociale): self
     {
-        $this->partenaireLibelle = $partenaireLibelle;
+        $this->partenaireRaisonSociale = $partenaireRaisonSociale;
         return $this;
     }
 
-    public function getPartenaireAcronyme(): ?string
+    public function getPartenaireRaisonSocialeShort(): ?string
     {
-        return $this->partenaireAcronyme;
+        return $this->partenaireRaisonSocialeShort;
     }
 
-    public function setPartenaireAcronyme(?string $partenaireAcronyme): self
+    public function setPartenaireRaisonSocialeShort(?string $partenaireRaisonSocialeShort): self
     {
-        $this->partenaireAcronyme = $partenaireAcronyme;
+        $this->partenaireRaisonSocialeShort = $partenaireRaisonSocialeShort;
         return $this;
     }
 
@@ -126,36 +124,25 @@ class Partenaire
         return $this;
     }
 
-    public function getPartenairePremierResponsableTelephone(): ?string
+    public function getPartenairePremierResponsableTelephone(): ?int
     {
         return $this->partenairePremierResponsableTelephone;
     }
 
-    public function setPartenairePremierResponsableTelephone(?string $partenairePremierResponsableTelephone): self
+    public function setPartenairePremierResponsableTelephone(?int $partenairePremierResponsableTelephone): self
     {
         $this->partenairePremierResponsableTelephone = $partenairePremierResponsableTelephone;
         return $this;
     }
 
-    public function getPartenairePremierResponsableAdresse(): ?string
+    public function getPartenaireAdresse(): ?string
     {
-        return $this->partenairePremierResponsableAdresse;
+        return $this->partenaireAdresse;
     }
 
-    public function setPartenairePremierResponsableAdresse(?string $partenairePremierResponsableAdresse): self
+    public function setPartenaireAdresse(?string $partenaireAdresse): self
     {
-        $this->partenairePremierResponsableAdresse = $partenairePremierResponsableAdresse;
-        return $this;
-    }
-
-    public function getPartenairePays(): ?string
-    {
-        return $this->partenairePays;
-    }
-
-    public function setPartenairePays(?string $partenairePays): self
-    {
-        $this->partenairePays = $partenairePays;
+        $this->partenaireAdresse = $partenaireAdresse;
         return $this;
     }
 
@@ -170,23 +157,23 @@ class Partenaire
         return $this;
     }
 
-    public function getPartenaireTelephone1(): ?string
+    public function getPartenaireTelephone1(): ?int
     {
         return $this->partenaireTelephone1;
     }
 
-    public function setPartenaireTelephone1(?string $partenaireTelephone1): self
+    public function setPartenaireTelephone1(?int $partenaireTelephone1): self
     {
         $this->partenaireTelephone1 = $partenaireTelephone1;
         return $this;
     }
 
-    public function getPartenaireTelephone2(): ?string
+    public function getPartenaireTelephone2(): ?int
     {
         return $this->partenaireTelephone2;
     }
 
-    public function setPartenaireTelephone2(?string $partenaireTelephone2): self
+    public function setPartenaireTelephone2(?int $partenaireTelephone2): self
     {
         $this->partenaireTelephone2 = $partenaireTelephone2;
         return $this;
@@ -214,9 +201,17 @@ class Partenaire
         return $this;
     }
 
-    /**
-     * @return Collection<int, AppelOffresPartenaire>
-     */
+    public function getPartenaireFacebook(): ?string
+    {
+        return $this->partenaireFacebook;
+    }
+
+    public function setPartenaireFacebook(?string $partenaireFacebook): self
+    {
+        $this->partenaireFacebook = $partenaireFacebook;
+        return $this;
+    }
+
     public function getAppelOffresPartenaires(): Collection
     {
         return $this->appelOffresPartenaires;

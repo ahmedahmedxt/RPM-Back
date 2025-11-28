@@ -96,7 +96,7 @@ class ExportController extends AbstractController
    </Row>
    <Row>
     <Cell ss:StyleID="label"><Data ss:Type="String">État</Data></Cell>
-    <Cell><Data ss:Type="String">' . htmlspecialchars($getVal(fn() => $appelOffre->getAppelOffresEtat())) . '</Data></Cell>
+    <Cell><Data ss:Type="String">' . htmlspecialchars($getVal(fn() => $appelOffre->getAppelOffresResultatEtat())) . '</Data></Cell>
    </Row>
    <Row>
     <Cell ss:StyleID="label"><Data ss:Type="String">Participation</Data></Cell>
@@ -204,7 +204,7 @@ class ExportController extends AbstractController
     <Cell><Data ss:Type="String">' . htmlspecialchars($ao->getAppelOffresOrganismeDemandeurId()?->getOrganismeDemandeurLibelle() ?? 'N/A') . '</Data></Cell>
     <Cell><Data ss:Type="String">' . htmlspecialchars($ao->getAppelOffresPaysId()?->getPaysLibelle() ?? 'N/A') . '</Data></Cell>
     <Cell><Data ss:Type="String">' . htmlspecialchars($ao->getAppelOffresDateLimiteRemise()?->format('d/m/Y') ?? 'N/A') . '</Data></Cell>
-    <Cell><Data ss:Type="String">' . htmlspecialchars($ao->getAppelOffresEtat() ?? 'N/A') . '</Data></Cell>
+    <Cell><Data ss:Type="String">' . htmlspecialchars($ao->getAppelOffresResultatEtat() ?? 'N/A') . '</Data></Cell>
     <Cell><Data ss:Type="String">' . ($ao->getAppelOffresParticipation() ? 'Oui' : 'Non') . '</Data></Cell>
     <Cell><Data ss:Type="String">' . htmlspecialchars($ao->getAppelOffresAnnee() ?? 'N/A') . '</Data></Cell>
    </Row>';
@@ -356,7 +356,7 @@ class ExportController extends AbstractController
         </tr>
         <tr>
             <td class="label">État</td>
-            <td class="value"><strong style="color: #808000;">' . htmlspecialchars($getVal(fn() => $appelOffre->getAppelOffresEtat())) . '</strong></td>
+            <td class="value"><strong style="color: #808000;">' . htmlspecialchars($getVal(fn() => $appelOffre->getAppelOffresResultatEtat())) . '</strong></td>
         </tr>
         <tr>
             <td class="label">Participation</td>

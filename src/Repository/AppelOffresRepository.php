@@ -141,7 +141,7 @@ class AppelOffresRepository extends ServiceEntityRepository
         return (int) $this->createQueryBuilder('a')
             ->select('COUNT(a.appelOffresId)')
             ->where('a.appelOffresParticipation = 1')
-            ->andWhere('a.appelOffresEtat NOT IN (:etats)')
+            ->andWhere('a.appelOffresResultatEtat NOT IN (:etats)')
             ->setParameter('etats', ['GAGNE', 'EN_ATTENTE', null])
             ->getQuery()
             ->getSingleScalarResult();
@@ -153,9 +153,9 @@ class AppelOffresRepository extends ServiceEntityRepository
     public function getStatistiquesParEtat(): array
     {
         $results = $this->createQueryBuilder('a')
-            ->select('a.appelOffresEtat as etat, COUNT(a.appelOffresId) as total')
-            ->where('a.appelOffresEtat IS NOT NULL')
-            ->groupBy('a.appelOffresEtat')
+            ->select('a.appelOffresResultatEtat as etat, COUNT(a.appelOffresId) as total')
+            ->where('a.appelOffresResultatEtat IS NOT NULL')
+            ->groupBy('a.appelOffresResultatEtat')
             ->getQuery()
             ->getResult();
 
@@ -281,7 +281,7 @@ class AppelOffresRepository extends ServiceEntityRepository
     public function getTauxSucces(): array
     {
         $participes = $this->count(['appelOffresParticipation' => 1]);
-        $gagnes = $this->count(['appelOffresEtat' => 'GAGNE']);
+        $gagnes = $this->count(['appelOffresResultatEtat' => 'GAGNE']);
         
         $tauxSucces = $participes > 0 ? round(($gagnes / $participes) * 100, 2) : 0;
 

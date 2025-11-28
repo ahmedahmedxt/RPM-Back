@@ -13,6 +13,7 @@ use App\Entity\Pays;
 use App\Entity\OrganismeDemandeur;
 use App\Entity\Devises;
 use App\Entity\AppelOffresPartenaire;
+use App\Entity\ParticipationType;
 
 #[ORM\Entity(repositoryClass: AppelOffresRepository::class)]
 #[ORM\Table(name: "appel_offres")]
@@ -43,7 +44,6 @@ class AppelOffres
     #[ORM\JoinColumn(name: "appelOffresDevisesId", referencedColumnName: "devisesId", nullable: true)]
     private ?Devises $appelOffresDevisesId = null;
 
-    // ✅ NOUVELLE RELATION POUR LA DEVISE DE CAUTION
     #[ORM\ManyToOne(targetEntity: Devises::class)]
     #[ORM\JoinColumn(name: "appelOffresCautionBancaireDeviseId", referencedColumnName: "devisesId", nullable: true)]
     private ?Devises $appelOffresCautionBancaireDeviseId = null;
@@ -51,7 +51,6 @@ class AppelOffres
     #[ORM\OneToMany(mappedBy: 'appelOffres', targetEntity: AppelOffresPartenaire::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $appelOffresPartenaires;
 
-    // Champs
     #[ORM\Column(name: "appelOffresObjet", type: "string", length: 255, nullable: true)]
     #[Assert\NotBlank(allowNull: true)]
     private ?string $appelOffresObjet = null;
@@ -71,8 +70,9 @@ class AppelOffres
     #[ORM\Column(name: "appelOffresCautionBancaire", type: "integer", nullable: true)]
     private ?int $appelOffresCautionBancaire = null;
 
-    #[ORM\Column(name: "appelOffresTypeParticipationId", type: "string", length: 20, nullable: true)]
-    private ?string $appelOffresTypeParticipationId = null;
+    #[ORM\ManyToOne(targetEntity: ParticipationType::class)]
+    #[ORM\JoinColumn(name: "appelOffresTypeParticipationId", referencedColumnName: "participationTypeId", nullable: true)]
+    private ?ParticipationType $appelOffresTypeParticipationId = null;
 
     #[ORM\Column(name: "appelOffresRemarque", type: "text", nullable: true)]
     private ?string $appelOffresRemarque = null;
@@ -83,8 +83,8 @@ class AppelOffres
     #[ORM\Column(name: "appelOffresDateParticipation", type: "date", nullable: true)]
     private ?\DateTimeInterface $appelOffresDateParticipation = null;
 
-    #[ORM\Column(name: "appelOffresEtat", type: "string", length: 50, nullable: true)]
-    private ?string $appelOffresEtat = null;
+    #[ORM\Column(name: "appelOffresResultatEtat", type: "string", length: 50, nullable: true)]
+    private ?string $appelOffresResultatEtat = null;
 
     #[ORM\Column(name: "appelOffresResultatRang", type: "integer", nullable: true)]
     private ?int $appelOffresResultatRang = null;
@@ -95,7 +95,7 @@ class AppelOffres
     #[ORM\Column(name: "appelOffresNumeroDevisParticipation", type: "string", length: 50, nullable: true)]
     private ?string $appelOffresNumeroDevisParticipation = null;
 
-    #[ORM\Column(name: "appelOffresNumero", type: "string", length: 50, nullable: true)]
+    #[ORM\Column(name: "appelOffresNumero", type: "string", length: 10, nullable: true)]
     private ?string $appelOffresNumero = null;
 
     #[ORM\Column(name: "appelOffresAnnee", type: "integer", nullable: true)]
@@ -112,8 +112,6 @@ class AppelOffres
     {
         $this->appelOffresPartenaires = new ArrayCollection();
     }
-
-    // GETTERS/SETTERS
 
     public function getAppelOffresId(): ?int { return $this->appelOffresId; }
 
@@ -132,7 +130,6 @@ class AppelOffres
     public function getAppelOffresDevisesId(): ?Devises { return $this->appelOffresDevisesId; }
     public function setAppelOffresDevisesId(?Devises $v): self { $this->appelOffresDevisesId = $v; return $this; }
 
-    // ✅ NOUVEAU GETTER/SETTER POUR LA DEVISE DE CAUTION
     public function getAppelOffresCautionBancaireDeviseId(): ?Devises { return $this->appelOffresCautionBancaireDeviseId; }
     public function setAppelOffresCautionBancaireDeviseId(?Devises $v): self { $this->appelOffresCautionBancaireDeviseId = $v; return $this; }
 
@@ -154,8 +151,8 @@ class AppelOffres
     public function getAppelOffresCautionBancaire(): ?int { return $this->appelOffresCautionBancaire; }
     public function setAppelOffresCautionBancaire(?int $v): self { $this->appelOffresCautionBancaire = $v; return $this; }
 
-    public function getAppelOffresTypeParticipationId(): ?string { return $this->appelOffresTypeParticipationId; }
-    public function setAppelOffresTypeParticipationId(?string $v): self { $this->appelOffresTypeParticipationId = $v; return $this; }
+    public function getAppelOffresTypeParticipationId(): ?ParticipationType { return $this->appelOffresTypeParticipationId; }
+    public function setAppelOffresTypeParticipationId(?ParticipationType $v): self { $this->appelOffresTypeParticipationId = $v; return $this; }
 
     public function getAppelOffresRemarque(): ?string { return $this->appelOffresRemarque; }
     public function setAppelOffresRemarque(?string $v): self { $this->appelOffresRemarque = $v; return $this; }
@@ -166,8 +163,8 @@ class AppelOffres
     public function getAppelOffresDateParticipation(): ?\DateTimeInterface { return $this->appelOffresDateParticipation; }
     public function setAppelOffresDateParticipation(?\DateTimeInterface $v): self { $this->appelOffresDateParticipation = $v; return $this; }
 
-    public function getAppelOffresEtat(): ?string { return $this->appelOffresEtat; }
-    public function setAppelOffresEtat(?string $etat): self { $this->appelOffresEtat = $etat; return $this; }
+    public function getAppelOffresResultatEtat(): ?string { return $this->appelOffresResultatEtat; }
+    public function setAppelOffresResultatEtat(?string $etat): self { $this->appelOffresResultatEtat = $etat; return $this; }
 
     public function getAppelOffresResultatRang(): ?int { return $this->appelOffresResultatRang; }
     public function setAppelOffresResultatRang(?int $v): self { $this->appelOffresResultatRang = $v; return $this; }
@@ -184,7 +181,6 @@ class AppelOffres
     public function getAppelOffresAnnee(): ?int { return $this->appelOffresAnnee; }
     public function setAppelOffresAnnee(?int $v): self { $this->appelOffresAnnee = $v; return $this; }
 
-    // Partenaires
     public function getAppelOffresPartenaires(): Collection { return $this->appelOffresPartenaires; }
 
     public function addAppelOffresPartenaire(AppelOffresPartenaire $p): self

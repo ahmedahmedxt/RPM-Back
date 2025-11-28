@@ -18,7 +18,7 @@ class EmployeDocuments
     private ?string $employeDocumentsPdf = null;
 
     #[ORM\ManyToOne(inversedBy: 'employeDocuments')]
-    #[ORM\JoinColumn(name: "employeDocumentsTypeId", referencedColumnName: "typeDocumentId")]
+    #[ORM\JoinColumn(name: "employeDocumentsType", referencedColumnName: "typeDocumentId")]
     private ?TypeDocument $employeDocumentsType = null;
 
     #[ORM\ManyToOne(inversedBy: 'employeDocuments')]
