@@ -25,17 +25,16 @@ class EmployeEducation
 
     #[ORM\Column(name: "employeEducationAnneeObtention", type: "date")]
     #[Assert\NotBlank]
-    private  ?\DateTimeInterface  $employeEducationAnneeObtention = null;
+    private ?\DateTimeInterface $employeEducationAnneeObtention = null;
 
-    #[ORM\ManyToOne(targetEntity: Employe::class)]
+    #[ORM\ManyToOne(targetEntity: Collaborateur::class, inversedBy: 'educations')]
     #[Assert\NotBlank]
-    #[ORM\JoinColumn(name: "employeId", referencedColumnName: "employeId")]
-    private ?Employe $employe;
+    #[ORM\JoinColumn(name: "collaborateurId", referencedColumnName: "collaborateurId")]
+    private ?Collaborateur $collaborateur = null;
 
     #[ORM\ManyToOne(inversedBy: 'employeEducation')]
     #[ORM\JoinColumn(name: "typeDiplomeId", referencedColumnName: "typeDiplomeId")]
     private ?TypeDiplome $typeDiplome = null;
-
 
     public function getEmployeEducationId(): ?int
     {
@@ -50,7 +49,6 @@ class EmployeEducation
     public function setEmployeEducationNatureEtudes(?string $employeEducationNatureEtudes): static
     {
         $this->employeEducationNatureEtudes = $employeEducationNatureEtudes;
-
         return $this;
     }
 
@@ -62,7 +60,6 @@ class EmployeEducation
     public function setEmployeEducationEtablissement(?string $employeEducationEtablissement): static
     {
         $this->employeEducationEtablissement = $employeEducationEtablissement;
-
         return $this;
     }
 
@@ -74,19 +71,17 @@ class EmployeEducation
     public function setEmployeEducationAnneeObtention(?\DateTimeInterface $employeEducationAnneeObtention): static
     {
         $this->employeEducationAnneeObtention = $employeEducationAnneeObtention;
-    
         return $this;
     }
     
-    public function getEmploye(): ?Employe
+    public function getCollaborateur(): ?Collaborateur
     {
-        return $this->employe;
+        return $this->collaborateur;
     }
 
-    public function setEmploye(?Employe $employe): self
+    public function setCollaborateur(?Collaborateur $collaborateur): static
     {
-        $this->employe = $employe;
-
+        $this->collaborateur = $collaborateur;
         return $this;
     }
 
@@ -98,7 +93,6 @@ class EmployeEducation
     public function setTypeDiplome(?TypeDiplome $typeDiplome): static
     {
         $this->typeDiplome = $typeDiplome;
-
         return $this;
     }
 }

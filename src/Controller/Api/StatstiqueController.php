@@ -6,7 +6,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
 use App\Repository\CallsForTendersRepository;
-use App\Repository\EmployeRepository;
+use App\Repository\CollaborateurRepository;
 use App\Repository\ProjetRepository;
 use App\Repository\ClientRepository;
 use App\Repository\AppelOffresRepository;
@@ -14,20 +14,20 @@ use App\Repository\AppelOffresRepository;
 class StatstiqueController extends AbstractController
 {
     private $callsForTendersRepository;
-    private $employeeRepository;
+    private $collaborateurRepository;
     private $projectRepository;
     private $clientRepository;
     private $appelOffresRepository;
 
     public function __construct(
         CallsForTendersRepository $callsForTendersRepository,
-        EmployeRepository $employeeRepository,
+        CollaborateurRepository $collaborateurRepository,
         ProjetRepository $projectRepository,
         ClientRepository $clientRepository,
         AppelOffresRepository $appelOffresRepository
     ) {
         $this->callsForTendersRepository = $callsForTendersRepository;
-        $this->employeeRepository = $employeeRepository;
+        $this->collaborateurRepository = $collaborateurRepository;
         $this->projectRepository = $projectRepository;
         $this->clientRepository = $clientRepository;
         $this->appelOffresRepository = $appelOffresRepository;
@@ -36,9 +36,9 @@ class StatstiqueController extends AbstractController
     #[Route('/api/statistics/employees', name: 'api_statistics_employees')]
     public function getEmployeesStatistics(): JsonResponse
     {
-        $totalEmployees = $this->employeeRepository->count([]);
+        $totalCollaborateurs = $this->collaborateurRepository->count([]);
 
-        return new JsonResponse(['totalEmployees' => $totalEmployees]);
+        return new JsonResponse(['totalEmployees' => $totalCollaborateurs]);
     }
 
     #[Route('/api/statistics/projects', name: 'api_statistics_projects')]

@@ -7,7 +7,7 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
-
+use App\Entity\ReferenceCaracteristiqueSpeciale;
 #[ORM\Entity(repositoryClass: ReferenceRepository::class)]
 #[ORM\Table(name: "reference")]
 class Reference
@@ -20,6 +20,8 @@ class Reference
     #[ORM\ManyToOne(targetEntity: Client::class)]
     #[ORM\JoinColumn(name: "clientId", referencedColumnName: "clientId", nullable: false)]
     private $client;
+    #[ORM\ManyToMany(targetEntity: ReferenceCaracteristiqueSpeciale::class, mappedBy: 'references')]
+    private Collection $referenceCaracteristiqueSpeciales;
 
     #[ORM\ManyToOne(targetEntity: Devises::class)]
     #[ORM\JoinColumn(name: "devisesId", referencedColumnName: "devisesId", nullable: false)]
@@ -122,6 +124,7 @@ class Reference
         $this->technologies = new ArrayCollection();
         $this->methodologies = new ArrayCollection();
         $this->environnementdeveloppements = new ArrayCollection();
+        $this->referenceCaracteristiqueSpeciales = new ArrayCollection();
     }
 
     public function getReferenceID(): ?int
@@ -260,7 +263,29 @@ class Reference
         $this->referenceAnneeAchevement = $referenceAnneeAchevement;
         return $this;
     }
+    public function getReferenceCaracteristiqueSpeciales(): Collection
+    {
+        return $this->referenceCaracteristiqueSpeciales;
+    }
 
+    public function addReferenceCaracteristiqueSpeciale(ReferenceCaracteristiqueSpeciale $referenceCaracteristiqueSpeciale): self
+    {
+        if (!$this->referenceCaracteristiqueSpeciales->contains($referenceCaracteristiqueSpeciale)) {
+            $this->referenceCaracteristiqueSpeciales[] = $referenceCaracteristiqueSpeciale;
+            $referenceCaracteristiqueSpeciale->addReference($this);
+        }
+
+        return $this;
+    }
+
+    public function removeReferenceCaracteristiqueSpeciale(ReferenceCaracteristiqueSpeciale $referenceCaracteristiqueSpeciale): self
+    {
+        if ($this->referenceCaracteristiqueSpeciales->removeElement($referenceCaracteristiqueSpeciale)) {
+            $referenceCaracteristiqueSpeciale->removeReference($this);
+        }
+
+        return $this;
+    }
     public function getReferenceDateReceptionProvisoire(): ?\DateTimeInterface
     {
         return $this->referenceDateReceptionProvisoire;

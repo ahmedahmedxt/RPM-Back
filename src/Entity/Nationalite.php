@@ -21,15 +21,13 @@ class Nationalite
     #[Assert\NotBlank]
     private ?string $nationaliteLibelle = null;
 
-    #[ORM\OneToMany(targetEntity: Employe::class, mappedBy: 'nationalite',cascade: ["persist","remove"])]
-    private Collection $employes;
-
+    #[ORM\OneToMany(targetEntity: Collaborateur::class, mappedBy: 'nationalite', cascade: ["persist","remove"])]
+    private Collection $collaborateurs;
 
     public function __construct()
     {
-        $this->employes = new ArrayCollection();
+        $this->collaborateurs = new ArrayCollection();
     }
-
 
     public function __toString()
     {
@@ -40,6 +38,7 @@ class Nationalite
     {
         return $this->id;
     }
+
     public function getNationaliteLibelle(): ?string
     {
         return $this->nationaliteLibelle;
@@ -48,36 +47,30 @@ class Nationalite
     public function setNationaliteLibelle(?string $nationaliteLibelle): static
     {
         $this->nationaliteLibelle = $nationaliteLibelle;
-
         return $this;
     }
-     /**
-     * @return Collection|Employe[]
-     */
-    public function getEmployes(): Collection
+
+    public function getCollaborateurs(): Collection
     {
-        return $this->employes;
+        return $this->collaborateurs;
     }
 
-    public function addEmploye(Employe $employe): self
+    public function addCollaborateur(Collaborateur $collaborateur): self
     {
-        if (!$this->employes->contains($employe)) {
-            $this->employes[] = $employe;
-            $employe->setNationalite($this);
+        if (!$this->collaborateurs->contains($collaborateur)) {
+            $this->collaborateurs[] = $collaborateur;
+            $collaborateur->setNationalite($this);
         }
-
         return $this;
     }
 
-    public function removeEmploye(Employe $employe): self
+    public function removeCollaborateur(Collaborateur $collaborateur): self
     {
-        if ($this->employes->removeElement($employe)) {
-            // set the owning side to null (unless already changed)
-            if ($employe->getNationalite() === $this) {
-                $employe->setNationalite(null);
+        if ($this->collaborateurs->removeElement($collaborateur)) {
+            if ($collaborateur->getNationalite() === $this) {
+                $collaborateur->setNationalite(null);
             }
         }
-
         return $this;
     }
 }

@@ -21,9 +21,9 @@ class EmployeDocuments
     #[ORM\JoinColumn(name: "employeDocumentsType", referencedColumnName: "typeDocumentId")]
     private ?TypeDocument $employeDocumentsType = null;
 
-    #[ORM\ManyToOne(inversedBy: 'employeDocuments')]
-    #[ORM\JoinColumn(name: "employeId", referencedColumnName: "employeId")]
-    private ?Employe $employe = null;
+    #[ORM\ManyToOne(targetEntity: Collaborateur::class, inversedBy: 'collaborateurDocuments')]
+    #[ORM\JoinColumn(name: "collaborateurId", referencedColumnName: "collaborateurId", nullable: true)]
+    private ?Collaborateur $collaborateur = null;
 
     public function getEmployeDocumentsId(): ?int
     {
@@ -38,7 +38,6 @@ class EmployeDocuments
     public function setEmployeDocumentsPdf(?string $employeDocumentsPdf): static
     {
         $this->employeDocumentsPdf = $employeDocumentsPdf;
-
         return $this;
     }
 
@@ -50,19 +49,17 @@ class EmployeDocuments
     public function setEmployeDocumentsType(?TypeDocument $employeDocumentsType): static
     {
         $this->employeDocumentsType = $employeDocumentsType;
-
         return $this;
     }
 
-    public function getEmploye(): ?Employe
+    public function getCollaborateur(): ?Collaborateur
     {
-        return $this->employe;
+        return $this->collaborateur;
     }
 
-    public function setEmploye(?Employe $employeId): static
+    public function setCollaborateur(?Collaborateur $collaborateur): static
     {
-        $this->employe = $employeId;
-
+        $this->collaborateur = $collaborateur;
         return $this;
     }
 }
