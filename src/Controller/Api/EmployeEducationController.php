@@ -2,7 +2,7 @@
 
 namespace App\Controller\Api;
 
-use App\Entity\Employe;
+use App\Entity\Collaborateur;
 use App\Entity\EmployeEducation;
 use App\Entity\TypeDiplome;
 use App\Repository\EmployeEducationRepository;
@@ -39,7 +39,7 @@ class EmployeEducationController extends AbstractController
                 'employeEducationNatureEtudes' => $employeEducation->getEmployeEducationNatureEtudes(),
                 'employeEducationEtablissement' => $employeEducation->getEmployeEducationEtablissement(),
                 'employeEducationAnneeObtention' => $employeEducation->getEmployeEducationAnneeObtention()?->format('Y-m-d'),
-                'employeId' => $employeEducation->getEmploye()?->getEmployeId(),
+                'collaborateurId' => $employeEducation->getCollaborateur()?->getCollaborateurId(),
                 'typeDiplomeId' => $employeEducation->getTypeDiplome()?->getTypeDiplomeId(),
             ];
         }
@@ -55,7 +55,7 @@ class EmployeEducationController extends AbstractController
             'employeEducationNatureEtudes' => $employeEducation->getEmployeEducationNatureEtudes(),
             'employeEducationEtablissement' => $employeEducation->getEmployeEducationEtablissement(),
             'employeEducationAnneeObtention' => $employeEducation->getEmployeEducationAnneeObtention()?->format('Y-m-d'),
-            'employeId' => $employeEducation->getEmploye()?->getEmployeId(),
+            'collaborateurId' => $employeEducation->getCollaborateur()?->getCollaborateurId(),
             'typeDiplomeId' => $employeEducation->getTypeDiplome()?->getTypeDiplomeId(),
         ];
 
@@ -72,10 +72,10 @@ class EmployeEducationController extends AbstractController
             ->setEmployeEducationEtablissement($data['employeEducationEtablissement'] ?? null)
             ->setEmployeEducationAnneeObtention(isset($data['employeEducationAnneeObtention']) ? new \DateTime($data['employeEducationAnneeObtention']) : null);
 
-        if (isset($data['employeId'])) {
-            $employe = $this->entityManager->getRepository(Employe::class)->find($data['employeId']);
-            if ($employe) {
-                $employeEducation->setEmploye($employe);
+        if (isset($data['collaborateurId'])) {
+            $collaborateur = $this->entityManager->getRepository(Collaborateur::class)->find($data['collaborateurId']);
+            if ($collaborateur) {
+                $employeEducation->setCollaborateur($collaborateur);
             }
         }
 
@@ -106,10 +106,10 @@ class EmployeEducationController extends AbstractController
             ->setEmployeEducationEtablissement($data['employeEducationEtablissement'] ?? $employeEducation->getEmployeEducationEtablissement())
             ->setEmployeEducationAnneeObtention(isset($data['employeEducationAnneeObtention']) ? new \DateTime($data['employeEducationAnneeObtention']) : $employeEducation->getEmployeEducationAnneeObtention());
 
-        if (isset($data['employeId'])) {
-            $employe = $this->entityManager->getRepository(Employe::class)->find($data['employeId']);
-            if ($employe) {
-                $employeEducation->setEmploye($employe);
+        if (isset($data['collaborateurId'])) {
+            $collaborateur = $this->entityManager->getRepository(Collaborateur::class)->find($data['collaborateurId']);
+            if ($collaborateur) {
+                $employeEducation->setCollaborateur($collaborateur);
             }
         }
 

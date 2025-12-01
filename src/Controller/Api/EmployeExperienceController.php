@@ -2,7 +2,9 @@
 
 namespace App\Controller\Api;
 
+use App\Entity\Collaborateur;
 use App\Entity\EmployeExperience;
+use App\Entity\Pays;
 use App\Repository\EmployeExperienceRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -37,7 +39,7 @@ class EmployeExperienceController extends AbstractController
                 'employeExperienceOrganismeEmployeur' => $employeExperience->getEmployeExperienceOrganismeEmployeur(),
                 'employeExperiencePeriode' => $employeExperience->getEmployeExperiencePeriode(),
                 'employeExperienceFonctionOccupe' => $employeExperience->getEmployeExperienceFonctionOccupe(),
-                'employeId' => $employeExperience->getEmploye()?->getEmployeId(),
+                'collaborateurId' => $employeExperience->getCollaborateur()?->getCollaborateurId(),
                 'paysId' => $employeExperience->getPays()?->getPaysId(),
             ];
         }
@@ -53,7 +55,7 @@ class EmployeExperienceController extends AbstractController
             'employeExperienceOrganismeEmployeur' => $employeExperience->getEmployeExperienceOrganismeEmployeur(),
             'employeExperiencePeriode' => $employeExperience->getEmployeExperiencePeriode(),
             'employeExperienceFonctionOccupe' => $employeExperience->getEmployeExperienceFonctionOccupe(),
-            'employeId' => $employeExperience->getEmploye()?->getEmployeId(),
+            'collaborateurId' => $employeExperience->getCollaborateur()?->getCollaborateurId(),
             'paysId' => $employeExperience->getPays()?->getPaysId(),
         ];
 
@@ -70,10 +72,10 @@ class EmployeExperienceController extends AbstractController
             ->setEmployeExperiencePeriode($data['employeExperiencePeriode'] ?? null)
             ->setEmployeExperienceFonctionOccupe($data['employeExperienceFonctionOccupe'] ?? null);
 
-        if (isset($data['employeId'])) {
-            $employe = $this->entityManager->getRepository(Employe::class)->find($data['employeId']);
-            if ($employe) {
-                $employeExperience->setEmploye($employe);
+        if (isset($data['collaborateurId'])) {
+            $collaborateur = $this->entityManager->getRepository(Collaborateur::class)->find($data['collaborateurId']);
+            if ($collaborateur) {
+                $employeExperience->setCollaborateur($collaborateur);
             }
         }
 
@@ -104,10 +106,10 @@ class EmployeExperienceController extends AbstractController
             ->setEmployeExperiencePeriode($data['employeExperiencePeriode'] ?? $employeExperience->getEmployeExperiencePeriode())
             ->setEmployeExperienceFonctionOccupe($data['employeExperienceFonctionOccupe'] ?? $employeExperience->getEmployeExperienceFonctionOccupe());
 
-        if (isset($data['employeId'])) {
-            $employe = $this->entityManager->getRepository(Employe::class)->find($data['employeId']);
-            if ($employe) {
-                $employeExperience->setEmploye($employe);
+        if (isset($data['collaborateurId'])) {
+            $collaborateur = $this->entityManager->getRepository(Collaborateur::class)->find($data['collaborateurId']);
+            if ($collaborateur) {
+                $employeExperience->setCollaborateur($collaborateur);
             }
         }
 

@@ -27,10 +27,10 @@ class EmployeExperience
     #[Assert\NotBlank]
     private ?string $employeExperienceFonctionOccupe = null;
 
-    #[ORM\ManyToOne(targetEntity: Employe::class, inversedBy: 'employeExperiences')]
-    #[ORM\JoinColumn(name: "employeId", referencedColumnName: "employeId", nullable: false)]
+    #[ORM\ManyToOne(targetEntity: Collaborateur::class, inversedBy: 'experiences')]
+    #[ORM\JoinColumn(name: "collaborateurId", referencedColumnName: "collaborateurId", nullable: false)]
     #[Assert\NotBlank]
-    private ?Employe $employe = null;
+    private ?Collaborateur $collaborateur = null;
 
     #[ORM\ManyToOne(targetEntity: Pays::class)]
     #[ORM\JoinColumn(name: "paysId", referencedColumnName: "paysId", nullable: true)]
@@ -49,7 +49,6 @@ class EmployeExperience
     public function setEmployeExperienceOrganismeEmployeur(?string $employeExperienceOrganismeEmployeur): static
     {
         $this->employeExperienceOrganismeEmployeur = $employeExperienceOrganismeEmployeur;
-
         return $this;
     }
 
@@ -61,7 +60,6 @@ class EmployeExperience
     public function setEmployeExperiencePeriode(?string $employeExperiencePeriode): static
     {
         $this->employeExperiencePeriode = $employeExperiencePeriode;
-
         return $this;
     }
 
@@ -73,19 +71,17 @@ class EmployeExperience
     public function setEmployeExperienceFonctionOccupe(?string $employeExperienceFonctionOccupe): static
     {
         $this->employeExperienceFonctionOccupe = $employeExperienceFonctionOccupe;
-
         return $this;
     }
 
-    public function getEmploye(): ?Employe
+    public function getCollaborateur(): ?Collaborateur
     {
-        return $this->employe;
+        return $this->collaborateur;
     }
 
-    public function setEmploye(?Employe $employe): static
+    public function setCollaborateur(?Collaborateur $collaborateur): static
     {
-        $this->employe = $employe;
-
+        $this->collaborateur = $collaborateur;
         return $this;
     }
 
@@ -97,7 +93,6 @@ class EmployeExperience
     public function setPays(?Pays $pays): static
     {
         $this->pays = $pays;
-
         return $this;
     }
 }
