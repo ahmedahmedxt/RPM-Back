@@ -14,6 +14,7 @@ use App\Entity\OrganismeDemandeur;
 use App\Entity\Devises;
 use App\Entity\AppelOffresPartenaire;
 use App\Entity\ParticipationType;
+use App\Entity\AppelOffresPersonnelCleAppelOffres;
 
 #[ORM\Entity(repositoryClass: AppelOffresRepository::class)]
 #[ORM\Table(name: "appel_offres")]
@@ -50,6 +51,9 @@ class AppelOffres
 
     #[ORM\OneToMany(mappedBy: 'appelOffres', targetEntity: AppelOffresPartenaire::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $appelOffresPartenaires;
+
+    #[ORM\OneToMany(mappedBy: 'appelOffres', targetEntity: AppelOffresPersonnelCleAppelOffres::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $appelOffresPersonnelCleAppelOffres;
 
     #[ORM\Column(name: "appelOffresObjet", type: "string", length: 255, nullable: true)]
     #[Assert\NotBlank(allowNull: true)]
@@ -111,6 +115,7 @@ class AppelOffres
     public function __construct()
     {
         $this->appelOffresPartenaires = new ArrayCollection();
+        $this->appelOffresPersonnelCleAppelOffres = new ArrayCollection();
     }
 
     public function getAppelOffresId(): ?int { return $this->appelOffresId; }
@@ -205,6 +210,30 @@ class AppelOffres
     public function clearAppelOffresPartenaires(): self
     {
         $this->appelOffresPartenaires->clear();
+        return $this;
+    }
+
+    public function getAppelOffresPersonnelCleAppelOffres(): Collection
+    {
+        return $this->appelOffresPersonnelCleAppelOffres;
+    }
+
+    public function addAppelOffresPersonnelCleAppelOffres(AppelOffresPersonnelCleAppelOffres $item): self
+    {
+        if (!$this->appelOffresPersonnelCleAppelOffres->contains($item)) {
+            $this->appelOffresPersonnelCleAppelOffres->add($item);
+            $item->setAppelOffres($this);
+        }
+        return $this;
+    }
+
+    public function removeAppelOffresPersonnelCleAppelOffres(AppelOffresPersonnelCleAppelOffres $item): self
+    {
+        if ($this->appelOffresPersonnelCleAppelOffres->removeElement($item)) {
+            if ($item->getAppelOffres() === $this) {
+                $item->setAppelOffres(null);
+            }
+        }
         return $this;
     }
 }

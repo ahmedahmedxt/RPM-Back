@@ -13,7 +13,7 @@ use App\Entity\NatureOrganismeDemendeur;
 use App\Entity\SecteurActivite;
 
 #[ORM\Entity(repositoryClass: OrganismeDemandeurRepository::class)]
-#[ORM\Table(name: 'organismeDemandeur')]
+#[ORM\Table(name: 'organismedemandeur')]
 class OrganismeDemandeur
 {
     #[ORM\Id]

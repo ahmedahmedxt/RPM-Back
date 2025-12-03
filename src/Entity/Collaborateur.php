@@ -55,6 +55,10 @@ class Collaborateur
     #[ORM\JoinColumn(name: "nationaliteId", referencedColumnName: "id", nullable: true, onDelete: "SET NULL")]
     private ?Nationalite $nationalite = null;
 
+    #[ORM\ManyToOne(targetEntity: AppelOffresPersonnelCle::class)]
+    #[ORM\JoinColumn(name: "appelOffresPersonnelCleId", referencedColumnName: "appelOffresPersonnelCleId", nullable: true, onDelete: "SET NULL")]
+    private ?AppelOffresPersonnelCle $appelOffresPersonnelCle = null;
+
     #[ORM\OneToMany(targetEntity: EmployeExperience::class, mappedBy: 'collaborateur', cascade: ["persist","remove"])]
     private Collection $experiences;
 
@@ -205,6 +209,17 @@ class Collaborateur
     public function setNationalite(?Nationalite $nationalite): static
     {
         $this->nationalite = $nationalite;
+        return $this;
+    }
+
+    public function getAppelOffresPersonnelCle(): ?AppelOffresPersonnelCle
+    {
+        return $this->appelOffresPersonnelCle;
+    }
+
+    public function setAppelOffresPersonnelCle(?AppelOffresPersonnelCle $appelOffresPersonnelCle): static
+    {
+        $this->appelOffresPersonnelCle = $appelOffresPersonnelCle;
         return $this;
     }
 

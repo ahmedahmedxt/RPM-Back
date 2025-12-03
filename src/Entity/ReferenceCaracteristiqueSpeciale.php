@@ -8,7 +8,7 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: ReferenceCaracteristiqueSpecialeRepository::class)]
-#[ORM\Table(name: "referenceCaracteristiqueSpeciale")]
+#[ORM\Table(name: "referencecaracteristiquespeciale")]
 class ReferenceCaracteristiqueSpeciale
 {
     #[ORM\Id]
