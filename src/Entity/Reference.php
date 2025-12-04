@@ -3,38 +3,26 @@
 namespace App\Entity;
 
 use App\Repository\ReferenceRepository;
-use Doctrine\ORM\Mapping as ORM;
-use Symfony\Component\Validator\Constraints as Assert;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
-use App\Entity\ReferenceCaracteristiqueSpeciale;
+use Doctrine\ORM\Mapping as ORM;
+
 #[ORM\Entity(repositoryClass: ReferenceRepository::class)]
 #[ORM\Table(name: "reference")]
 class Reference
 {
+    /* =======================
+     *  ID
+     * ======================= */
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(type: "integer", name: "referenceID")]
     private ?int $referenceID = null;
 
-    #[ORM\ManyToOne(targetEntity: Client::class)]
-    #[ORM\JoinColumn(name: "clientId", referencedColumnName: "clientId", nullable: false)]
-    private $client;
-    #[ORM\ManyToMany(targetEntity: ReferenceCaracteristiqueSpeciale::class, mappedBy: 'references')]
-    private Collection $referenceCaracteristiqueSpeciales;
-
-    #[ORM\ManyToOne(targetEntity: Devises::class)]
-    #[ORM\JoinColumn(name: "devisesId", referencedColumnName: "devisesId", nullable: false)]
-    private $devises;
-
-    #[ORM\ManyToOne(targetEntity: Lieu::class)]
-    #[ORM\JoinColumn(name: "lieuId", referencedColumnName: "lieuId", nullable: false)]
-    private $lieu;
-
-    #[ORM\ManyToOne(targetEntity: Categorie::class)]
-    #[ORM\JoinColumn(name: "categorieId", referencedColumnName: "categorieId", nullable: false)]
-    #[Assert\NotBlank]
-    private $categorie;
+    /* =======================
+     *  SCALAR FIELDS
+     * ======================= */
 
     #[ORM\Column(type: "string", length: 254, nullable: true, name: "referenceRef")]
     private $referenceRef;
@@ -48,132 +36,155 @@ class Reference
     #[ORM\Column(type: "string", length: 254, nullable: true, name: "referenceUrlFonctionnel")]
     private $referenceUrlFonctionnel;
 
-    #[ORM\Column(type: "integer", nullable: true, name: "referenceDuree")]
-    private $referenceDuree;
+    #[ORM\Column(type: "integer", nullable: true, name: "referenceDureeExecution")]
+    private $referenceDureeExecution;
 
-    #[ORM\Column(type: "datetime", nullable: true, name: "referenceDateDemarrage")]
+    #[ORM\Column(type: "date", nullable: true, name: "referenceDateDemarrage")]
     private $referenceDateDemarrage;
 
-    #[ORM\Column(type: "datetime", nullable: true, name: "referenceDateAchevement")]
+    #[ORM\Column(type: "date", nullable: true, name: "referenceDateAchevement")]
     private $referenceDateAchevement;
 
-    #[ORM\Column(type: "integer", nullable: true, name: "referenceAnneeAchevement")]
-    private $referenceAnneeAchevement;
-
-    #[ORM\Column(type: "datetime", nullable: true, name: "referenceDateReceptionProvisoire")]
+    #[ORM\Column(type: "date", nullable: true, name: "referenceDateReceptionProvisoire")]
     private $referenceDateReceptionProvisoire;
-
-    #[ORM\Column(type: "datetime", nullable: true, name: "referenceDateReceptionDefinitive")]
-    private $referenceDateReceptionDefinitive;
-
-    #[ORM\Column(type: "string", length: 1000, nullable: true, name: "referenceCaracteristiques")]
-    private $referenceCaracteristiques;
-
-    #[ORM\Column(type: "string", length: 1000, nullable: true, name: "referenceDescription")]
-    private $referenceDescription;
-
-    #[ORM\Column(type: "string", length: 1000, nullable: true, name: "referenceDescriptionServiceEffectivemenetRendus")]
-    private $referenceDescriptionServiceEffectivemenetRendus;
 
     #[ORM\Column(type: "integer", nullable: true, name: "referenceDureeGarantie")]
     private $referenceDureeGarantie;
 
+    #[ORM\Column(type: "date", nullable: true, name: "referenceDateReceptionDefinitive")]
+    private $referenceDateReceptionDefinitive;
+
+    #[ORM\Column(type: "text", nullable: true, name: "referenceCaracteristiques")]
+    private $referenceCaracteristiques;
+
+    #[ORM\Column(type: "text", nullable: true, name: "referenceDescription")]
+    private $referenceDescription;
+
+    #[ORM\Column(type: "text", nullable: true, name: "referenceDescriptionServiceEffectivementRendus")]
+    private $referenceDescriptionServiceEffectivementRendus;
+
     #[ORM\Column(type: "float", nullable: true, name: "referenceBudget")]
     private $referenceBudget;
 
-    #[ORM\Column(type: "string", length: 100, nullable: true, name: "referencePartBudgetGroupement")]
-    private $referencePartBudgetGroupement;
+    #[ORM\Column(type: "string", length: 254, nullable: true, name: "referencePartBudget")]
+    private $referencePartBudget;
 
-    #[ORM\Column(type: "string", length: 1000, nullable: true, name: "referenceRemarque")]
+    #[ORM\Column(type: "text", nullable: true, name: "referenceRemarque")]
     private $referenceRemarque;
 
-    #[ORM\ManyToMany(targetEntity: BailleurFond::class, inversedBy: 'references')]
-    #[ORM\JoinTable(name: 'referencebailleurfond')]
-    #[ORM\JoinColumn(name: 'referenceID', referencedColumnName: 'referenceID')]
-    #[ORM\InverseJoinColumn(name: 'bailleurFondId', referencedColumnName: 'bailleurFondId')]
+    /* =======================
+     *  MANY-TO-ONE RELATIONS
+     * ======================= */
+
+    #[ORM\ManyToOne(targetEntity: Pays::class)]
+    #[ORM\JoinColumn(name: "paysId", referencedColumnName: "paysId", nullable: true)]
+    private $pays;
+
+    // lieu 1 ---- * reference
+    #[ORM\ManyToOne(targetEntity: Lieu::class)]
+    #[ORM\JoinColumn(name: "lieuId", referencedColumnName: "lieuId", nullable: true)]
+    private $lieu;
+
+    // devises 1 ---- * reference
+    #[ORM\ManyToOne(targetEntity: Devises::class)]
+    #[ORM\JoinColumn(name: "devisesId", referencedColumnName: "devisesId", nullable: true)]
+    private $devises;
+
+    // categorieService 1 ---- * reference
+    #[ORM\ManyToOne(targetEntity: Categorie::class)]
+    #[ORM\JoinColumn(name: "categorieId", referencedColumnName: "categorieId", nullable: true)]
+    private $categorie;
+
+    // collaborateur 1 ---- * reference
+    #[ORM\ManyToOne(targetEntity: Collaborateur::class)]
+    #[ORM\JoinColumn(name: "collaborateurId", referencedColumnName: "collaborateurId", nullable: true)]
+    private $collaborateur;
+
+    /* =======================
+     *  ONE-TO-MANY RELATIONS
+     * ======================= */
+
+    // reference 1 ---- * referenceDocument
+    #[ORM\OneToMany(targetEntity: ReferenceDocuments::class, mappedBy: "reference")]
+    private Collection $referenceDocuments;
+
+    // reference 1 ---- * referenceCollaborateur
+    #[ORM\OneToMany(targetEntity: ReferenceCollaborateur::class, mappedBy: "reference")]
+    private Collection $referenceCollaborateurs;
+
+    /* =======================
+     *  MANY-TO-MANY RELATIONS
+     * ======================= */
+
+    // Reference * ---- * BailleurFond
+    #[ORM\ManyToMany(targetEntity: BailleurFond::class, inversedBy: "references")]
+    #[ORM\JoinTable(name: "reference_bailleurfond")]
+    #[ORM\JoinColumn(name: "reference_id", referencedColumnName: "referenceID")]
+    #[ORM\InverseJoinColumn(name: "bailleur_fond_id", referencedColumnName: "bailleurFondId")]
     private Collection $bailleurfonds;
 
-    #[ORM\ManyToMany(targetEntity: Role::class, inversedBy: 'references')]
-    #[ORM\JoinTable(name: 'referencerole')]
-    #[ORM\JoinColumn(name: 'referenceID', referencedColumnName: 'referenceID')]
-    #[ORM\InverseJoinColumn(name: 'roleId', referencedColumnName: 'roleId')]
-    private Collection $roles;
+    // reference * ---- * environnementDeveloppement
+    #[ORM\ManyToMany(targetEntity: EnvironnementDeveloppement::class, inversedBy: "references")]
+    #[ORM\JoinTable(name: "reference_environnement_developpement")]
+    #[ORM\JoinColumn(name: "reference_id", referencedColumnName: "referenceID")]
+    #[ORM\InverseJoinColumn(name: "environnement_developpement_id", referencedColumnName: "environnementDeveloppementId")]
+    private Collection $environnementsDeveloppement;
 
-    #[ORM\ManyToMany(targetEntity: Technologie::class, inversedBy: 'references')]
-    #[ORM\JoinTable(name: 'referencetechnologie')]
-    #[ORM\JoinColumn(name: 'referenceID', referencedColumnName: 'referenceID')]
-    #[ORM\InverseJoinColumn(name: 'technologieId', referencedColumnName: 'technologieId')]
+    // reference * ---- * technologie
+    #[ORM\ManyToMany(targetEntity: Technologie::class, inversedBy: "references")]
+    #[ORM\JoinTable(name: "reference_technologie")]
+    #[ORM\JoinColumn(name: "reference_id", referencedColumnName: "referenceID")]
+    #[ORM\InverseJoinColumn(name: "technologie_id", referencedColumnName: "technologieId")]
     private Collection $technologies;
 
-    #[ORM\ManyToMany(targetEntity: Methodologie::class, inversedBy: 'references')]
-    #[ORM\JoinTable(name: 'referencemethodologie')]
-    #[ORM\JoinColumn(name: 'referenceID', referencedColumnName: 'referenceID')]
-    #[ORM\InverseJoinColumn(name: 'methodologieId', referencedColumnName: 'methodologieId')]
+    // reference * ---- * methodologie
+    #[ORM\ManyToMany(targetEntity: Methodologie::class, inversedBy: "references")]
+    #[ORM\JoinTable(name: "reference_methodologie")]
+    #[ORM\JoinColumn(name: "reference_id", referencedColumnName: "referenceID")]
+    #[ORM\InverseJoinColumn(name: "methodologie_id", referencedColumnName: "methodologieId")]
     private Collection $methodologies;
 
-    #[ORM\ManyToMany(targetEntity: EnvironnementDeveloppement::class, inversedBy: 'references')]
-    #[ORM\JoinTable(name: 'referenceenvironnementdeveloppement')]
-    #[ORM\JoinColumn(name: 'referenceID', referencedColumnName: 'referenceID')]
-    #[ORM\InverseJoinColumn(name: 'environnementDeveloppementId', referencedColumnName: 'environnementDeveloppementId')]
-    private Collection $environnementdeveloppements;
+    // reference * ---- * role
+    #[ORM\ManyToMany(targetEntity: Role::class, inversedBy: "references")]
+    #[ORM\JoinTable(name: "reference_role")]
+    #[ORM\JoinColumn(name: "reference_id", referencedColumnName: "referenceID")]
+    #[ORM\InverseJoinColumn(name: "role_id", referencedColumnName: "roleId")]
+    private Collection $roles;
+
+    // reference * ---- * appelOffres
+    #[ORM\ManyToMany(targetEntity: AppelOffres::class, inversedBy: "references")]
+    #[ORM\JoinTable(name: "reference_appel_offres")]
+    #[ORM\JoinColumn(name: "reference_id", referencedColumnName: "referenceID")]
+    #[ORM\InverseJoinColumn(name: "appel_offres_id", referencedColumnName: "appelOffresId")]
+    private Collection $appelOffres;
+
+    // reference * ---- * referenceCaracteristiqueSpeciale
+    #[ORM\ManyToMany(targetEntity: ReferenceCaracteristiqueSpeciale::class, inversedBy: "references")]
+    #[ORM\JoinTable(name: "reference_caracteristique_speciale")]
+    #[ORM\JoinColumn(name: "reference_id", referencedColumnName: "referenceID")]
+    #[ORM\InverseJoinColumn(name: "reference_caracteristique_speciale_id", referencedColumnName: "referenceCaracteristiqueSpecialeId")]
+    private Collection $referenceCaracteristiqueSpeciales;
 
     public function __construct()
     {
+        $this->referenceDocuments = new ArrayCollection();
+        $this->referenceCollaborateurs = new ArrayCollection();
         $this->bailleurfonds = new ArrayCollection();
-        $this->roles = new ArrayCollection();
+        $this->environnementsDeveloppement = new ArrayCollection();
         $this->technologies = new ArrayCollection();
         $this->methodologies = new ArrayCollection();
-        $this->environnementdeveloppements = new ArrayCollection();
+        $this->roles = new ArrayCollection();
+        $this->appelOffres = new ArrayCollection();
         $this->referenceCaracteristiqueSpeciales = new ArrayCollection();
     }
+
+    /* =======================
+     *  GETTERS / SETTERS
+     * ======================= */
 
     public function getReferenceID(): ?int
     {
         return $this->referenceID;
-    }
-
-    public function getClient(): ?Client
-    {
-        return $this->client;
-    }
-
-    public function setClient(?Client $client): self
-    {
-        $this->client = $client;
-        return $this;
-    }
-
-    public function getDevises(): ?Devises
-    {
-        return $this->devises;
-    }
-
-    public function setDevises(?Devises $devises): self
-    {
-        $this->devises = $devises;
-        return $this;
-    }
-
-    public function getLieu(): ?Lieu
-    {
-        return $this->lieu;
-    }
-
-    public function setLieu(?Lieu $lieu): self
-    {
-        $this->lieu = $lieu;
-        return $this;
-    }
-
-    public function getCategorie(): ?Categorie
-    {
-        return $this->categorie;
-    }
-
-    public function setCategorie(?Categorie $categorie): self
-    {
-        $this->categorie = $categorie;
-        return $this;
     }
 
     public function getReferenceRef(): ?string
@@ -220,14 +231,14 @@ class Reference
         return $this;
     }
 
-    public function getReferenceDuree(): ?int
+    public function getReferenceDureeExecution(): ?int
     {
-        return $this->referenceDuree;
+        return $this->referenceDureeExecution;
     }
 
-    public function setReferenceDuree(?int $referenceDuree): self
+    public function setReferenceDureeExecution(?int $referenceDureeExecution): self
     {
-        $this->referenceDuree = $referenceDuree;
+        $this->referenceDureeExecution = $referenceDureeExecution;
         return $this;
     }
 
@@ -253,39 +264,6 @@ class Reference
         return $this;
     }
 
-    public function getReferenceAnneeAchevement(): ?int
-    {
-        return $this->referenceAnneeAchevement;
-    }
-
-    public function setReferenceAnneeAchevement(?int $referenceAnneeAchevement): self
-    {
-        $this->referenceAnneeAchevement = $referenceAnneeAchevement;
-        return $this;
-    }
-    public function getReferenceCaracteristiqueSpeciales(): Collection
-    {
-        return $this->referenceCaracteristiqueSpeciales;
-    }
-
-    public function addReferenceCaracteristiqueSpeciale(ReferenceCaracteristiqueSpeciale $referenceCaracteristiqueSpeciale): self
-    {
-        if (!$this->referenceCaracteristiqueSpeciales->contains($referenceCaracteristiqueSpeciale)) {
-            $this->referenceCaracteristiqueSpeciales[] = $referenceCaracteristiqueSpeciale;
-            $referenceCaracteristiqueSpeciale->addReference($this);
-        }
-
-        return $this;
-    }
-
-    public function removeReferenceCaracteristiqueSpeciale(ReferenceCaracteristiqueSpeciale $referenceCaracteristiqueSpeciale): self
-    {
-        if ($this->referenceCaracteristiqueSpeciales->removeElement($referenceCaracteristiqueSpeciale)) {
-            $referenceCaracteristiqueSpeciale->removeReference($this);
-        }
-
-        return $this;
-    }
     public function getReferenceDateReceptionProvisoire(): ?\DateTimeInterface
     {
         return $this->referenceDateReceptionProvisoire;
@@ -294,6 +272,17 @@ class Reference
     public function setReferenceDateReceptionProvisoire(?\DateTimeInterface $referenceDateReceptionProvisoire): self
     {
         $this->referenceDateReceptionProvisoire = $referenceDateReceptionProvisoire;
+        return $this;
+    }
+
+    public function getReferenceDureeGarantie(): ?int
+    {
+        return $this->referenceDureeGarantie;
+    }
+
+    public function setReferenceDureeGarantie(?int $referenceDureeGarantie): self
+    {
+        $this->referenceDureeGarantie = $referenceDureeGarantie;
         return $this;
     }
 
@@ -330,25 +319,14 @@ class Reference
         return $this;
     }
 
-    public function getReferenceDescriptionServiceEffectivemenetRendus(): ?string
+    public function getReferenceDescriptionServiceEffectivementRendus(): ?string
     {
-        return $this->referenceDescriptionServiceEffectivemenetRendus;
+        return $this->referenceDescriptionServiceEffectivementRendus;
     }
 
-    public function setReferenceDescriptionServiceEffectivemenetRendus(?string $referenceDescriptionServiceEffectivementRendus): self
+    public function setReferenceDescriptionServiceEffectivementRendus(?string $referenceDescriptionServiceEffectivementRendus): self
     {
-        $this->referenceDescriptionServiceEffectivemenetRendus = $referenceDescriptionServiceEffectivementRendus;
-        return $this;
-    }
-
-    public function getReferenceDureeGarantie(): ?int
-    {
-        return $this->referenceDureeGarantie;
-    }
-
-    public function setReferenceDureeGarantie(?int $referenceDureeGarantie): self
-    {
-        $this->referenceDureeGarantie = $referenceDureeGarantie;
+        $this->referenceDescriptionServiceEffectivementRendus = $referenceDescriptionServiceEffectivementRendus;
         return $this;
     }
 
@@ -363,14 +341,15 @@ class Reference
         return $this;
     }
 
-    public function getReferencePartBudgetGroupement(): ?string
+    public function getReferencePartBudget(): ?string
     {
-        return $this->referencePartBudgetGroupement;
+        return $this->referencePartBudget;
     }
 
-    public function setReferencePartBudgetGroupement(?string $referencePartBudgetGroupement): void
+    public function setReferencePartBudget(?string $referencePartBudget): self
     {
-        $this->referencePartBudgetGroupement = $referencePartBudgetGroupement;
+        $this->referencePartBudget = $referencePartBudget;
+        return $this;
     }
 
     public function getReferenceRemarque(): ?string
@@ -378,12 +357,135 @@ class Reference
         return $this->referenceRemarque;
     }
 
-    public function setReferenceRemarque(?string $referenceRemarque): void
+    public function setReferenceRemarque(?string $referenceRemarque): self
     {
         $this->referenceRemarque = $referenceRemarque;
+        return $this;
     }
 
-    // For BailleurFond
+    /* ======= ManyToOne getters/setters ======= */
+    public function getPays()
+    {
+        return $this->pays;
+    }
+
+    public function setPays($Pays): self
+    {
+        $this->Pays = $Pays;
+        return $this;
+    }
+
+    public function getLieu()
+    {
+        return $this->lieu;
+    }
+
+    public function setLieu($lieu): self
+    {
+        $this->lieu = $lieu;
+        return $this;
+    }
+
+    public function getDevises()
+    {
+        return $this->devises;
+    }
+
+    public function setDevises($devises): self
+    {
+        $this->devises = $devises;
+        return $this;
+    }
+
+    public function getCategorie()
+    {
+        return $this->categorie;
+    }
+
+    public function setCategorie($categorie): self
+    {
+        $this->categorie = $categorie;
+        return $this;
+    }
+
+    public function getCollaborateur()
+    {
+        return $this->collaborateur;
+    }
+
+    public function setCollaborateur($collaborateur): self
+    {
+        $this->collaborateur = $collaborateur;
+        return $this;
+    }
+
+    /* ======= OneToMany: ReferenceDocument ======= */
+
+    /**
+     * @return Collection<int, ReferenceDocument>
+     */
+    public function getReferenceDocuments(): Collection
+    {
+        return $this->referenceDocuments;
+    }
+
+    public function addReferenceDocument(ReferenceDocument $referenceDocument): self
+    {
+        if (!$this->referenceDocuments->contains($referenceDocument)) {
+            $this->referenceDocuments[] = $referenceDocument;
+            $referenceDocument->setReference($this);
+        }
+
+        return $this;
+    }
+
+    public function removeReferenceDocument(ReferenceDocument $referenceDocument): self
+    {
+        if ($this->referenceDocuments->removeElement($referenceDocument)) {
+            if ($referenceDocument->getReference() === $this) {
+                $referenceDocument->setReference(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /* ======= OneToMany: ReferenceCollaborateur ======= */
+
+    /**
+     * @return Collection<int, ReferenceCollaborateur>
+     */
+    public function getReferenceCollaborateurs(): Collection
+    {
+        return $this->referenceCollaborateurs;
+    }
+
+    public function addReferenceCollaborateur(ReferenceCollaborateur $referenceCollaborateur): self
+    {
+        if (!$this->referenceCollaborateurs->contains($referenceCollaborateur)) {
+            $this->referenceCollaborateurs[] = $referenceCollaborateur;
+            $referenceCollaborateur->setReference($this);
+        }
+
+        return $this;
+    }
+
+    public function removeReferenceCollaborateur(ReferenceCollaborateur $referenceCollaborateur): self
+    {
+        if ($this->referenceCollaborateurs->removeElement($referenceCollaborateur)) {
+            if ($referenceCollaborateur->getReference() === $this) {
+                $referenceCollaborateur->setReference(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /* ======= ManyToMany: BailleurFond (bailleurfonds) ======= */
+
+    /**
+     * @return Collection<int, BailleurFond>
+     */
     public function getBailleurfonds(): Collection
     {
         return $this->bailleurfonds;
@@ -393,7 +495,6 @@ class Reference
     {
         if (!$this->bailleurfonds->contains($bailleurFond)) {
             $this->bailleurfonds[] = $bailleurFond;
-            $bailleurFond->addReference($this);
         }
 
         return $this;
@@ -401,39 +502,40 @@ class Reference
 
     public function removeBailleurfond(BailleurFond $bailleurFond): self
     {
-        if ($this->bailleurfonds->removeElement($bailleurFond)) {
-            $bailleurFond->removeReference($this);
+        $this->bailleurfonds->removeElement($bailleurFond);
+        return $this;
+    }
+
+    /* ======= ManyToMany: EnvironnementDeveloppement ======= */
+
+    /**
+     * @return Collection<int, EnvironnementDeveloppement>
+     */
+    public function getEnvironnementsDeveloppement(): Collection
+    {
+        return $this->environnementsDeveloppement;
+    }
+
+    public function addEnvironnementDeveloppement(EnvironnementDeveloppement $env): self
+    {
+        if (!$this->environnementsDeveloppement->contains($env)) {
+            $this->environnementsDeveloppement[] = $env;
         }
 
         return $this;
     }
 
-    // For Role
-    public function getRoles(): Collection
+    public function removeEnvironnementDeveloppement(EnvironnementDeveloppement $env): self
     {
-        return $this->roles;
-    }
-
-    public function addRole(Role $role): self
-    {
-        if (!$this->roles->contains($role)) {
-            $this->roles[] = $role;
-            $role->addReference($this);
-        }
-
+        $this->environnementsDeveloppement->removeElement($env);
         return $this;
     }
 
-    public function removeRole(Role $role): self
-    {
-        if ($this->roles->removeElement($role)) {
-            $role->removeReference($this);
-        }
+    /* ======= ManyToMany: Technologie ======= */
 
-        return $this;
-    }
-
-    // For Technologie
+    /**
+     * @return Collection<int, Technologie>
+     */
     public function getTechnologies(): Collection
     {
         return $this->technologies;
@@ -443,7 +545,6 @@ class Reference
     {
         if (!$this->technologies->contains($technologie)) {
             $this->technologies[] = $technologie;
-            $technologie->addReference($this);
         }
 
         return $this;
@@ -451,14 +552,15 @@ class Reference
 
     public function removeTechnologie(Technologie $technologie): self
     {
-        if ($this->technologies->removeElement($technologie)) {
-            $technologie->removeReference($this);
-        }
-
+        $this->technologies->removeElement($technologie);
         return $this;
     }
 
-    // For Methodologie
+    /* ======= ManyToMany: Methodologie ======= */
+
+    /**
+     * @return Collection<int, Methodologie>
+     */
     public function getMethodologies(): Collection
     {
         return $this->methodologies;
@@ -468,7 +570,6 @@ class Reference
     {
         if (!$this->methodologies->contains($methodologie)) {
             $this->methodologies[] = $methodologie;
-            $methodologie->addReference($this);
         }
 
         return $this;
@@ -476,35 +577,82 @@ class Reference
 
     public function removeMethodologie(Methodologie $methodologie): self
     {
-        if ($this->methodologies->removeElement($methodologie)) {
-            $methodologie->removeReference($this);
+        $this->methodologies->removeElement($methodologie);
+        return $this;
+    }
+
+    /* ======= ManyToMany: Role ======= */
+
+    /**
+     * @return Collection<int, Role>
+     */
+    public function getRolesReference(): Collection
+    {
+        return $this->roles;
+    }
+
+    public function addRoleReference(Role $role): self
+    {
+        if (!$this->roles->contains($role)) {
+            $this->roles[] = $role;
         }
 
         return $this;
     }
 
-    // For EnvironnementDeveloppement
-    public function getEnvironnementdeveloppements(): Collection
+    public function removeRoleReference(Role $role): self
     {
-        return $this->environnementdeveloppements;
+        $this->roles->removeElement($role);
+        return $this;
     }
 
-    public function addEnvironnementdeveloppement(EnvironnementDeveloppement $environnementDeveloppement): self
+    /* ======= ManyToMany: AppelOffres ======= */
+
+    /**
+     * @return Collection<int, AppelOffres>
+     */
+    public function getAppelOffres(): Collection
     {
-        if (!$this->environnementdeveloppements->contains($environnementDeveloppement)) {
-            $this->environnementdeveloppements[] = $environnementDeveloppement;
-            $environnementDeveloppement->addReference($this);
+        return $this->appelOffres;
+    }
+
+    public function addAppelOffres(AppelOffres $appelOffres): self
+    {
+        if (!$this->appelOffres->contains($appelOffres)) {
+            $this->appelOffres[] = $appelOffres;
         }
 
         return $this;
     }
 
-    public function removeEnvironnementdeveloppement(EnvironnementDeveloppement $environnementDeveloppement): self
+    public function removeAppelOffres(AppelOffres $appelOffres): self
     {
-        if ($this->environnementdeveloppements->removeElement($environnementDeveloppement)) {
-            $environnementDeveloppement->removeReference($this);
+        $this->appelOffres->removeElement($appelOffres);
+        return $this;
+    }
+
+    /* ======= ManyToMany: ReferenceCaracteristiqueSpeciale ======= */
+
+    /**
+     * @return Collection<int, ReferenceCaracteristiqueSpeciale>
+     */
+    public function getReferenceCaracteristiqueSpeciales(): Collection
+    {
+        return $this->referenceCaracteristiqueSpeciales;
+    }
+
+    public function addReferenceCaracteristiqueSpeciale(ReferenceCaracteristiqueSpeciale $carac): self
+    {
+        if (!$this->referenceCaracteristiqueSpeciales->contains($carac)) {
+            $this->referenceCaracteristiqueSpeciales[] = $carac;
         }
 
+        return $this;
+    }
+
+    public function removeReferenceCaracteristiqueSpeciale(ReferenceCaracteristiqueSpeciale $carac): self
+    {
+        $this->referenceCaracteristiqueSpeciales->removeElement($carac);
         return $this;
     }
 }
