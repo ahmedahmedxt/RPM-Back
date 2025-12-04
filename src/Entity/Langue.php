@@ -20,6 +20,9 @@ class Langue
     #[ORM\Column(length: 255, unique: true)]
     #[Assert\NotBlank]
     private ?string $langueNom = null;
+
+    #[ORM\Column(name: "langueCodeISO", length: 10, nullable: true)]
+    private ?string $langueCodeISO = null;
     
     public function __construct()
     {
@@ -43,6 +46,17 @@ class Langue
     public function setLangueNom(string $langueNom): static
     {
         $this->langueNom = $langueNom;
+        return $this;
+    }
+
+    public function getLangueCodeISO(): ?string
+    {
+        return $this->langueCodeISO;
+    }
+
+    public function setLangueCodeISO(?string $langueCodeISO): static
+    {
+        $this->langueCodeISO = $langueCodeISO;
         return $this;
     }
 }

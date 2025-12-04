@@ -22,18 +22,28 @@ class LangueController extends AbstractController
     {
         $data = json_decode($request->getContent(), true);
 
+        if (empty($data['langueNom'])) {
+            return new JsonResponse(['error' => 'Le nom de la langue est requis'], Response::HTTP_BAD_REQUEST);
+        }
+
         $existingLangue = $entityManager->getRepository(Langue::class)->findOneBy(['langueNom' => $data['langueNom']]);
         if ($existingLangue) {
-            return new JsonResponse('Cette langue existe déjà', Response::HTTP_CONFLICT);
+            return new JsonResponse(['error' => 'Cette langue existe déjà'], Response::HTTP_CONFLICT);
         }
 
         $langue = new Langue();
         $langue->setLangueNom($data['langueNom']);
+        $langue->setLangueCodeISO($data['langueCodeISO'] ?? null);
 
         $entityManager->persist($langue);
         $entityManager->flush();
 
-        return new JsonResponse('Langue créée avec succès', Response::HTTP_CREATED);
+        return new JsonResponse([
+            'message' => 'Langue créée avec succès',
+            'id' => $langue->getId(),
+            'langueNom' => $langue->getLangueNom(),
+            'langueCodeISO' => $langue->getLangueCodeISO()
+        ], Response::HTTP_CREATED);
     }
 
     #[Route('/api/get/langue/{id}', name: 'api_langue_get', methods: ['GET'])]
@@ -48,6 +58,7 @@ class LangueController extends AbstractController
         $data = [
             'id' => $langue->getId(),
             'langueNom' => $langue->getLangueNom(),
+            'langueCodeISO' => $langue->getLangueCodeISO(),
         ];
 
         return new JsonResponse($data, Response::HTTP_OK);
@@ -63,11 +74,23 @@ class LangueController extends AbstractController
         }
 
         $data = json_decode($request->getContent(), true);
-        $langue->setLangueNom($data['langueNom']);
+
+        if (array_key_exists('langueNom', $data)) {
+            $langue->setLangueNom($data['langueNom']);
+        }
+
+        if (array_key_exists('langueCodeISO', $data)) {
+            $langue->setLangueCodeISO($data['langueCodeISO'] ?? null);
+        }
 
         $entityManager->flush();
 
-        return new JsonResponse('Langue mise à jour avec succès', Response::HTTP_OK);
+        return new JsonResponse([
+            'message' => 'Langue mise à jour avec succès',
+            'id' => $langue->getId(),
+            'langueNom' => $langue->getLangueNom(),
+            'langueCodeISO' => $langue->getLangueCodeISO()
+        ], Response::HTTP_OK);
     }
 
     #[Route('/api/delete/langue/{id}', name: 'api_langue_delete', methods: ['DELETE'])]
@@ -86,20 +109,42 @@ class LangueController extends AbstractController
     }
 
     #[Route('/api/getAll/langues', name: 'api_langue_list', methods: ['GET'])]
-    public function list(EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
+    public function list(Request $request, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        $langues = $entityManager->getRepository(Langue::class)->findBy([], ['langueNom' => 'ASC']);
+        $sortField = $request->query->get('sortField', 'langueNom');
+        $sortDir = $request->query->get('sortDir', 'ASC');
+        $search = $request->query->get('search', '');
+
+        $qb = $entityManager->getRepository(Langue::class)->createQueryBuilder('l');
+
+        // Recherche
+        if (!empty($search)) {
+            $qb->where('l.langueNom LIKE :search OR l.langueCodeISO LIKE :search')
+               ->setParameter('search', '%' . $search . '%');
+        }
+
+        // Tri
+        $allowedSortFields = ['id', 'langueNom', 'langueCodeISO'];
+        if (!in_array($sortField, $allowedSortFields)) {
+            $sortField = 'langueNom';
+        }
+
+        $qb->orderBy('l.' . $sortField, $sortDir === 'DESC' ? 'DESC' : 'ASC');
+
+        $langues = $qb->getQuery()->getResult();
         
         $data = [];
         foreach ($langues as $langue) {
             $data[] = [
                 'id' => $langue->getId(),
                 'langueNom' => $langue->getLangueNom(),
+                'langueCodeISO' => $langue->getLangueCodeISO(),
             ];
         }
 
         return new JsonResponse($data, Response::HTTP_OK);
     }
+
     public function checkToken(TokenStorageInterface $tokenStorage): void
     {
         $token = $tokenStorage->getToken();

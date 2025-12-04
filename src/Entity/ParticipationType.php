@@ -7,7 +7,7 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 
 #[ORM\Entity]
-#[ORM\Table(name: 'participationType')]
+#[ORM\Table(name: 'participationtype')]
 class ParticipationType
 {
     #[ORM\Id]

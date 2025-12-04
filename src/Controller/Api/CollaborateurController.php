@@ -37,6 +37,7 @@ class CollaborateurController extends AbstractController
         $collaborateurs = $repository->findAll();
 
         $data = array_map(function($collaborateur) {
+            $appelOffresPersonnelCle = $collaborateur->getAppelOffresPersonnelCle();
             return [
                 'collaborateurId' => $collaborateur->getCollaborateurId(),
                 'collaborateurNom' => $collaborateur->getCollaborateurNom(),
@@ -45,7 +46,9 @@ class CollaborateurController extends AbstractController
                 'collaborateurEmail1' => $collaborateur->getCollaborateurEmail1(),
                 'collaborateurTelephone1' => $collaborateur->getCollaborateurTelephone1(),
                 'pays' => $collaborateur->getPays() ? $collaborateur->getPays()->getPaysLibelle() : null,
-                'nationalite' => $collaborateur->getNationalite() ? $collaborateur->getNationalite()->getNationaliteLibelle() : null
+                'nationalite' => $collaborateur->getNationalite() ? $collaborateur->getNationalite()->getNationaliteLibelle() : null,
+                'appelOffresPersonnelCleId' => $appelOffresPersonnelCle ? $appelOffresPersonnelCle->getAppelOffresPersonnelCleId() : null,
+                'appelOffresPersonnelCleIntitule' => $appelOffresPersonnelCle ? $appelOffresPersonnelCle->getAppelOffresPersonnelCleIntitule() : null
             ];
         }, $collaborateurs);
 
@@ -82,6 +85,7 @@ class CollaborateurController extends AbstractController
 
     private function serializeCollaborateurDetails(Collaborateur $collaborateur): array
     {
+        $appelOffresPersonnelCle = $collaborateur->getAppelOffresPersonnelCle();
         return [
             'collaborateurId' => $collaborateur->getCollaborateurId(),
             'collaborateurNom' => $collaborateur->getCollaborateurNom(),
@@ -101,12 +105,15 @@ class CollaborateurController extends AbstractController
             'nationalite' => $collaborateur->getNationalite() ? [
                 'id' => $collaborateur->getNationalite()->getId(),
                 'nationaliteLibelle' => $collaborateur->getNationalite()->getNationaliteLibelle()
-            ] : null
+            ] : null,
+            'appelOffresPersonnelCleId' => $appelOffresPersonnelCle ? $appelOffresPersonnelCle->getAppelOffresPersonnelCleId() : null,
+            'appelOffresPersonnelCleIntitule' => $appelOffresPersonnelCle ? $appelOffresPersonnelCle->getAppelOffresPersonnelCleIntitule() : null
         ];
     }
 
     private function serializeCollaborateur(Collaborateur $collaborateur): array
     {
+        $appelOffresPersonnelCle = $collaborateur->getAppelOffresPersonnelCle();
         return [
             'collaborateurId' => $collaborateur->getCollaborateurId(),
             'collaborateurNom' => $collaborateur->getCollaborateurNom(),
@@ -120,7 +127,8 @@ class CollaborateurController extends AbstractController
             'collaborateurTelephone2' => $collaborateur->getCollaborateurTelephone2(),
             'collaborateurCV' => $collaborateur->getCollaborateurCV(),
             'paysId' => $collaborateur->getPays() ? $collaborateur->getPays()->getPaysId() : null,
-            'nationaliteId' => $collaborateur->getNationalite() ? $collaborateur->getNationalite()->getId() : null
+            'nationaliteId' => $collaborateur->getNationalite() ? $collaborateur->getNationalite()->getId() : null,
+            'appelOffresPersonnelCleId' => $appelOffresPersonnelCle ? $appelOffresPersonnelCle->getAppelOffresPersonnelCleId() : null
         ];
     }
 
