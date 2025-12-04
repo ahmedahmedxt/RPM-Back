@@ -113,19 +113,19 @@ class AppelOffresPersonnelCleController extends AbstractController
                 return new JsonResponse(['message' => 'AppelOffres not found'], Response::HTTP_NOT_FOUND);
             }
 
-            $appelOffresPersonnelCles = $repository->findAll();
+            $liaisons = $liaisonRepository->findBy(['appelOffres' => $appelOffres]);
             
             $data = [];
-            foreach ($appelOffresPersonnelCles as $appelOffresPersonnelCle) {
+            foreach ($liaisons as $liaison) {
+                $appelOffresPersonnelCle = $liaison->getAppelOffresPersonnelCle();
+                if (!$appelOffresPersonnelCle) {
+                    continue;
+                }
+                
                 $niveauEtude = $appelOffresPersonnelCle->getNiveauEtude();
                 $collaborateurs = $appelOffresPersonnelCle->getCollaborateurs();
                 
-                $liaison = $liaisonRepository->findOneBy([
-                    'appelOffres' => $appelOffres,
-                    'appelOffresPersonnelCle' => $appelOffresPersonnelCle
-                ]);
-                
-                $couleurStatus = $liaison ? $liaison->getCouleurStatus() : null;
+                $couleurStatus = $liaison->getCouleurStatus();
                 
                 $collaborateursData = [];
                 foreach ($collaborateurs as $collaborateur) {
@@ -242,14 +242,12 @@ class AppelOffresPersonnelCleController extends AbstractController
                 }
             }
 
-            if (isset($data['collaborateurIds']) && is_array($data['collaborateurIds'])) {
-                foreach ($data['collaborateurIds'] as $collaborateurId) {
-                    $collaborateur = $collaborateurRepository->find($collaborateurId);
-                    if ($collaborateur) {
-                        $appelOffresPersonnelCle->addCollaborateur($collaborateur);
-                    }
+            if (isset($data['collaborateurId']) && $data['collaborateurId'] !== null) {
+                $collaborateur = $collaborateurRepository->find($data['collaborateurId']);
+                if ($collaborateur) {
+                    $appelOffresPersonnelCle->addCollaborateur($collaborateur);
+                    $this->entityManager->flush();
                 }
-                $this->entityManager->flush();
             }
 
             return new JsonResponse(['message' => 'AppelOffresPersonnelCle created'], Response::HTTP_CREATED);
@@ -267,18 +265,18 @@ class AppelOffresPersonnelCleController extends AbstractController
     {
         try {
             $appelOffresPersonnelCle = $repository->find($id);
-
+    
             if (!$appelOffresPersonnelCle) {
                 return new JsonResponse(['message' => 'AppelOffresPersonnelCle not found'], Response::HTTP_NOT_FOUND);
             }
-
+    
             $data = json_decode($request->getContent(), true);
-
+    
             $appelOffresPersonnelCle->setAppelOffresPersonnelCleIntitule($data['appelOffresPersonnelCleIntitule'] ?? $appelOffresPersonnelCle->getAppelOffresPersonnelCleIntitule());
             $appelOffresPersonnelCle->setAppelOffresPersonnelCleDescription($data['appelOffresPersonnelCleDescription'] ?? $appelOffresPersonnelCle->getAppelOffresPersonnelCleDescription());
             $appelOffresPersonnelCle->setAppelOffresPersonnelCleNiveauEtudeMin($data['appelOffresPersonnelCleNiveauEtudeMin'] ?? $appelOffresPersonnelCle->getAppelOffresPersonnelCleNiveauEtudeMin());
             $appelOffresPersonnelCle->setAppelOffresPersonnelCleNbrAnneeExperience($data['appelOffresPersonnelCleNbrAnneeExperience'] ?? $appelOffresPersonnelCle->getAppelOffresPersonnelCleNbrAnneeExperience());
-
+    
             if (isset($data['niveauEtudeId'])) {
                 if ($data['niveauEtudeId'] === null) {
                     $appelOffresPersonnelCle->setNiveauEtude(null);
@@ -289,24 +287,24 @@ class AppelOffresPersonnelCleController extends AbstractController
                     }
                 }
             }
-
-            if (isset($data['collaborateurIds']) && is_array($data['collaborateurIds'])) {
+    
+            if (isset($data['collaborateurId'])) {
                 foreach ($appelOffresPersonnelCle->getCollaborateurs() as $existingCollaborateur) {
                     $appelOffresPersonnelCle->removeCollaborateur($existingCollaborateur);
                 }
                 
-                foreach ($data['collaborateurIds'] as $collaborateurId) {
-                    $collaborateur = $collaborateurRepository->find($collaborateurId);
+                if ($data['collaborateurId'] !== null) {
+                    $collaborateur = $collaborateurRepository->find($data['collaborateurId']);
                     if ($collaborateur) {
                         $appelOffresPersonnelCle->addCollaborateur($collaborateur);
                     }
                 }
             }
-
+    
             $this->entityManager->flush();
-
+    
             return new JsonResponse(['message' => 'AppelOffresPersonnelCle updated'], Response::HTTP_OK);
-
+    
         } catch (\Exception $e) {
             return new JsonResponse([
                 'error' => $e->getMessage(),
@@ -362,29 +360,32 @@ class AppelOffresPersonnelCleController extends AbstractController
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
-
     #[Route('/{id}/collaborateurs', name: 'add_collaborateurs', methods: ['POST'])]
     public function addCollaborateurs(int $id, Request $request, AppelOffresPersonnelCleRepository $repository, CollaborateurRepository $collaborateurRepository, AppelOffresRepository $appelOffresRepository, AppelOffresPersonnelCleAppelOffresRepository $liaisonRepository, TokenStorageInterface $tokenStorage): JsonResponse
     {
         try {
             $appelOffresPersonnelCle = $repository->find($id);
-
+        
             if (!$appelOffresPersonnelCle) {
                 return new JsonResponse(['message' => 'AppelOffresPersonnelCle not found'], Response::HTTP_NOT_FOUND);
             }
-
+        
             $data = json_decode($request->getContent(), true);
-
-            if (isset($data['collaborateurIds']) && is_array($data['collaborateurIds'])) {
-                foreach ($data['collaborateurIds'] as $collaborateurId) {
-                    $collaborateur = $collaborateurRepository->find($collaborateurId);
-                    if ($collaborateur && !$appelOffresPersonnelCle->getCollaborateurs()->contains($collaborateur)) {
+        
+            if (isset($data['collaborateurId'])) {
+                foreach ($appelOffresPersonnelCle->getCollaborateurs() as $existingCollaborateur) {
+                    $appelOffresPersonnelCle->removeCollaborateur($existingCollaborateur);
+                }
+                
+                if ($data['collaborateurId'] !== null) {
+                    $collaborateur = $collaborateurRepository->find($data['collaborateurId']);
+                    if ($collaborateur) {
                         $appelOffresPersonnelCle->addCollaborateur($collaborateur);
                     }
                 }
                 $this->entityManager->flush();
             }
-
+        
             if (isset($data['appelOffresId']) && $data['appelOffresId'] !== null) {
                 $appelOffres = $appelOffresRepository->find($data['appelOffresId']);
                 if ($appelOffres) {
@@ -392,28 +393,32 @@ class AppelOffresPersonnelCleController extends AbstractController
                         'appelOffres' => $appelOffres,
                         'appelOffresPersonnelCle' => $appelOffresPersonnelCle
                     ]);
-
+        
                     if (!$liaison) {
                         $liaison = new AppelOffresPersonnelCleAppelOffres();
                         $liaison->setAppelOffres($appelOffres);
                         $liaison->setAppelOffresPersonnelCle($appelOffresPersonnelCle);
                         $this->entityManager->persist($liaison);
                     }
-
+        
                     if (count($appelOffresPersonnelCle->getCollaborateurs()) > 0) {
                         $liaison->setCouleurStatus('vert');
+                    } else {
+                        if ($data['collaborateurId'] === null) {
+                            $liaison->setCouleurStatus('rouge');
+                        }
                     }
                     
                     $this->entityManager->flush();
                 }
             }
-
-            return new JsonResponse(['message' => 'Collaborateurs added'], Response::HTTP_OK);
-
+        
+            return new JsonResponse(['message' => 'Collaborateur added'], Response::HTTP_OK);
+        
         } catch (\Exception $e) {
             return new JsonResponse([
                 'error' => $e->getMessage(),
-                'message' => 'Erreur lors de l\'ajout des collaborateurs'
+                'message' => 'Erreur lors de l\'ajout du collaborateur'
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
