@@ -95,11 +95,6 @@ class Reference
     #[ORM\JoinColumn(name: "categorieId", referencedColumnName: "categorieId", nullable: true)]
     private $categorie;
 
-    // collaborateur 1 ---- * reference
-    #[ORM\ManyToOne(targetEntity: Collaborateur::class)]
-    #[ORM\JoinColumn(name: "collaborateurId", referencedColumnName: "collaborateurId", nullable: true)]
-    private $collaborateur;
-
     /* =======================
      *  ONE-TO-MANY RELATIONS
      * ======================= */
