@@ -24,7 +24,7 @@ class AppelOffresController extends AbstractController
         try {
             $page = max(1, (int)$request->query->get('page', 1));
             $limit = max(1, min(100, (int)$request->query->get('limit', 10)));
-            $sortField = $request->query->get('sortField', 'appelOffresNumero');
+            $sortField = $request->query->get('sortField', 'appelOffresAnnee');
             $sortDir = strtoupper($request->query->get('sortDir', 'DESC')) === 'ASC' ? 'ASC' : 'DESC';
             $search = $request->query->get('search', '');
             $etatFilter = $request->query->get('etat', '');
@@ -38,8 +38,9 @@ class AppelOffresController extends AbstractController
                 'appelOffresResultatEtat' => 'a.appelOffresResultatEtat',
             ];
 
+            // Si le champ de tri n'est pas dans la liste autorisée, utiliser le tri par défaut
             if (!array_key_exists($sortField, $allowedSortFields)) {
-                $sortField = 'appelOffresNumero';
+                $sortField = 'appelOffresAnnee';
             }
 
             $qb = $em->getRepository(AppelOffres::class)->createQueryBuilder('a');
@@ -54,12 +55,20 @@ class AppelOffresController extends AbstractController
                    ->setParameter('etat', $etatFilter);
             }
 
-            $qb->orderBy($allowedSortFields[$sortField], $sortDir);
+            // Créer un query builder séparé pour le COUNT
+            $qbCount = clone $qb;
+            $total = (int)$qbCount->select('COUNT(a.appelOffresId)')->getQuery()->getSingleScalarResult();
 
-            $total = (int)$qb->select('COUNT(a.appelOffresId)')->getQuery()->getSingleScalarResult();
-
-            $qb->select('a')
-               ->setFirstResult(($page - 1) * $limit)
+            // Si le tri est par année, utiliser le tri par défaut (année+numéro)
+            // Sinon, utiliser le tri demandé
+            if ($sortField === 'appelOffresAnnee') {
+                $qb->orderBy('a.appelOffresAnnee', 'DESC')
+                   ->addOrderBy('a.appelOffresNumero', 'DESC');
+            } else {
+                $qb->orderBy($allowedSortFields[$sortField], $sortDir);
+            }
+            
+            $qb->setFirstResult(($page - 1) * $limit)
                ->setMaxResults($limit);
 
             $appels = $qb->getQuery()->getResult();
