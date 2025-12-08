@@ -96,8 +96,9 @@ class AppelOffres
     #[ORM\Column(name: "appelOffresResultatRangTotal", type: "integer", nullable: true)]
     private ?int $appelOffresResultatRangTotal = null;
 
-    #[ORM\Column(name: "appelOffresNumeroDevisParticipation", type: "string", length: 50, nullable: true)]
-    private ?string $appelOffresNumeroDevisParticipation = null;
+   
+    #[ORM\Column(name: "appelOffresNumeroDevisParticipation", type: "integer", nullable: true)]
+    private ?int $appelOffresNumeroDevisParticipation = null;
 
     #[ORM\Column(name: "appelOffresNumero", type: "string", length: 10, nullable: true)]
     private ?string $appelOffresNumero = null;
@@ -177,8 +178,8 @@ class AppelOffres
     public function getAppelOffresResultatRangTotal(): ?int { return $this->appelOffresResultatRangTotal; }
     public function setAppelOffresResultatRangTotal(?int $v): self { $this->appelOffresResultatRangTotal = $v; return $this; }
 
-    public function getAppelOffresNumeroDevisParticipation(): ?string { return $this->appelOffresNumeroDevisParticipation; }
-    public function setAppelOffresNumeroDevisParticipation(?string $v): self { $this->appelOffresNumeroDevisParticipation = $v; return $this; }
+    public function getAppelOffresNumeroDevisParticipation(): ?int { return $this->appelOffresNumeroDevisParticipation; }
+    public function setAppelOffresNumeroDevisParticipation(?int $v): self { $this->appelOffresNumeroDevisParticipation = $v; return $this; }
 
     public function getAppelOffresNumero(): ?string { return $this->appelOffresNumero; }
     public function setAppelOffresNumero(?string $v): self { $this->appelOffresNumero = $v; return $this; }
