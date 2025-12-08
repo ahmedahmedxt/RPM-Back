@@ -3,9 +3,13 @@
 namespace App\Controller\Api;
 
 use App\Entity\Collaborateur;
+use App\Entity\CollaborateurEducation;
+use App\Entity\TypeDiplome;
 use App\Repository\CollaborateurRepository;
 use App\Repository\PaysRepository;
 use App\Repository\NationaliteRepository;
+use App\Repository\TypeDiplomeRepository;
+use App\Repository\CollaborateurEducationRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -38,6 +42,19 @@ class CollaborateurController extends AbstractController
 
         $data = array_map(function($collaborateur) {
             $appelOffresPersonnelCle = $collaborateur->getAppelOffresPersonnelCle();
+            
+            $educations = [];
+            foreach ($collaborateur->getEducations() as $education) {
+                $educations[] = [
+                    'collaborateurEducationId' => $education->getCollaborateurEducationId(),
+                    'collaborateurEducationNatureEtudes' => $education->getCollaborateurEducationNatureEtudes(),
+                    'collaborateurEducationEtablissement' => $education->getCollaborateurEducationEtablissement(),
+                    'collaborateurEducationAnneeObtention' => $education->getCollaborateurEducationAnneeObtention(),
+                    'typeDiplomeId' => $education->getTypeDiplome()?->getTypeDiplomeId(),
+                    'typeDiplomeLibelle' => $education->getTypeDiplome()?->getTypeDiplomeLibelle(),
+                ];
+            }
+            
             return [
                 'collaborateurId' => $collaborateur->getCollaborateurId(),
                 'collaborateurNom' => $collaborateur->getCollaborateurNom(),
@@ -48,7 +65,8 @@ class CollaborateurController extends AbstractController
                 'pays' => $collaborateur->getPays() ? $collaborateur->getPays()->getPaysLibelle() : null,
                 'nationalite' => $collaborateur->getNationalite() ? $collaborateur->getNationalite()->getNationaliteLibelle() : null,
                 'appelOffresPersonnelCleId' => $appelOffresPersonnelCle ? $appelOffresPersonnelCle->getAppelOffresPersonnelCleId() : null,
-                'appelOffresPersonnelCleIntitule' => $appelOffresPersonnelCle ? $appelOffresPersonnelCle->getAppelOffresPersonnelCleIntitule() : null
+                'appelOffresPersonnelCleIntitule' => $appelOffresPersonnelCle ? $appelOffresPersonnelCle->getAppelOffresPersonnelCleIntitule() : null,
+                'educations' => $educations
             ];
         }, $collaborateurs);
 
@@ -86,6 +104,19 @@ class CollaborateurController extends AbstractController
     private function serializeCollaborateurDetails(Collaborateur $collaborateur): array
     {
         $appelOffresPersonnelCle = $collaborateur->getAppelOffresPersonnelCle();
+        
+        $educations = [];
+        foreach ($collaborateur->getEducations() as $education) {
+            $educations[] = [
+                'collaborateurEducationId' => $education->getCollaborateurEducationId(),
+                'collaborateurEducationNatureEtudes' => $education->getCollaborateurEducationNatureEtudes(),
+                'collaborateurEducationEtablissement' => $education->getCollaborateurEducationEtablissement(),
+                'collaborateurEducationAnneeObtention' => $education->getCollaborateurEducationAnneeObtention(),
+                'typeDiplomeId' => $education->getTypeDiplome()?->getTypeDiplomeId(),
+                'typeDiplomeLibelle' => $education->getTypeDiplome()?->getTypeDiplomeLibelle(),
+            ];
+        }
+        
         return [
             'collaborateurId' => $collaborateur->getCollaborateurId(),
             'collaborateurNom' => $collaborateur->getCollaborateurNom(),
@@ -107,13 +138,27 @@ class CollaborateurController extends AbstractController
                 'nationaliteLibelle' => $collaborateur->getNationalite()->getNationaliteLibelle()
             ] : null,
             'appelOffresPersonnelCleId' => $appelOffresPersonnelCle ? $appelOffresPersonnelCle->getAppelOffresPersonnelCleId() : null,
-            'appelOffresPersonnelCleIntitule' => $appelOffresPersonnelCle ? $appelOffresPersonnelCle->getAppelOffresPersonnelCleIntitule() : null
+            'appelOffresPersonnelCleIntitule' => $appelOffresPersonnelCle ? $appelOffresPersonnelCle->getAppelOffresPersonnelCleIntitule() : null,
+            'educations' => $educations
         ];
     }
 
     private function serializeCollaborateur(Collaborateur $collaborateur): array
     {
         $appelOffresPersonnelCle = $collaborateur->getAppelOffresPersonnelCle();
+        
+        $educations = [];
+        foreach ($collaborateur->getEducations() as $education) {
+            $educations[] = [
+                'collaborateurEducationId' => $education->getCollaborateurEducationId(),
+                'collaborateurEducationNatureEtudes' => $education->getCollaborateurEducationNatureEtudes(),
+                'collaborateurEducationEtablissement' => $education->getCollaborateurEducationEtablissement(),
+                'collaborateurEducationAnneeObtention' => $education->getCollaborateurEducationAnneeObtention(),
+                'typeDiplomeId' => $education->getTypeDiplome()?->getTypeDiplomeId(),
+                'typeDiplomeLibelle' => $education->getTypeDiplome()?->getTypeDiplomeLibelle(),
+            ];
+        }
+        
         return [
             'collaborateurId' => $collaborateur->getCollaborateurId(),
             'collaborateurNom' => $collaborateur->getCollaborateurNom(),
@@ -128,13 +173,20 @@ class CollaborateurController extends AbstractController
             'collaborateurCV' => $collaborateur->getCollaborateurCV(),
             'paysId' => $collaborateur->getPays() ? $collaborateur->getPays()->getPaysId() : null,
             'nationaliteId' => $collaborateur->getNationalite() ? $collaborateur->getNationalite()->getId() : null,
-            'appelOffresPersonnelCleId' => $appelOffresPersonnelCle ? $appelOffresPersonnelCle->getAppelOffresPersonnelCleId() : null
+            'appelOffresPersonnelCleId' => $appelOffresPersonnelCle ? $appelOffresPersonnelCle->getAppelOffresPersonnelCleId() : null,
+            'educations' => $educations
         ];
     }
 
     #[Route('', name: 'create', methods: ['POST'])]
-    public function create(Request $request, EntityManagerInterface $entityManager, PaysRepository $paysRepository, NationaliteRepository $nationaliteRepository, TokenStorageInterface $tokenStorage): JsonResponse
-    {
+    public function create(
+        Request $request, 
+        EntityManagerInterface $entityManager, 
+        PaysRepository $paysRepository, 
+        NationaliteRepository $nationaliteRepository,
+        CollaborateurEducationRepository $collaborateurEducationRepository,
+        TokenStorageInterface $tokenStorage
+    ): JsonResponse {
         $this->checkToken($tokenStorage);
         
         $data = json_decode($request->getContent(), true);
@@ -171,6 +223,17 @@ class CollaborateurController extends AbstractController
             }
         }
 
+        if (isset($data['educations']) && is_array($data['educations'])) {
+            foreach ($data['educations'] as $educationData) {
+                if (isset($educationData['collaborateurEducationId'])) {
+                    $education = $collaborateurEducationRepository->find($educationData['collaborateurEducationId']);
+                    if ($education) {
+                        $collaborateur->addEducation($education);
+                    }
+                }
+            }
+        }
+
         $entityManager->persist($collaborateur);
         $entityManager->flush();
 
@@ -178,8 +241,16 @@ class CollaborateurController extends AbstractController
     }
 
     #[Route('/{id}', name: 'update', methods: ['PUT'])]
-    public function update(int $id, Request $request, CollaborateurRepository $collaborateurRepository, EntityManagerInterface $entityManager, PaysRepository $paysRepository, NationaliteRepository $nationaliteRepository, TokenStorageInterface $tokenStorage): JsonResponse
-    {
+    public function update(
+        int $id, 
+        Request $request, 
+        CollaborateurRepository $collaborateurRepository, 
+        EntityManagerInterface $entityManager, 
+        PaysRepository $paysRepository, 
+        NationaliteRepository $nationaliteRepository,
+        CollaborateurEducationRepository $collaborateurEducationRepository,
+        TokenStorageInterface $tokenStorage
+    ): JsonResponse {
         $this->checkToken($tokenStorage);
         
         $collaborateur = $collaborateurRepository->find($id);
@@ -218,6 +289,19 @@ class CollaborateurController extends AbstractController
                 $collaborateur->setNationalite($nationalite);
             } else {
                 return new JsonResponse(['message' => 'Invalid Nationalite ID'], Response::HTTP_BAD_REQUEST);
+            }
+        }
+
+        if (isset($data['educations']) && is_array($data['educations'])) {
+            $collaborateur->getEducations()->clear();
+            
+            foreach ($data['educations'] as $educationData) {
+                if (isset($educationData['collaborateurEducationId'])) {
+                    $education = $collaborateurEducationRepository->find($educationData['collaborateurEducationId']);
+                    if ($education) {
+                        $collaborateur->addEducation($education);
+                    }
+                }
             }
         }
 

@@ -62,7 +62,10 @@ class Collaborateur
     #[ORM\OneToMany(targetEntity: EmployeExperience::class, mappedBy: 'collaborateur', cascade: ["persist","remove"])]
     private Collection $experiences;
 
-    #[ORM\OneToMany(targetEntity: EmployeEducation::class, mappedBy: 'collaborateur', cascade: ["persist","remove"])]
+    #[ORM\ManyToMany(targetEntity: CollaborateurEducation::class, inversedBy: 'collaborateurs')]
+    #[ORM\JoinTable(name: 'collaborateur_collaborateur_education')]
+    #[ORM\JoinColumn(name: 'collaborateurId', referencedColumnName: 'collaborateurId')]
+    #[ORM\InverseJoinColumn(name: 'collaborateurEducationId', referencedColumnName: 'collaborateurEducationId')]
     private Collection $educations;
 
     #[ORM\OneToMany(targetEntity: EmployeDocuments::class, mappedBy: 'collaborateur', cascade: ["persist","remove"])]
@@ -252,21 +255,19 @@ class Collaborateur
         return $this->educations;
     }
 
-    public function addEducation(EmployeEducation $education): static
+    public function addEducation(CollaborateurEducation $education): static
     {
         if (!$this->educations->contains($education)) {
             $this->educations->add($education);
-            $education->setCollaborateur($this);
+            $education->addCollaborateur($this);
         }
         return $this;
     }
 
-    public function removeEducation(EmployeEducation $education): static
+    public function removeEducation(CollaborateurEducation $education): static
     {
         if ($this->educations->removeElement($education)) {
-            if ($education->getCollaborateur() === $this) {
-                $education->setCollaborateur(null);
-            }
+            $education->removeCollaborateur($this);
         }
         return $this;
     }
@@ -276,20 +277,20 @@ class Collaborateur
         return $this->collaborateurDocuments;
     }
 
-    public function addCollaborateurDocument(EmployeDocuments $document): static
+    public function addCollaborateurDocument(EmployeDocuments $collaborateurDocument): static
     {
-        if (!$this->collaborateurDocuments->contains($document)) {
-            $this->collaborateurDocuments->add($document);
-            $document->setCollaborateur($this);
+        if (!$this->collaborateurDocuments->contains($collaborateurDocument)) {
+            $this->collaborateurDocuments->add($collaborateurDocument);
+            $collaborateurDocument->setCollaborateur($this);
         }
         return $this;
     }
 
-    public function removeCollaborateurDocument(EmployeDocuments $document): static
+    public function removeCollaborateurDocument(EmployeDocuments $collaborateurDocument): static
     {
-        if ($this->collaborateurDocuments->removeElement($document)) {
-            if ($document->getCollaborateur() === $this) {
-                $document->setCollaborateur(null);
+        if ($this->collaborateurDocuments->removeElement($collaborateurDocument)) {
+            if ($collaborateurDocument->getCollaborateur() === $this) {
+                $collaborateurDocument->setCollaborateur(null);
             }
         }
         return $this;

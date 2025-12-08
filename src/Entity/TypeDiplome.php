@@ -19,12 +19,12 @@ class TypeDiplome
     #[ORM\Column(name: "typeDiplomeLibelle", length: 254, nullable: true)]
     private ?string $typeDiplomeLibelle = null;
 
-    #[ORM\OneToMany(targetEntity: EmployeEducation::class, mappedBy: 'typeDiplome')]
-    private Collection $employeEducation;
+    #[ORM\OneToMany(targetEntity: CollaborateurEducation::class, mappedBy: 'typeDiplome')]
+    private Collection $collaborateurEducation;
 
     public function __construct()
     {
-        $this->employeEducation = new ArrayCollection();
+        $this->collaborateurEducation = new ArrayCollection();
     }
 
     public function getTypeDiplomeId(): ?int
@@ -45,29 +45,29 @@ class TypeDiplome
     }
 
     /**
-     * @return Collection<int, EmployeEducation>
+     * @return Collection<int, CollaborateurEducation>
      */
-    public function getEmployeEducation(): Collection
+    public function getCollaborateurEducation(): Collection
     {
-        return $this->employeEducation;
+        return $this->collaborateurEducation;
     }
 
-    public function addEmployeEducation(EmployeEducation $employeEducation): static
+    public function addCollaborateurEducation(CollaborateurEducation $collaborateurEducation): static
     {
-        if (!$this->employeEducation->contains($employeEducation)) {
-            $this->employeEducation->add($employeEducation);
-            $employeEducation->setTypeDiplome($this);
+        if (!$this->collaborateurEducation->contains($collaborateurEducation)) {
+            $this->collaborateurEducation->add($collaborateurEducation);
+            $collaborateurEducation->setTypeDiplome($this);
         }
 
         return $this;
     }
 
-    public function removeEmployeEducation(EmployeEducation $employeEducation): static
+    public function removeCollaborateurEducation(CollaborateurEducation $collaborateurEducation): static
     {
-        if ($this->employeEducation->removeElement($employeEducation)) {
+        if ($this->collaborateurEducation->removeElement($collaborateurEducation)) {
             // set the owning side to null (unless already changed)
-            if ($employeEducation->getTypeDiplome() === $this) {
-                $employeEducation->setTypeDiplome(null);
+            if ($collaborateurEducation->getTypeDiplome() === $this) {
+                $collaborateurEducation->setTypeDiplome(null);
             }
         }
 
