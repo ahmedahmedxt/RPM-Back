@@ -55,7 +55,7 @@ class ReferenceController extends AbstractController
 
         $cat = $ref->getCategorie();
         $catData = $cat ? [
-            'id'      => $cat->getCategorieId(),
+            'id'      => $cat->getId(),
             'libelle' => $cat->getCategorieLibelle(),
             'short'   => $cat->getCategorieShort(),
         ] : null;
@@ -149,6 +149,58 @@ class ReferenceController extends AbstractController
     {
         $refs = $this->referenceRepository->findAll();
         return $this->json(array_map(fn (Reference $r) => $this->serializeReference($r), $refs));
+    }
+
+    #[Route('/list', name: 'ref_list', methods: ['GET'])]
+    public function list(Request $request): JsonResponse
+    {
+        $page = max(1, (int) $request->query->get('page', 1));
+        $size = max(1, min(100, (int) $request->query->get('size', 10)));
+
+        $sortField = $request->query->get('sortField', 'referenceID');
+        $sortDir   = strtolower((string) $request->query->get('sortDir', 'asc')) === 'desc' ? 'DESC' : 'ASC';
+        $search    = trim((string) $request->query->get('search', ''));
+
+        $allowedSortFields = [
+            'referenceID',
+            'referenceRef',
+            'referenceTitre',
+            'referenceDateDemarrage',
+            'referenceBudget',
+        ];
+        if (!in_array($sortField, $allowedSortFields, true)) {
+            $sortField = 'referenceID';
+        }
+
+        $qb = $this->referenceRepository->createQueryBuilder('r');
+
+        if ($search !== '') {
+            $qb->andWhere(
+                'r.referenceRef LIKE :s 
+                OR r.referenceTitre LIKE :s 
+                OR r.referenceLibelle LIKE :s'
+            )
+            ->setParameter('s', '%' . $search . '%');
+        }
+
+        $qbCount = clone $qb;
+        $total = (int) $qbCount
+            ->select('COUNT(r.referenceID)')
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        $qb->orderBy('r.' . $sortField, $sortDir)
+        ->setFirstResult(($page - 1) * $size)
+        ->setMaxResults($size);
+
+        /** @var Reference[] $refs */
+        $refs = $qb->getQuery()->getResult();
+
+        return $this->json([
+            'data'  => array_map(fn (Reference $r) => $this->serializeReference($r), $refs),
+            'total' => $total,
+            'page'  => $page,
+        ]);
     }
 
     #[Route('/{id}', name: 'ref_one', methods: ['GET'])]
