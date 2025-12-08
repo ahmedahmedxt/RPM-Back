@@ -22,7 +22,7 @@ class EnvironnementDeveloppement
     #[ORM\Column(type: "string", length: 254, nullable: true, name: "environnementDeveloppementDescription")]
     private $environnementDeveloppementDescription;
 
-    #[ORM\ManyToMany(targetEntity: Reference::class, mappedBy: 'environnementdeveloppements')]
+    #[ORM\ManyToMany(targetEntity: Reference::class, mappedBy: "environnementsDeveloppement")]
     private Collection $references;
 
     public function __construct()
