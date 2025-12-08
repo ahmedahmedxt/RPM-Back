@@ -2,16 +2,19 @@
 
 namespace App\Entity;
 
-use App\Repository\ReferenceEmployeRepository;
+use App\Repository\ReferenceCollaborateurRepository;
 use Doctrine\ORM\Mapping as ORM;
 
-#[ORM\Entity(repositoryClass: ReferenceEmployeRepository::class)]
-class ReferenceEmploye
+#[ORM\Entity(repositoryClass: ReferenceCollaborateurRepository::class)]
+class ReferenceCollaborateur
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    private ?int $id = null;
+    private ?int $referenceCollaborateurid = null;
+
+    #[ORM\Column(type: "date", nullable: true, name: "referenceCollaborateurDuree")]
+    private $referenceCollaborateurDuree;
 
     #[ORM\ManyToOne(targetEntity: Collaborateur::class)]
     #[ORM\JoinColumn(name: "collaborateurId", referencedColumnName: "collaborateurId", nullable: true)]
@@ -19,7 +22,7 @@ class ReferenceEmploye
 
     public function getId(): ?int
     {
-        return $this->id;
+        return $this->ireferenceCollaborateurid;
     }
 
     public function getCollaborateur(): ?Collaborateur

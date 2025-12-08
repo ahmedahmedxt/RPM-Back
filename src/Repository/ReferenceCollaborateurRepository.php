@@ -2,27 +2,27 @@
 
 namespace App\Repository;
 
-use App\Entity\ReferenceEmploye;
+use App\Entity\ReferenceCollaborateur;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
- * @extends ServiceEntityRepository<ReferenceEmploye>
+ * @extends ServiceEntityRepository<ReferenceCollaborateur>
  *
- * @method ReferenceEmploye|null find($id, $lockMode = null, $lockVersion = null)
- * @method ReferenceEmploye|null findOneBy(array $criteria, array $orderBy = null)
- * @method ReferenceEmploye[]    findAll()
- * @method ReferenceEmploye[]    findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
+ * @method ReferenceCollaborateur|null find($id, $lockMode = null, $lockVersion = null)
+ * @method ReferenceCollaborateur|null findOneBy(array $criteria, array $orderBy = null)
+ * @method ReferenceCollaborateur[]    findAll()
+ * @method ReferenceCollaborateur[]    findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
  */
-class ReferenceEmployeRepository extends ServiceEntityRepository
+class ReferenceCollaborateurRepository extends ServiceEntityRepository
 {
     public function __construct(ManagerRegistry $registry)
     {
-        parent::__construct($registry, ReferenceEmploye::class);
+        parent::__construct($registry, ReferenceCollaborateur::class);
     }
 
 //    /**
-//     * @return ReferenceEmploye[] Returns an array of ReferenceEmploye objects
+//     * @return ReferenceCollaborateur[] Returns an array of ReferenceCollaborateur objects
 //     */
 //    public function findByExampleField($value): array
 //    {
@@ -36,7 +36,7 @@ class ReferenceEmployeRepository extends ServiceEntityRepository
 //        ;
 //    }
 
-//    public function findOneBySomeField($value): ?ReferenceEmploye
+//    public function findOneBySomeField($value): ?ReferenceCollaborateur
 //    {
 //        return $this->createQueryBuilder('r')
 //            ->andWhere('r.exampleField = :val')
