@@ -68,8 +68,8 @@ class Collaborateur
     #[ORM\InverseJoinColumn(name: 'collaborateurEducationId', referencedColumnName: 'collaborateurEducationId')]
     private Collection $educations;
 
-    #[ORM\OneToMany(targetEntity: EmployeDocuments::class, mappedBy: 'collaborateur', cascade: ["persist","remove"])]
-    private Collection $collaborateurDocuments;
+    #[ORM\OneToMany(targetEntity: CollaborateurDocuments::class, mappedBy: 'collaborateur', cascade: ["persist","remove"])]
+    private Collection $collaborateurDocuments; 
 
     public function __construct()
     {
@@ -277,22 +277,10 @@ class Collaborateur
         return $this->collaborateurDocuments;
     }
 
-    public function addCollaborateurDocument(EmployeDocuments $collaborateurDocument): static
-    {
-        if (!$this->collaborateurDocuments->contains($collaborateurDocument)) {
-            $this->collaborateurDocuments->add($collaborateurDocument);
-            $collaborateurDocument->setCollaborateur($this);
-        }
-        return $this;
-    }
+ 
+    
 
-    public function removeCollaborateurDocument(EmployeDocuments $collaborateurDocument): static
-    {
-        if ($this->collaborateurDocuments->removeElement($collaborateurDocument)) {
-            if ($collaborateurDocument->getCollaborateur() === $this) {
-                $collaborateurDocument->setCollaborateur(null);
-            }
-        }
-        return $this;
-    }
+
+
+
 }

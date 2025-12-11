@@ -130,7 +130,9 @@ api_statistics_appesl_offres:
   path: /api/statistics/AppeslOffres
   controller: App\Controller\Api\StatstiqueController::getAppeslOffresStatistics
   methods: [GET]
-
+api_appel_offres_personnel_cle:
+  resource: '../src/Controller/Api/AppelOffresPersonnelCleController.php'
+  type: attribute
 # Routes pour les templates
 api_templates_available_fields:
   path: /api/templates/available-fields

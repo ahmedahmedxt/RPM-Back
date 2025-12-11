@@ -16,7 +16,10 @@ class AppelOffresPersonnelCleAppelOffres
     #[ORM\ManyToOne(targetEntity: AppelOffres::class, inversedBy: 'appelOffresPersonnelCleAppelOffres')]
     #[ORM\JoinColumn(name: 'appelOffresId', referencedColumnName: 'appelOffresId', nullable: false, onDelete: 'CASCADE')]
     private ?AppelOffres $appelOffres = null;
-
+    
+    #[ORM\Column(type: 'integer', nullable: true, name: 'ordreAffichage')]
+    private ?int $ordreAffichage = null;
+    
     #[ORM\ManyToOne(targetEntity: AppelOffresPersonnelCle::class, inversedBy: 'appelOffresPersonnelCleAppelOffres')]
     #[ORM\JoinColumn(name: 'appelOffresPersonnelCleId', referencedColumnName: 'appelOffresPersonnelCleId', nullable: false, onDelete: 'CASCADE')]
     private ?AppelOffresPersonnelCle $appelOffresPersonnelCle = null;
@@ -27,6 +30,17 @@ class AppelOffresPersonnelCleAppelOffres
     public function getId(): ?int
     {
         return $this->id;
+    }
+
+    public function getOrdreAffichage(): ?int
+    {
+        return $this->ordreAffichage;
+    }
+
+    public function setOrdreAffichage(?int $ordreAffichage): self
+    {
+        $this->ordreAffichage = $ordreAffichage;
+        return $this;
     }
 
     public function getAppelOffres(): ?AppelOffres
