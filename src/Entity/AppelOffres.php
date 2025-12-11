@@ -113,6 +113,10 @@ class AppelOffres
         'GAGNE' => 'Gagné',
     ];
 
+    #[ORM\ManyToOne(targetEntity: SourceAppelOffres::class, inversedBy: 'appelOffres')]
+    #[ORM\JoinColumn(name: 'sourceAppelOffresId', referencedColumnName: 'sourceAppelOffresId', nullable: true)]
+    private ?SourceAppelOffres $sourceAppelOffres = null;
+
     public function __construct()
     {
         $this->appelOffresPartenaires = new ArrayCollection();
@@ -235,6 +239,17 @@ class AppelOffres
                 $item->setAppelOffres(null);
             }
         }
+        return $this;
+    }
+
+    public function getSourceAppelOffres(): ?SourceAppelOffres
+    {
+        return $this->sourceAppelOffres;
+    }
+
+    public function setSourceAppelOffres(?SourceAppelOffres $source): self
+    {
+        $this->sourceAppelOffres = $source;
         return $this;
     }
 }

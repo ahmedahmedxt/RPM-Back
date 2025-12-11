@@ -20,6 +20,10 @@ class ReferenceCollaborateur
     #[ORM\JoinColumn(name: "collaborateurId", referencedColumnName: "collaborateurId", nullable: true)]
     private ?Collaborateur $collaborateur = null;
 
+    #[ORM\ManyToOne(targetEntity: Reference::class, inversedBy: 'referenceCollaborateurs')]
+    #[ORM\JoinColumn(name: "reference_id", referencedColumnName: "referenceID", nullable: false)]
+    private ?Reference $reference = null;
+
     public function getId(): ?int
     {
         return $this->ireferenceCollaborateurid;
