@@ -28,6 +28,9 @@ class AppelOffresPersonnelCle
     #[ORM\Column(type: "integer", nullable: true, name: "appelOffresPersonnelCleNbrAnneeExperience")]
     private ?int $appelOffresPersonnelCleNbrAnneeExperience = null;
 
+    #[ORM\Column(type: "integer", nullable: true, name: "appelOffresPersonnelCleCollaborateursCount", options: ["default" => 0])]
+    private ?int $appelOffresPersonnelCleCollaborateursCount = 0;
+
     #[ORM\ManyToOne(targetEntity: NiveauEtude::class)]
     #[ORM\JoinColumn(name: "niveauEtudeId", referencedColumnName: "niveauEtudeId", nullable: true, onDelete: "SET NULL")]
     private ?NiveauEtude $niveauEtude = null;
@@ -87,6 +90,17 @@ class AppelOffresPersonnelCle
     public function setAppelOffresPersonnelCleNbrAnneeExperience(?int $appelOffresPersonnelCleNbrAnneeExperience): void
     {
         $this->appelOffresPersonnelCleNbrAnneeExperience = $appelOffresPersonnelCleNbrAnneeExperience;
+    }
+
+    public function getAppelOffresPersonnelCleCollaborateursCount(): ?int
+    {
+        return $this->appelOffresPersonnelCleCollaborateursCount ?? 0;
+    }
+
+    public function setAppelOffresPersonnelCleCollaborateursCount(?int $appelOffresPersonnelCleCollaborateursCount): self
+    {
+        $this->appelOffresPersonnelCleCollaborateursCount = $appelOffresPersonnelCleCollaborateursCount ?? 0;
+        return $this;
     }
 
     public function getNiveauEtude(): ?NiveauEtude

@@ -22,13 +22,16 @@ class TypeDocument
     #[ORM\OneToMany(targetEntity: ReferenceDocuments::class, mappedBy: 'typeDocument')]
     private Collection $referenceDocuments;
 
-    #[ORM\OneToMany(targetEntity: EmployeDocuments::class, mappedBy: 'employeDocumentsType')]
-    private Collection $employeDocuments;
+
+
+    #[ORM\OneToMany(targetEntity: CollaborateurDocuments::class, mappedBy: 'collaborateurDocumentsType')]
+    private Collection $collaborateurDocuments;
+    
 
     public function __construct()
     {
         $this->referenceDocuments = new ArrayCollection();
-        $this->employeDocuments = new ArrayCollection();
+        $this->collaborateurDocuments = new ArrayCollection();
     }
 
     public function getTypeDocumentId(): ?int
@@ -47,6 +50,31 @@ class TypeDocument
 
         return $this;
     }
+
+    public function getCollaborateurDocuments(): Collection
+    {
+        return $this->collaborateurDocuments;
+    }
+    
+    public function addCollaborateurDocument(CollaborateurDocuments $collaborateurDocument): static
+    {
+        if (!$this->collaborateurDocuments->contains($collaborateurDocument)) {
+            $this->collaborateurDocuments->add($collaborateurDocument);
+            $collaborateurDocument->setCollaborateurDocumentsType($this);
+        }
+        return $this;
+    }
+    
+    public function removeCollaborateurDocument(CollaborateurDocuments $collaborateurDocument): static
+    {
+        if ($this->collaborateurDocuments->removeElement($collaborateurDocument)) {
+            if ($collaborateurDocument->getCollaborateurDocumentsType() === $this) {
+                $collaborateurDocument->setCollaborateurDocumentsType(null);
+            }
+        }
+        return $this;
+    }
+
 
     /**
      * @return Collection<int, ReferenceDocuments>
