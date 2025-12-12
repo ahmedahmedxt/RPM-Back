@@ -30,7 +30,8 @@ class AppelOffresPersonnelCle
 
     #[ORM\Column(type: "integer", nullable: true, name: "appelOffresPersonnelCleCollaborateursCount", options: ["default" => 0])]
     private ?int $appelOffresPersonnelCleCollaborateursCount = 0;
-
+    #[ORM\Column(type: "string", length: 10, nullable: true, name: "appelOffresPersonnelCleNumeroKey")]
+    private ?string $appelOffresPersonnelCleNumeroKey = null;
     #[ORM\ManyToOne(targetEntity: NiveauEtude::class)]
     #[ORM\JoinColumn(name: "niveauEtudeId", referencedColumnName: "niveauEtudeId", nullable: true, onDelete: "SET NULL")]
     private ?NiveauEtude $niveauEtude = null;
@@ -61,7 +62,16 @@ class AppelOffresPersonnelCle
     {
         $this->appelOffresPersonnelCleIntitule = $appelOffresPersonnelCleIntitule;
     }
-
+    public function getAppelOffresPersonnelCleNumeroKey(): ?string
+    {
+        return $this->appelOffresPersonnelCleNumeroKey;
+    }
+    
+    public function setAppelOffresPersonnelCleNumeroKey(?string $appelOffresPersonnelCleNumeroKey): self
+    {
+        $this->appelOffresPersonnelCleNumeroKey = $appelOffresPersonnelCleNumeroKey;
+        return $this;
+    }
     public function getAppelOffresPersonnelCleDescription(): ?string
     {
         return $this->appelOffresPersonnelCleDescription;

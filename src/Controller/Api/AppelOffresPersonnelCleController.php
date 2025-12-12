@@ -35,6 +35,49 @@ class AppelOffresPersonnelCleController extends AbstractController
         $this->serializer = $serializer;
     }
 
+    private function getNextNumeroKey(int $appelOffresId, AppelOffresPersonnelCleAppelOffresRepository $liaisonRepository): string
+    {
+        $liaisons = $liaisonRepository->findBy(
+            ['appelOffres' => $appelOffresId],
+            ['ordreAffichage' => 'ASC', 'id' => 'ASC']
+        );
+
+        $maxNumero = 0;
+        foreach ($liaisons as $liaison) {
+            $pc = $liaison->getAppelOffresPersonnelCle();
+            if ($pc && $pc->getAppelOffresPersonnelCleNumeroKey()) {
+                $numeroKey = $pc->getAppelOffresPersonnelCleNumeroKey();
+                if (preg_match('/^K(\d+)$/', $numeroKey, $matches)) {
+                    $numero = (int)$matches[1];
+                    if ($numero > $maxNumero) {
+                        $maxNumero = $numero;
+                    }
+                }
+            }
+        }
+
+        return 'K' . ($maxNumero + 1);
+    }
+
+    private function recalculateNumeroKeys(int $appelOffresId, AppelOffresPersonnelCleAppelOffresRepository $liaisonRepository, AppelOffresPersonnelCleRepository $pcRepository): void
+    {
+        $liaisons = $liaisonRepository->findBy(
+            ['appelOffres' => $appelOffresId],
+            ['ordreAffichage' => 'ASC', 'id' => 'ASC']
+        );
+
+        $numero = 1;
+        foreach ($liaisons as $liaison) {
+            $pc = $liaison->getAppelOffresPersonnelCle();
+            if ($pc) {
+                $pc->setAppelOffresPersonnelCleNumeroKey('K' . $numero);
+                $numero++;
+            }
+        }
+
+        $this->entityManager->flush();
+    }
+
     #[Route('', name: 'get_all', methods: ['GET'])]
     public function getAll(
         AppelOffresPersonnelCleRepository $repository,
@@ -72,7 +115,6 @@ class AppelOffresPersonnelCleController extends AbstractController
                             $ordreAffichage = $liaison->getOrdreAffichage();
                         }
 
-                        // Compter les collaborateurs affectés à ce personnel clé pour cet appel d'offre
                         $assignes = $liaisonRepository->countCollaborateurs($appelOffresIdInt, $appelOffresPersonnelCle->getAppelOffresPersonnelCleId());
                     }
                 }
@@ -95,14 +137,15 @@ class AppelOffresPersonnelCleController extends AbstractController
                     'appelOffresPersonnelCleNiveauEtudeMin' => $appelOffresPersonnelCle->getAppelOffresPersonnelCleNiveauEtudeMin() ?? '',
                     'appelOffresPersonnelCleNbrAnneeExperience' => $appelOffresPersonnelCle->getAppelOffresPersonnelCleNbrAnneeExperience(),
                     'appelOffresPersonnelCleCouleurStatus' => $couleurStatus,
+                    'appelOffresPersonnelCleNumeroKey' => $appelOffresPersonnelCle->getAppelOffresPersonnelCleNumeroKey() ?? null,
                     'ordreAffichage' => $ordreAffichage,
                     'appelOffresId' => $appelOffres ? $appelOffres->getAppelOffresId() : null,
                     'appelOffresObjet' => $appelOffres ? $appelOffres->getAppelOffresObjet() : null,
                     'niveauEtudeId' => $niveauEtude ? $niveauEtude->getNiveauEtudeId() : null,
                     'niveauEtudeLibelle' => $niveauEtude ? $niveauEtude->getNiveauEtudeLibelle() : null,
                     'collaborateurs' => $collaborateursData,
-                    'collaborateursCount' => $appelOffresPersonnelCle->getAppelOffresPersonnelCleCollaborateursCount() ?? 0, // quota
-                    'collaborateursAssignes' => $assignes // compteur affectés
+                    'collaborateursCount' => $appelOffresPersonnelCle->getAppelOffresPersonnelCleCollaborateursCount() ?? 0,
+                    'collaborateursAssignes' => $assignes
                 ];
             }
 
@@ -131,7 +174,6 @@ class AppelOffresPersonnelCleController extends AbstractController
                 return new JsonResponse(['message' => 'AppelOffres not found'], Response::HTTP_NOT_FOUND);
             }
 
-            // Trier par ordreAffichage asc, puis id asc (si ordreAffichage est nul)
             $liaisons = $liaisonRepository->findBy(
                 ['appelOffres' => $appelOffres],
                 ['ordreAffichage' => 'ASC', 'id' => 'ASC']
@@ -144,8 +186,6 @@ class AppelOffresPersonnelCleController extends AbstractController
                     continue;
                 }
 
-                // Recharger l'entité depuis le repository au lieu d'utiliser refresh()
-                // Cela garantit que toutes les colonnes sont chargées correctement
                 $appelOffresPersonnelCle = $repository->find($appelOffresPersonnelCle->getAppelOffresPersonnelCleId());
                 if (!$appelOffresPersonnelCle) {
                     continue;
@@ -168,10 +208,8 @@ class AppelOffresPersonnelCleController extends AbstractController
                     ];
                 }
 
-                // compter les collaborateurs affectés à ce PC pour cet AO
                 $assignes = $liaisonRepository->countCollaborateurs($appelOffresId, $appelOffresPersonnelCle->getAppelOffresPersonnelCleId());
 
-                // Récupérer collaborateursCount directement depuis l'entité (sans refresh)
                 $collaborateursCount = $appelOffresPersonnelCle->getAppelOffresPersonnelCleCollaborateursCount();
                 if ($collaborateursCount === null) {
                     $collaborateursCount = 0;
@@ -184,6 +222,7 @@ class AppelOffresPersonnelCleController extends AbstractController
                     'appelOffresPersonnelCleNiveauEtudeMin' => $appelOffresPersonnelCle->getAppelOffresPersonnelCleNiveauEtudeMin() ?? '',
                     'appelOffresPersonnelCleNbrAnneeExperience' => $appelOffresPersonnelCle->getAppelOffresPersonnelCleNbrAnneeExperience(),
                     'appelOffresPersonnelCleCouleurStatus' => $couleurStatus,
+                    'appelOffresPersonnelCleNumeroKey' => $appelOffresPersonnelCle->getAppelOffresPersonnelCleNumeroKey() ?? null,
                     'ordreAffichage' => $ordreAffichage,
                     'appelOffresId' => $appelOffres->getAppelOffresId(),
                     'appelOffresObjet' => $appelOffres->getAppelOffresObjet(),
@@ -200,7 +239,7 @@ class AppelOffresPersonnelCleController extends AbstractController
         } catch (\Exception $e) {
             return new JsonResponse([
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(), // Ajouter la trace pour debug
+                'trace' => $e->getTraceAsString(),
                 'data' => []
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
@@ -238,6 +277,7 @@ class AppelOffresPersonnelCleController extends AbstractController
                 'appelOffresPersonnelCleDescription' => $appelOffresPersonnelCle->getAppelOffresPersonnelCleDescription() ?? '',
                 'appelOffresPersonnelCleNiveauEtudeMin' => $appelOffresPersonnelCle->getAppelOffresPersonnelCleNiveauEtudeMin() ?? '',
                 'appelOffresPersonnelCleNbrAnneeExperience' => $appelOffresPersonnelCle->getAppelOffresPersonnelCleNbrAnneeExperience(),
+                'appelOffresPersonnelCleNumeroKey' => $appelOffresPersonnelCle->getAppelOffresPersonnelCleNumeroKey() ?? null,
                 'niveauEtudeId' => $niveauEtude ? $niveauEtude->getNiveauEtudeId() : null,
                 'niveauEtudeLibelle' => $niveauEtude ? $niveauEtude->getNiveauEtudeLibelle() : null,
                 'collaborateurs' => $collaborateursData,
@@ -272,7 +312,6 @@ class AppelOffresPersonnelCleController extends AbstractController
             $appelOffresPersonnelCle->setAppelOffresPersonnelCleNiveauEtudeMin($data['appelOffresPersonnelCleNiveauEtudeMin'] ?? null);
             $appelOffresPersonnelCle->setAppelOffresPersonnelCleNbrAnneeExperience($data['appelOffresPersonnelCleNbrAnneeExperience'] ?? null);
             
-            // S'assurer que collaborateursCount est toujours défini (même si 0)
             $collaborateursCount = isset($data['collaborateursCount']) ? (int)$data['collaborateursCount'] : 0;
             $appelOffresPersonnelCle->setAppelOffresPersonnelCleCollaborateursCount($collaborateursCount);
 
@@ -289,13 +328,23 @@ class AppelOffresPersonnelCleController extends AbstractController
             if (isset($data['appelOffresId']) && $data['appelOffresId'] !== null) {
                 $appelOffres = $appelOffresRepository->find($data['appelOffresId']);
                 if ($appelOffres) {
+                    $numeroKey = $this->getNextNumeroKey($data['appelOffresId'], $liaisonRepository);
+                    $appelOffresPersonnelCle->setAppelOffresPersonnelCleNumeroKey($numeroKey);
+                    
                     $liaison = new AppelOffresPersonnelCleAppelOffres();
                     $liaison->setAppelOffres($appelOffres);
                     $liaison->setAppelOffresPersonnelCle($appelOffresPersonnelCle);
                     $liaison->setCouleurStatus($data['appelOffresPersonnelCleCouleurStatus'] ?? null);
-                    if (isset($data['ordreAffichage'])) {
-                        $liaison->setOrdreAffichage($data['ordreAffichage']);
+                    
+                    $maxOrdre = 0;
+                    $liaisons = $liaisonRepository->findBy(['appelOffres' => $appelOffres]);
+                    foreach ($liaisons as $l) {
+                        if ($l->getOrdreAffichage() !== null && $l->getOrdreAffichage() > $maxOrdre) {
+                            $maxOrdre = $l->getOrdreAffichage();
+                        }
                     }
+                    $liaison->setOrdreAffichage($maxOrdre + 1);
+                    
                     $this->entityManager->persist($liaison);
                     $this->entityManager->flush();
                 }
@@ -320,76 +369,72 @@ class AppelOffresPersonnelCleController extends AbstractController
     }
 
     #[Route('/{id}', name: 'update', methods: ['PUT'])]
-public function update(
-    int $id,
-    Request $request,
-    AppelOffresPersonnelCleRepository $repository,
-    AppelOffresRepository $appelOffresRepository,
-    NiveauEtudeRepository $niveauEtudeRepository,
-    AppelOffresPersonnelCleAppelOffresRepository $liaisonRepository,
-    TokenStorageInterface $tokenStorage
-): JsonResponse {
-    try {
-        $appelOffresPersonnelCle = $repository->find($id);
+    public function update(
+        int $id,
+        Request $request,
+        AppelOffresPersonnelCleRepository $repository,
+        AppelOffresRepository $appelOffresRepository,
+        NiveauEtudeRepository $niveauEtudeRepository,
+        AppelOffresPersonnelCleAppelOffresRepository $liaisonRepository,
+        TokenStorageInterface $tokenStorage
+    ): JsonResponse {
+        try {
+            $appelOffresPersonnelCle = $repository->find($id);
 
-        if (!$appelOffresPersonnelCle) {
-            return new JsonResponse(['message' => 'AppelOffresPersonnelCle not found'], Response::HTTP_NOT_FOUND);
-        }
+            if (!$appelOffresPersonnelCle) {
+                return new JsonResponse(['message' => 'AppelOffresPersonnelCle not found'], Response::HTTP_NOT_FOUND);
+            }
 
-        $data = json_decode($request->getContent(), true);
+            $data = json_decode($request->getContent(), true);
 
-        // Update only the basic fields
-        $appelOffresPersonnelCle->setAppelOffresPersonnelCleIntitule($data['appelOffresPersonnelCleIntitule'] ?? $appelOffresPersonnelCle->getAppelOffresPersonnelCleIntitule());
-        $appelOffresPersonnelCle->setAppelOffresPersonnelCleDescription($data['appelOffresPersonnelCleDescription'] ?? $appelOffresPersonnelCle->getAppelOffresPersonnelCleDescription());
-        $appelOffresPersonnelCle->setAppelOffresPersonnelCleNiveauEtudeMin($data['appelOffresPersonnelCleNiveauEtudeMin'] ?? $appelOffresPersonnelCle->getAppelOffresPersonnelCleNiveauEtudeMin());
-        $appelOffresPersonnelCle->setAppelOffresPersonnelCleNbrAnneeExperience($data['appelOffresPersonnelCleNbrAnneeExperience'] ?? $appelOffresPersonnelCle->getAppelOffresPersonnelCleNbrAnneeExperience());
-        
-        if (isset($data['collaborateursCount'])) {
-            $appelOffresPersonnelCle->setAppelOffresPersonnelCleCollaborateursCount($data['collaborateursCount']);
-        }
+            $appelOffresPersonnelCle->setAppelOffresPersonnelCleIntitule($data['appelOffresPersonnelCleIntitule'] ?? $appelOffresPersonnelCle->getAppelOffresPersonnelCleIntitule());
+            $appelOffresPersonnelCle->setAppelOffresPersonnelCleDescription($data['appelOffresPersonnelCleDescription'] ?? $appelOffresPersonnelCle->getAppelOffresPersonnelCleDescription());
+            $appelOffresPersonnelCle->setAppelOffresPersonnelCleNiveauEtudeMin($data['appelOffresPersonnelCleNiveauEtudeMin'] ?? $appelOffresPersonnelCle->getAppelOffresPersonnelCleNiveauEtudeMin());
+            $appelOffresPersonnelCle->setAppelOffresPersonnelCleNbrAnneeExperience($data['appelOffresPersonnelCleNbrAnneeExperience'] ?? $appelOffresPersonnelCle->getAppelOffresPersonnelCleNbrAnneeExperience());
+            
+            if (isset($data['collaborateursCount'])) {
+                $appelOffresPersonnelCle->setAppelOffresPersonnelCleCollaborateursCount($data['collaborateursCount']);
+            }
 
-        // Update niveau d'étude if provided
-        if (isset($data['niveauEtudeId'])) {
-            if ($data['niveauEtudeId'] === null) {
-                $appelOffresPersonnelCle->setNiveauEtude(null);
-            } else {
-                $niveauEtude = $niveauEtudeRepository->find($data['niveauEtudeId']);
-                if ($niveauEtude) {
-                    $appelOffresPersonnelCle->setNiveauEtude($niveauEtude);
+            if (isset($data['niveauEtudeId'])) {
+                if ($data['niveauEtudeId'] === null) {
+                    $appelOffresPersonnelCle->setNiveauEtude(null);
+                } else {
+                    $niveauEtude = $niveauEtudeRepository->find($data['niveauEtudeId']);
+                    if ($niveauEtude) {
+                        $appelOffresPersonnelCle->setNiveauEtude($niveauEtude);
+                    }
                 }
             }
-        }
 
-        // Mettre à jour l'ordre / couleur si appelOffresId et liaison visée
-        if (isset($data['appelOffresId'])) {
-            $appelOffres = $appelOffresRepository->find($data['appelOffresId']);
-            if ($appelOffres) {
-                $liaison = $liaisonRepository->findOneBy([
-                    'appelOffres' => $appelOffres,
-                    'appelOffresPersonnelCle' => $appelOffresPersonnelCle
-                ]);
+            if (isset($data['appelOffresId'])) {
+                $appelOffres = $appelOffresRepository->find($data['appelOffresId']);
+                if ($appelOffres) {
+                    $liaison = $liaisonRepository->findOneBy([
+                        'appelOffres' => $appelOffres,
+                        'appelOffresPersonnelCle' => $appelOffresPersonnelCle
+                    ]);
 
-                if ($liaison && isset($data['ordreAffichage'])) {
-                    $liaison->setOrdreAffichage($data['ordreAffichage']);
-                }
-                if ($liaison && isset($data['appelOffresPersonnelCleCouleurStatus'])) {
-                    $liaison->setCouleurStatus($data['appelOffresPersonnelCleCouleurStatus']);
+                    if ($liaison && isset($data['ordreAffichage'])) {
+                        $liaison->setOrdreAffichage($data['ordreAffichage']);
+                    }
+                    if ($liaison && isset($data['appelOffresPersonnelCleCouleurStatus'])) {
+                        $liaison->setCouleurStatus($data['appelOffresPersonnelCleCouleurStatus']);
+                    }
                 }
             }
+
+            $this->entityManager->flush();
+
+            return new JsonResponse(['message' => 'AppelOffresPersonnelCle updated'], Response::HTTP_OK);
+
+        } catch (\Exception $e) {
+            return new JsonResponse([
+                'error' => $e->getMessage(),
+                'message' => 'Erreur lors de la mise à jour de l\'appel d\'offres personnel clé'
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
-
-        $this->entityManager->flush();
-
-        return new JsonResponse(['message' => 'AppelOffresPersonnelCle updated'], Response::HTTP_OK);
-
-    } catch (\Exception $e) {
-        return new JsonResponse([
-            'error' => $e->getMessage(),
-            'message' => 'Erreur lors de la mise à jour de l\'appel d\'offres personnel clé'
-        ], Response::HTTP_INTERNAL_SERVER_ERROR);
     }
-} 
-
 
     #[Route('/{id}/couleur', name: 'update_couleur', methods: ['PUT'])]
     public function updateCouleur(
@@ -464,7 +509,6 @@ public function update(
 
             $data = json_decode($request->getContent(), true);
 
-            // Quota check : si appelOffresId fourni
             $appelOffresId = $data['appelOffresId'] ?? null;
             $assignes = 0;
             $quota = 0;
@@ -474,14 +518,11 @@ public function update(
                 $quota = $appelOffresPersonnelCle->getAppelOffresPersonnelCleCollaborateursCount() ?? 0;
             }
 
-            // Gérer plusieurs collaborateurs (tableau) ou un seul (rétrocompatibilité)
             $collaborateurIds = [];
             
             if (isset($data['collaborateurIds']) && is_array($data['collaborateurIds'])) {
-                // Nouveau format : tableau d'IDs
                 $collaborateurIds = array_map('intval', $data['collaborateurIds']);
             } elseif (isset($data['collaborateurId'])) {
-                // Ancien format : un seul ID (rétrocompatibilité)
                 $collaborateurIds = [$data['collaborateurId']];
             }
 
@@ -489,7 +530,6 @@ public function update(
                 return new JsonResponse(['message' => 'Aucun collaborateur fourni'], Response::HTTP_BAD_REQUEST);
             }
 
-            // Vérifier le quota avant d'ajouter
             if ($quota > 0) {
                 $nouveauxCollaborateurs = count($collaborateurIds);
                 $totalApresAjout = $assignes + $nouveauxCollaborateurs;
@@ -502,7 +542,6 @@ public function update(
                 }
             }
 
-            // Ajouter les collaborateurs (sans supprimer les existants)
             $addedCount = 0;
             $skippedCount = 0;
             
@@ -514,17 +553,14 @@ public function update(
                     continue;
                 }
 
-                // Vérifier si le collaborateur n'est pas déjà associé à ce personnel clé
                 $dejaAssocie = $collaborateur->getAppelOffresPersonnelCle() === $appelOffresPersonnelCle;
                 
                 if (!$dejaAssocie) {
-                    // Retirer le collaborateur de son ancien personnel clé si nécessaire
                     $ancienPersonnelCle = $collaborateur->getAppelOffresPersonnelCle();
                     if ($ancienPersonnelCle) {
                         $ancienPersonnelCle->removeCollaborateur($collaborateur);
                     }
                     
-                    // Ajouter au nouveau personnel clé
                     $appelOffresPersonnelCle->addCollaborateur($collaborateur);
                     $addedCount++;
                 } else {
@@ -534,7 +570,6 @@ public function update(
 
             $this->entityManager->flush();
 
-            // Mettre à jour la couleur de la liaison si appelOffresId fourni
             if ($appelOffresId) {
                 $appelOffres = $appelOffresRepository->find($appelOffresId);
                 if ($appelOffres) {
@@ -550,7 +585,6 @@ public function update(
                         $this->entityManager->persist($liaison);
                     }
 
-                    // Mettre à jour la couleur selon le nombre de collaborateurs
                     $totalCollaborateurs = count($appelOffresPersonnelCle->getCollaborateurs());
                     if ($totalCollaborateurs > 0) {
                         $liaison->setCouleurStatus('vert');
@@ -606,16 +640,13 @@ public function update(
                 return new JsonResponse(['message' => 'Collaborateur not found'], Response::HTTP_NOT_FOUND);
             }
 
-            // Vérifier que le collaborateur est bien associé à ce personnel clé
             if ($collaborateur->getAppelOffresPersonnelCle() !== $appelOffresPersonnelCle) {
                 return new JsonResponse(['message' => 'Ce collaborateur n\'est pas associé à ce personnel clé'], Response::HTTP_BAD_REQUEST);
             }
 
-            // Retirer le collaborateur
             $appelOffresPersonnelCle->removeCollaborateur($collaborateur);
             $this->entityManager->flush();
 
-            // Mettre à jour la couleur de la liaison si appelOffresId fourni
             $appelOffresId = $request->query->get('appelOffresId');
             if ($appelOffresId) {
                 $appelOffres = $appelOffresRepository->find($appelOffresId);
@@ -652,7 +683,8 @@ public function update(
         int $appelOffresId,
         Request $request,
         AppelOffresRepository $appelOffresRepository,
-        AppelOffresPersonnelCleAppelOffresRepository $liaisonRepository
+        AppelOffresPersonnelCleAppelOffresRepository $liaisonRepository,
+        AppelOffresPersonnelCleRepository $pcRepository
     ): JsonResponse {
         try {
             $appelOffres = $appelOffresRepository->find($appelOffresId);
@@ -665,7 +697,6 @@ public function update(
                 return new JsonResponse(['message' => 'Payload invalide'], Response::HTTP_BAD_REQUEST);
             }
 
-            // Payload attendu : [{ appelOffresPersonnelCleId: X, ordreAffichage: Y }, ...]
             foreach ($payload as $item) {
                 if (!isset($item['appelOffresPersonnelCleId'])) {
                     continue;
@@ -684,6 +715,8 @@ public function update(
             }
 
             $this->entityManager->flush();
+
+            $this->recalculateNumeroKeys($appelOffresId, $liaisonRepository, $pcRepository);
 
             return new JsonResponse(['message' => 'Ordre mis à jour'], Response::HTTP_OK);
 
