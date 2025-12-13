@@ -519,7 +519,7 @@ class ReferenceController extends AbstractController
                 return $this->json(['error' => 'Invalid categorieId'], 400);
             }
 
-            if ($oldCategorie && $cat->getCategorieId() !== $oldCategorie->getCategorieId()) {
+            if ($oldCategorie && $cat->getId() !== $oldCategorie->getId()) {
                 if (!array_key_exists('referenceOrdre', $data) && method_exists($ref, 'setReferenceOrdre')) {
                     $ref->setReferenceOrdre($this->getNextOrdreForCategorie($cat));
                 }
