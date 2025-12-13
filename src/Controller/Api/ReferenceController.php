@@ -22,6 +22,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\HttpFoundation\Response;
 
 #[Route('/api/reference')]
 class ReferenceController extends AbstractController
@@ -30,6 +31,38 @@ class ReferenceController extends AbstractController
         private ReferenceRepository $referenceRepository,
         private EntityManagerInterface $em,
     ) {}
+
+    private function getNextOrdreForCategorie(Categorie $cat): int
+    {
+        $max = (int) $this->referenceRepository->createQueryBuilder('r')
+            ->select('COALESCE(MAX(r.referenceOrdre), 0)')
+            ->where('r.categorie = :cat')
+            ->setParameter('cat', $cat)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        return $max + 1;
+    }
+
+    private function shiftOrdresForInsert(Categorie $cat, int $ordreWanted, ?int $excludeReferenceId = null): void
+    {
+        $ordreWanted = max(1, $ordreWanted);
+
+        $qb = $this->em->createQueryBuilder()
+            ->update(Reference::class, 'r')
+            ->set('r.referenceOrdre', 'r.referenceOrdre + 1')
+            ->where('r.categorie = :cat')
+            ->andWhere('r.referenceOrdre >= :ordre')
+            ->setParameter('cat', $cat)
+            ->setParameter('ordre', $ordreWanted);
+
+        if ($excludeReferenceId) {
+            $qb->andWhere('r.referenceID != :rid')
+               ->setParameter('rid', $excludeReferenceId);
+        }
+
+        $qb->getQuery()->execute();
+    }
 
     private function serializeReference(Reference $ref): array
     {
@@ -63,6 +96,8 @@ class ReferenceController extends AbstractController
         return [
             'referenceID'   => $ref->getReferenceID(),
             'referenceRef'  => $ref->getReferenceRef(),
+            'referenceOrdre' => $ref->getReferenceOrdre(),
+
             'referenceTitre' => $ref->getReferenceTitre(),
             'referenceLibelle' => $ref->getReferenceLibelle(),
             'referenceUrlFonctionnel' => $ref->getReferenceUrlFonctionnel(),
@@ -78,10 +113,12 @@ class ReferenceController extends AbstractController
             'referenceBudget' => $ref->getReferenceBudget(),
             'referencePartBudget' => $ref->getReferencePartBudget(),
             'referenceRemarque' => $ref->getReferenceRemarque(),
+
             'pays'      => $paysData,
             'lieu'      => $lieuData,
             'devises'   => $devData,
             'categorie' => $catData,
+
             'bailleursFond' => array_map(
                 fn (BailleurFond $b) => [
                     'id'       => $b->getBailleurFondId(),
@@ -161,12 +198,16 @@ class ReferenceController extends AbstractController
         $sortDir   = strtolower((string) $request->query->get('sortDir', 'asc')) === 'desc' ? 'DESC' : 'ASC';
         $search    = trim((string) $request->query->get('search', ''));
 
+        $categorieId = (int) $request->query->get('categorieId', 0);
+
         $allowedSortFields = [
             'referenceID',
             'referenceRef',
             'referenceTitre',
             'referenceDateDemarrage',
-            'referenceBudget',
+            'referenceDureeExecution',
+            'referenceDateAchevement',
+            'referenceOrdre',
         ];
         if (!in_array($sortField, $allowedSortFields, true)) {
             $sortField = 'referenceID';
@@ -174,26 +215,30 @@ class ReferenceController extends AbstractController
 
         $qb = $this->referenceRepository->createQueryBuilder('r');
 
+        if ($categorieId > 0) {
+            $qb->andWhere('IDENTITY(r.categorie) = :catId')
+            ->setParameter('catId', $categorieId);
+
+            $clientRequestedSort = $request->query->has('sortField') && $request->query->get('sortField') !== null && $request->query->get('sortField') !== '';
+            if (!$clientRequestedSort) {
+                $sortField = 'referenceOrdre';
+                $sortDir   = 'ASC';
+            }
+        }
+
         if ($search !== '') {
             $qb->andWhere(
-                'r.referenceRef LIKE :s 
-                OR r.referenceTitre LIKE :s 
-                OR r.referenceLibelle LIKE :s'
-            )
-            ->setParameter('s', '%' . $search . '%');
+                'r.referenceRef LIKE :s OR r.referenceTitre LIKE :s OR r.referenceLibelle LIKE :s OR r.referenceDureeExecution LIKE :s OR r.referenceDateDemarrage LIKE :s OR r.referenceDateAchevement LIKE :s'
+            )->setParameter('s', '%' . $search . '%');
         }
 
         $qbCount = clone $qb;
-        $total = (int) $qbCount
-            ->select('COUNT(r.referenceID)')
-            ->getQuery()
-            ->getSingleScalarResult();
+        $total = (int) $qbCount->select('COUNT(r.referenceID)')->getQuery()->getSingleScalarResult();
 
         $qb->orderBy('r.' . $sortField, $sortDir)
         ->setFirstResult(($page - 1) * $size)
         ->setMaxResults($size);
 
-        /** @var Reference[] $refs */
         $refs = $qb->getQuery()->getResult();
 
         return $this->json([
@@ -202,6 +247,7 @@ class ReferenceController extends AbstractController
             'page'  => $page,
         ]);
     }
+
 
     #[Route('/{id}', name: 'ref_one', methods: ['GET'])]
     public function getOne(int $id): JsonResponse
@@ -219,7 +265,6 @@ class ReferenceController extends AbstractController
         $data = json_decode($req->getContent(), true);
         $ref = new Reference();
 
-        $ref->setReferenceRef($data['referenceRef'] ?? null);
         $ref->setReferenceTitre($data['referenceTitre'] ?? null);
         $ref->setReferenceLibelle($data['referenceLibelle'] ?? null);
         $ref->setReferenceUrlFonctionnel($data['referenceUrlFonctionnel'] ?? null);
@@ -259,10 +304,33 @@ class ReferenceController extends AbstractController
             }
         }
 
-        if (!empty($data['categorieId'])) {
-            $cat = $this->em->getRepository(Categorie::class)->find($data['categorieId']);
-            if ($cat) {
-                $ref->setCategorie($cat);
+        if (empty($data['categorieId'])) {
+            return $this->json(['error' => 'categorieId is required'], 400);
+        }
+
+        $cat = $this->em->getRepository(Categorie::class)->find($data['categorieId']);
+        if (!$cat) {
+            return $this->json(['error' => 'Invalid categorieId'], 400);
+        }
+        $ref->setCategorie($cat);
+
+        $ordreWanted = !empty($data['referenceOrdre']) ? (int) $data['referenceOrdre'] : null;
+
+        if ($ordreWanted && method_exists($ref, 'setReferenceOrdre')) {
+            $this->shiftOrdresForInsert($cat, $ordreWanted, null);
+            $ref->setReferenceOrdre($ordreWanted);
+        } else {
+            $next = $this->getNextOrdreForCategorie($cat);
+            if (method_exists($ref, 'setReferenceOrdre')) {
+                $ref->setReferenceOrdre($next);
+            }
+        }
+
+        if (method_exists($ref, 'rebuildReferenceRefFromCategorieShort')) {
+            try {
+                $ref->rebuildReferenceRefFromCategorieShort($cat->getCategorieShort());
+            } catch (\Throwable $e) {
+                $ref->rebuildReferenceRefFromCategorieShort();
             }
         }
 
@@ -335,6 +403,7 @@ class ReferenceController extends AbstractController
         return $this->json([
             'success' => true,
             'id'      => $ref->getReferenceID(),
+            'data'    => $this->serializeReference($ref),
         ]);
     }
 
@@ -348,9 +417,22 @@ class ReferenceController extends AbstractController
 
         $data = json_decode($req->getContent(), true);
 
-        if (array_key_exists('referenceRef', $data)) {
-            $ref->setReferenceRef($data['referenceRef']);
+        $needRebuildRef = false;
+        $oldCategorie = $ref->getCategorie();
+
+        if (array_key_exists('referenceOrdre', $data) && method_exists($ref, 'setReferenceOrdre')) {
+            $wanted = (int) $data['referenceOrdre'];
+            $wanted = max(1, $wanted);
+
+            $catForShift = $ref->getCategorie();
+            if ($catForShift) {
+                $this->shiftOrdresForInsert($catForShift, $wanted, $ref->getReferenceID());
+            }
+
+            $ref->setReferenceOrdre($wanted);
+            $needRebuildRef = true;
         }
+
         if (array_key_exists('referenceTitre', $data)) {
             $ref->setReferenceTitre($data['referenceTitre']);
         }
@@ -432,7 +514,20 @@ class ReferenceController extends AbstractController
             $cat = $data['categorieId']
                 ? $this->em->getRepository(Categorie::class)->find($data['categorieId'])
                 : null;
+
+            if (!$cat) {
+                return $this->json(['error' => 'Invalid categorieId'], 400);
+            }
+
+            if ($oldCategorie && $cat->getCategorieId() !== $oldCategorie->getCategorieId()) {
+                if (!array_key_exists('referenceOrdre', $data) && method_exists($ref, 'setReferenceOrdre')) {
+                    $ref->setReferenceOrdre($this->getNextOrdreForCategorie($cat));
+                }
+                $needRebuildRef = true;
+            }
+
             $ref->setCategorie($cat);
+            $needRebuildRef = true;
         }
 
         if (array_key_exists('bailleurFondIds', $data)) {
@@ -519,10 +614,178 @@ class ReferenceController extends AbstractController
             }
         }
 
+        if ($needRebuildRef && method_exists($ref, 'rebuildReferenceRefFromCategorieShort')) {
+            $cat = $ref->getCategorie();
+            if ($cat) {
+                try {
+                    $ref->rebuildReferenceRefFromCategorieShort($cat->getCategorieShort());
+                } catch (\Throwable $e) {
+                    $ref->rebuildReferenceRefFromCategorieShort();
+                }
+            }
+        }
+
         $this->em->flush();
 
-        return $this->json(['success' => true]);
+        return $this->json([
+            'success' => true,
+            'data'    => $this->serializeReference($ref),
+        ]);
     }
+
+    #[Route('/reorder', name: 'ref_reorder', methods: ['POST'])]
+    public function reorder(Request $req): JsonResponse
+    {
+        $data = json_decode($req->getContent(), true) ?? [];
+
+        $movedId  = (int)($data['movedId'] ?? 0);
+        $targetId = (int)($data['targetId'] ?? 0);
+        $position = strtolower((string)($data['position'] ?? ''));
+
+        if ($movedId <= 0 || $targetId <= 0 || !in_array($position, ['before', 'after'], true)) {
+            return $this->json(['success' => false, 'error' => 'Invalid payload'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $conn = $this->em->getConnection();
+        $conn->beginTransaction();
+
+        try {
+            $movedCatId = $conn->fetchOne(
+                "SELECT categorieId FROM `reference` WHERE referenceID = :id",
+                ['id' => $movedId]
+            );
+            $targetCatId = $conn->fetchOne(
+                "SELECT categorieId FROM `reference` WHERE referenceID = :id",
+                ['id' => $targetId]
+            );
+
+            if ($movedCatId === false || $targetCatId === false) {
+                $conn->rollBack();
+                return $this->json(['success' => false, 'error' => 'Reference not found (DB)'], 404);
+            }
+
+            $movedCatId  = (int)$movedCatId;
+            $targetCatId = (int)$targetCatId;
+
+            if ($movedCatId <= 0 || $targetCatId <= 0) {
+                $conn->rollBack();
+                return $this->json([
+                    'success' => false,
+                    'error'   => 'categorieId missing on moved/target reference (NULL or 0)',
+                    'movedCatId' => $movedCatId,
+                    'targetCatId' => $targetCatId,
+                ], 400);
+            }
+
+            if ($movedCatId !== $targetCatId) {
+                $conn->rollBack();
+                return $this->json(['success' => false, 'error' => 'Moved and target are not in the same category'], 400);
+            }
+
+            $catId = $movedCatId;
+
+            $rows = $conn->fetchAllAssociative(
+                "SELECT referenceID
+                FROM `reference`
+                WHERE categorieId = :catId
+                ORDER BY referenceOrdre ASC, referenceID ASC
+                FOR UPDATE",
+                ['catId' => $catId]
+            );
+
+            if (!$rows) {
+                $conn->commit();
+                return $this->json(['success' => true, 'message' => 'No references in category', 'catId' => $catId]);
+            }
+
+            $ids = array_map(fn($r) => (int)$r['referenceID'], $rows);
+
+            $oldIndex    = array_search($movedId, $ids, true);
+            $targetIndex = array_search($targetId, $ids, true);
+
+            if ($oldIndex === false || $targetIndex === false) {
+                $conn->rollBack();
+                return $this->json(['success' => false, 'error' => 'Ids not found in category list'], 400);
+            }
+
+            if ($movedId === $targetId) {
+                $conn->commit();
+                return $this->json(['success' => true, 'message' => 'No change', 'catId' => $catId]);
+            }
+
+            array_splice($ids, $oldIndex, 1);
+            $targetIndex = array_search($targetId, $ids, true);
+
+            $insertIndex = ($position === 'before') ? $targetIndex : ($targetIndex + 1);
+            array_splice($ids, $insertIndex, 0, [$movedId]);
+
+            $OFFSET = 1000000;
+
+            $caseParts = [];
+            $params = ['catId' => $catId];
+
+            foreach ($ids as $i => $id) {
+                $caseParts[] = "WHEN referenceID = :id_$i THEN :ord_$i";
+                $params["id_$i"]  = $id;
+                $params["ord_$i"] = $OFFSET + ($i + 1);
+            }
+
+            $caseSql = implode("\n", $caseParts);
+
+            $affectedA = $conn->executeStatement(
+                "UPDATE `reference`
+                SET referenceOrdre = CASE
+                    $caseSql
+                    ELSE referenceOrdre
+                END
+                WHERE categorieId = :catId",
+                $params
+            );
+
+            $affectedB = $conn->executeStatement(
+                "UPDATE `reference`
+                SET referenceOrdre = referenceOrdre - :off
+                WHERE categorieId = :catId",
+                ['off' => $OFFSET, 'catId' => $catId]
+            );
+
+            $affectedTmp = $conn->executeStatement(
+                "UPDATE `reference`
+                SET referenceRef = CONCAT('__TMP__', referenceID)
+                WHERE categorieId = :catId",
+                ['catId' => $catId]
+            );
+
+            $affectedFinal = $conn->executeStatement(
+                "UPDATE `reference` r
+                JOIN categorie c ON c.categorieId = r.categorieId
+                SET r.referenceRef = CONCAT('REF.', UPPER(TRIM(c.categorieShort)), ' ', LPAD(r.referenceOrdre, 3, '0'))
+                WHERE r.categorieId = :catId",
+                ['catId' => $catId]
+            );
+
+            $conn->commit();
+
+            return $this->json([
+                'success'  => true,
+                'movedId'  => $movedId,
+                'targetId' => $targetId,
+                'position' => $position,
+                'catId'    => $catId,
+                'affected' => [
+                    'phaseA' => $affectedA,
+                    'phaseB' => $affectedB,
+                    'tmpRef' => $affectedTmp,
+                    'finalRef' => $affectedFinal,
+                ],
+            ]);
+
+        } catch (\Throwable $e) {
+            $conn->rollBack();
+            return $this->json(['success' => false, 'error' => $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
 
     #[Route('/delete/{id}', name: 'ref_delete', methods: ['DELETE'])]
     public function delete(int $id): JsonResponse
