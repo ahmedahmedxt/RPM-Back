@@ -30,11 +30,19 @@ class BailleurFondController extends AbstractController
     #[Route('', name: 'get_all', methods: ['GET'])]
     public function getAll(BailleurFondRepository $repository, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        //$this->checkToken($tokenStorage);
-        $bailleurs = $repository->findAll();
-        $data = $this->serializer->serialize($bailleurs, 'json');
+        // $this->checkToken($tokenStorage);
 
-        return new JsonResponse($data, Response::HTTP_OK, [], true);
+        $bailleurs = $repository->findAll();
+
+        $data = array_map(static function (BailleurFond $b) {
+            return [
+                'bailleurFondId'       => $b->getBailleurFondId(),
+                'bailleurFondLibelle'  => $b->getBailleurFondLibelle(),
+                'bailleurFondAcronyme' => $b->getBailleurFondAcronyme(),
+            ];
+        }, $bailleurs);
+
+        return new JsonResponse($data, Response::HTTP_OK);
     }
 
     #[Route('/{id}', name: 'get_by_id', methods: ['GET'])]
