@@ -62,7 +62,7 @@ class BailleurFond
         $this->bailleurFondAcronyme = $bailleurFondAcronyme;
     }
 
-    public function getReference(): Collection
+    public function getReferences(): Collection
     {
         return $this->references;
     }
