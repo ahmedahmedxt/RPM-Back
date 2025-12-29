@@ -106,33 +106,4 @@ class TypeDocument
         return $this;
     }
 
-    /**
-     * @return Collection<int, EmployeDocuments>
-     */
-    public function getEmployeDocuments(): Collection
-    {
-        return $this->employeDocuments;
-    }
-
-    public function addEmployeDocument(EmployeDocuments $employeDocument): static
-    {
-        if (!$this->employeDocuments->contains($employeDocument)) {
-            $this->employeDocuments->add($employeDocument);
-            $employeDocument->setEmployeDocumentsType($this);
-        }
-
-        return $this;
-    }
-
-    public function removeEmployeDocument(EmployeDocuments $employeDocument): static
-    {
-        if ($this->employeDocuments->removeElement($employeDocument)) {
-            // set the owning side to null (unless already changed)
-            if ($employeDocument->getEmployeDocumentsType() === $this) {
-                $employeDocument->setEmployeDocumentsType(null);
-            }
-        }
-
-        return $this;
-    }
 }

@@ -4,6 +4,8 @@ namespace App\Entity;
 
 use App\Repository\EmployePosteRepository;
 use Doctrine\ORM\Mapping as ORM;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 
 #[ORM\Entity(repositoryClass: EmployePosteRepository::class)]
 #[ORM\Table(name: 'employeposte')]
@@ -16,6 +18,19 @@ class EmployePoste
 
     #[ORM\Column(name: "employePosteLibelle", length: 254, nullable: true)]
     private ?string $employePosteLibelle = null;
+
+    #[ORM\OneToMany(mappedBy: 'employePoste', targetEntity: ReferenceCollaborateur::class)]
+    private Collection $referenceCollaborateurs;
+
+    public function __construct()
+    {
+        $this->referenceCollaborateurs = new ArrayCollection();
+    }
+
+    public function getReferenceCollaborateurs(): Collection
+    {
+        return $this->referenceCollaborateurs;
+    }
 
     public function getEmployePosteId(): ?int
     {

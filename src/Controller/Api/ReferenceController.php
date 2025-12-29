@@ -16,6 +16,10 @@ use App\Entity\AppelOffres;
 use App\Entity\ReferenceCaracteristiqueSpeciale;
 use App\Entity\ReferenceDocuments;
 use App\Entity\ReferenceCollaborateur;
+use App\Entity\Collaborateur;
+use App\Entity\EmployePoste;
+use App\Entity\TypeDocument;
+use App\Entity\AppelOffresPersonnelCleAppelOffres;
 use App\Repository\ReferenceRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -23,6 +27,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 
 #[Route('/api/reference')]
 class ReferenceController extends AbstractController
@@ -64,6 +69,33 @@ class ReferenceController extends AbstractController
         $qb->getQuery()->execute();
     }
 
+    private function serializeCollaborateur(Collaborateur $c): array
+    {
+        return [
+            'id'     => $c->getCollaborateurId(),
+            'nom'    => $c->getCollaborateurNom(),
+            'prenom' => $c->getCollaborateurPrenom(),
+        ];
+    }
+
+    private function serializePersonnelCle(AppelOffresPersonnelCleAppelOffres $link): array
+    {
+        $pc = $link->getAppelOffresPersonnelCle();
+
+        return [
+            'intitule' => $pc?->getAppelOffresPersonnelCleIntitule(),
+
+            'collaborateurs' => array_map(
+                fn (Collaborateur $c) => [
+                    'nom'    => $c->getCollaborateurNom(),
+                    'prenom' => $c->getCollaborateurPrenom(),
+                ],
+                $pc?->getCollaborateurs()->toArray() ?? []
+            ),
+        ];
+    }
+
+
     private function serializeReference(Reference $ref): array
     {
         $pays = $ref->getPays();
@@ -93,6 +125,8 @@ class ReferenceController extends AbstractController
             'short'   => $cat->getCategorieShort(),
         ] : null;
 
+        $appels = $ref->getAppelOffres()->toArray();
+
         return [
             'referenceID'   => $ref->getReferenceID(),
             'referenceRef'  => $ref->getReferenceRef(),
@@ -118,7 +152,7 @@ class ReferenceController extends AbstractController
             'lieu'      => $lieuData,
             'devises'   => $devData,
             'categorie' => $catData,
-
+            
             'bailleursFond' => array_map(
                 fn (BailleurFond $b) => [
                     'id'       => $b->getBailleurFondId(),
@@ -155,31 +189,151 @@ class ReferenceController extends AbstractController
                     'short'   => $r->getRoleShort(),
                 ],
                 $ref->getRolesReference()->toArray()
-            ),
-            'appelOffres' => array_map(
-                fn (AppelOffres $ao) => [
-                    'id'      => $ao->getAppelOffresId(),
-                    'libelle' => $ao->getAppelOffresObjet(),
-                ],
-                $ref->getAppelOffres()->toArray()
-            ),
+            ),            
+            'appelOffres' => !empty($appels)   ? $this->serializeAppelOffres($appels[0]) : null,
             'referenceCaracteristiqueSpeciales' => array_map(
                 fn (ReferenceCaracteristiqueSpeciale $cs) => [
                     'id'      => $cs->getReferenceCaracteristiqueSpecialeId(),
                     'libelle' => $cs->getReferenceCaracteristiqueSpecialeTitre(),
+                    'description' => $cs->getReferenceCaracteristiqueSpecialeDescription(),
                 ],
                 $ref->getReferenceCaracteristiqueSpeciales()->toArray()
             ),
             'referenceDocuments' => array_map(
                 fn (ReferenceDocuments $doc) => [
-                    'id'    => $doc->getReferenceDocumentsId(),
-                    'type'  => $doc->getTypeDocument(),
-                    'libelle' => $doc->getReferenceDocumentsLibelle(),
+                    'referenceDocumentsId' => $doc->getReferenceDocumentsId(),
+                    'libelle'              => $doc->getReferenceDocumentsLibelle(),
+                    'path'                 => $doc->getReferenceDocumentPath(),
+                    'date'                 => $doc->getReferenceDocumentsDate()?->format('Y-m-d'),
+                    'commentaire'          => $doc->getReferenceDocumentsCommentaire(),
+                    'typeDocument'         => $doc->getTypeDocument() ? [
+                        'typeDocumentId'      => $doc->getTypeDocument()->getTypeDocumentId(),
+                        'typeDocumentLibelle' => $doc->getTypeDocument()->getTypeDocumentLibelle(),
+                    ] : null,
                 ],
                 $ref->getReferenceDocuments()->toArray()
             ),
+            'referenceCollaborateurs' => array_map(
+                fn (ReferenceCollaborateur $rc) => [
+                    'id' => $rc->getId(),
+                    'duree' => $rc->getReferenceCollaborateurDuree(),
+
+                    'collaborateur' => $rc->getCollaborateur() ? [
+                        'id' => $rc->getCollaborateur()->getCollaborateurId(),
+                        'nom' => $rc->getCollaborateur()->getCollaborateurNom(),
+                        'prenom' => $rc->getCollaborateur()->getCollaborateurPrenom(),
+                        'email' => $rc->getCollaborateur()->getCollaborateurEmail1(),
+                        'telephone' => $rc->getCollaborateur()->getCollaborateurTelephone1(),
+                    ] : null,
+
+                    'employePoste' => $rc->getEmployePoste() ? [
+                        'id' => $rc->getEmployePoste()->getEmployePosteId(),
+                        'libelle' => $rc->getEmployePoste()->getEmployePosteLibelle(),
+                    ] : null,
+                ],
+                $ref->getReferenceCollaborateurs()->toArray()
+            ),
         ];
     }
+
+    private function serializeAppelOffres(AppelOffres $ao): array
+    {
+        $type = $ao->getAppelOffresTypeId();
+        $pays = $ao->getAppelOffresPaysId();
+        $org = $ao->getAppelOffresOrganismeDemandeurId();
+        $devise = $ao->getAppelOffresDevisesId();
+        $deviseCaution = $ao->getAppelOffresCautionBancaireDeviseId();
+        $typeParticipation = $ao->getAppelOffresTypeParticipationId();
+        $secteur = $org?->getSecteurActivite();
+        $nature = $org?->getNatureOrganismeDemendeur();
+
+        return [
+            'appelOffresId' => $ao->getAppelOffresId(),
+            'appelOffresObjet' => $ao->getAppelOffresObjet(),
+            'appelOffresAnnee' => $ao->getAppelOffresAnnee(),
+            'appelOffresType' => $type ? [
+                'id'    => $type->getAppelOffresTypeId(),
+                'libelle' =>
+                    method_exists($type, 'getAppelOffresTypeLibelle')
+                        ? $type->getAppelOffresTypeLibelle()
+                        : null,
+                'short' =>
+                    method_exists($type, 'getAppelOffresTypeShort')
+                        ? $type->getAppelOffresTypeShort()
+                        : null,
+            ] : null,
+            'pays' => $pays ? [
+                'id' => method_exists($pays, 'getPaysId') ? $pays->getPaysId() : null,
+                'libelle' => method_exists($pays, 'getPaysLibelle') ? $pays->getPaysLibelle() : null,
+            ] : null,
+            'organismeDemandeur' => $org ? [
+                'id' => $org->getOrganismeDemandeurId(),
+
+                'raisonSociale' =>
+                    $org->getOrganismeDemandeurRaisonSociale(),
+
+                'raisonSocialeShort' =>
+                    $org->getOrganismeDemandeurRaisonSocialeShort(),
+
+                'adresse' =>
+                    $org->getOrganismeDemandeurAdresse(),
+
+                'telephone' =>
+                    $org->getOrganismeDemandeurTelephone(),
+
+                'email' =>
+                    $org->getOrganismeDemandeurEmail(),
+
+                'secteurActivite' => $secteur ? [
+                    'id' =>
+                        $secteur->getSecteurActiviteId(),
+                    'libelle' =>
+                        $secteur->getSecteurActiviteLibelle(),
+                ] : null,
+                'NatureOrganismeDemandeur' => $nature ? [
+                    'id' =>
+                        $nature->getNatureOrganismeDemendeurId(),
+                    'libelle' =>
+                        $nature->getNatureOrganismeDemendeurLibelle(),
+                ] : null,
+            ] : null,
+
+            'devises' => $devise ? [
+                'id' => method_exists($devise, 'getDevisesId') ? $devise->getDevisesId() : null,
+                'libelle' => method_exists($devise, 'getDevisesLibelle') ? $devise->getDevisesLibelle() : null,
+                'code' => method_exists($devise, 'getDevisesCode') ? $devise->getDevisesCode() : null,
+            ] : null,
+
+            'typeParticipation' => $typeParticipation ? [
+                'id' => method_exists($typeParticipation, 'getParticipationTypeId') ? $typeParticipation->getParticipationTypeId() : null,
+                'libelle' => method_exists($typeParticipation, 'getParticipationTypeLibelle') ? $typeParticipation->getParticipationTypeLibelle() : null,
+            ] : null,
+
+            'personnelCle' => array_values(array_filter(array_map(
+                function (AppelOffresPersonnelCleAppelOffres $link) {
+                    $pc = $link->getAppelOffresPersonnelCle();
+                    if (!$pc) return null;
+
+                    $names = array_map(
+                        fn (Collaborateur $c) =>
+                            trim($c->getCollaborateurPrenom() . ' ' . $c->getCollaborateurNom()),
+                        $pc->getCollaborateurs()->toArray()
+                    );
+
+                    if (empty($names)) return null;
+
+                    return implode(', ', $names) . ' : ' . $pc->getAppelOffresPersonnelCleIntitule();
+                },
+                $ao->getAppelOffresPersonnelCleAppelOffres()->toArray()
+            ))),
+
+            'partenairesCount' => $ao->getAppelOffresPartenaires()->count(),
+            
+            'personnelCleCount' => $ao->getAppelOffresPersonnelCleAppelOffres()->count(),
+        ];
+    }
+
+
 
     #[Route('/all', name: 'ref_all', methods: ['GET'])]
     public function getAll(): JsonResponse
@@ -257,6 +411,74 @@ class ReferenceController extends AbstractController
             return $this->json(['error' => 'Reference not found'], 404);
         }
         return $this->json($this->serializeReference($ref));
+    }
+
+    #[Route('/{id}/documents', name: 'ref_upload_documents', methods: ['POST'])]
+    public function uploadDocuments(int $id, Request $req): JsonResponse
+    {
+        $ref = $this->referenceRepository->find($id);
+        if (!$ref) return $this->json(['error' => 'Reference not found'], 404);
+
+        /** @var UploadedFile[] $files */
+        $files = $req->files->all('files');
+        $metaJson = $req->request->get('meta', '[]');
+        $meta = json_decode($metaJson, true);
+        if (!is_array($meta)) $meta = [];
+
+        if (count($files) !== count($meta)) {
+            return $this->json(['error' => 'Files/meta count mismatch'], 400);
+        }
+
+        $docTypeRepo = $this->em->getRepository(TypeDocument::class);
+
+        $uploadDir = $this->getParameter('kernel.project_dir') . '/public/uploads/reference';
+        if (!is_dir($uploadDir)) @mkdir($uploadDir, 0777, true);
+
+        $created = [];
+
+        foreach ($files as $i => $file) {
+            if (!$file instanceof UploadedFile) continue;
+
+            $typeId = (int)($meta[$i]['typeDocumentId'] ?? $meta[$i]['documentTypeId'] ?? 0);
+
+            if ($typeId <= 0) {
+                return $this->json(['error' => 'typeDocumentId is required', 'index' => $i], 400);
+            }
+
+            $type = $docTypeRepo->find($typeId);
+            if (!$type) {
+                return $this->json(['error' => 'Invalid typeDocumentId', 'index' => $i], 400);
+            }
+
+            $ext = $file->guessExtension() ?: $file->getClientOriginalExtension() ?: 'bin';
+            $safeName = uniqid('ref_'.$ref->getReferenceID().'_', true) . '.' . $ext;
+            $file->move($uploadDir, $safeName);
+
+            $doc = new ReferenceDocuments();
+            $doc->setReference($ref);
+            $doc->setTypeDocument($type);
+            $doc->setReferenceDocumentsLibelle($file->getClientOriginalName());
+            $doc->setReferenceDocumentPath('/uploads/reference/' . $safeName);
+
+            $this->em->persist($doc);
+            $created[] = $doc;
+        }
+
+        $this->em->flush();
+
+        return $this->json([
+            'success' => true,
+            'count' => count($created),
+            'documents' => array_map(fn(ReferenceDocuments $d) => [
+                'referenceDocumentsId' => $d->getReferenceDocumentsId(),
+                'libelle' => $d->getReferenceDocumentsLibelle(),
+                'path' => $d->getReferenceDocumentPath(),
+                'typeDocument' => $d->getTypeDocument() ? [
+                    'typeDocumentId' => $d->getTypeDocument()->getTypeDocumentId(),
+                    'typeDocumentLibelle' => $d->getTypeDocument()->getTypeDocumentLibelle(),
+                ] : null
+            ], $created),
+        ]);
     }
 
     #[Route('/create', name: 'ref_create', methods: ['POST'])]
@@ -379,14 +601,15 @@ class ReferenceController extends AbstractController
             }
         }
 
-        if (!empty($data['appelOffresIds']) && is_array($data['appelOffresIds'])) {
-            foreach ($data['appelOffresIds'] as $aid) {
-                $ao = $this->em->getRepository(AppelOffres::class)->find($aid);
-                if ($ao) {
-                    $ref->addAppelOffres($ao);
-                }
+        $aoId = (int)($data['appelOffresIds'] ?? 0);
+
+        if ($aoId > 0) {
+            $ao = $this->em->getRepository(AppelOffres::class)->find($aoId);
+            if ($ao) {
+                $ref->addAppelOffres($ao);
             }
         }
+
 
         if (!empty($data['referenceCaracteristiqueSpecialeIds']) && is_array($data['referenceCaracteristiqueSpecialeIds'])) {
             foreach ($data['referenceCaracteristiqueSpecialeIds'] as $cid) {
@@ -398,6 +621,41 @@ class ReferenceController extends AbstractController
         }
 
         $this->em->persist($ref);
+        $items = $data['referenceCollaborateurs'] ?? [];
+        if (!is_array($items)) $items = [];
+            $collabRepository = $this->em->getRepository(Collaborateur::class);
+            $posteRepository  = $this->em->getRepository(EmployePoste::class);
+            foreach ($items as $item) {
+                $collaborateurId = (int)($item['collaborateurId'] ?? 0);
+                $employePosteId  = (int)($item['employePosteId'] ?? 0);
+                $duree           = (int)($item['duree'] ?? 0);
+
+                if ($collaborateurId <= 0 || $employePosteId <= 0) {
+                    return $this->json([
+                        'error' => 'Invalid collaborator payload',
+                        'item'  => $item
+                    ], 400);
+                }
+
+                $collab = $collabRepository->find($collaborateurId);
+                $poste  = $posteRepository->find($employePosteId);
+
+                if (!$collab || !$poste) {
+                    return $this->json([
+                        'error' => 'Collaborateur or EmployePoste not found',
+                        'item'  => $item
+                    ], 404);
+                }
+
+                $rc = new ReferenceCollaborateur();
+                $rc->setReference($ref);
+                $rc->setCollaborateur($collab);
+                $rc->setEmployePoste($poste);
+                $rc->setReferenceCollaborateurDuree(max(0, $duree));
+
+                $this->em->persist($rc);
+            }
+
         $this->em->flush();
 
         return $this->json([
@@ -590,18 +848,6 @@ class ReferenceController extends AbstractController
             }
         }
 
-        if (array_key_exists('appelOffresIds', $data)) {
-            $ref->getAppelOffres()->clear();
-            if (is_array($data['appelOffresIds'])) {
-                foreach ($data['appelOffresIds'] as $aid) {
-                    $ao = $this->em->getRepository(AppelOffres::class)->find($aid);
-                    if ($ao) {
-                        $ref->addAppelOffres($ao);
-                    }
-                }
-            }
-        }
-
         if (array_key_exists('referenceCaracteristiqueSpecialeIds', $data)) {
             $ref->getReferenceCaracteristiqueSpeciales()->clear();
             if (is_array($data['referenceCaracteristiqueSpecialeIds'])) {
@@ -624,6 +870,65 @@ class ReferenceController extends AbstractController
                 }
             }
         }
+
+        if (array_key_exists('referenceCollaborateurs', $data)) {
+        $items = $data['referenceCollaborateurs'];
+        if (!is_array($items)) $items = [];
+
+        $this->em->createQuery(
+            'DELETE FROM App\Entity\ReferenceCollaborateur rc WHERE rc.reference = :ref'
+        )
+        ->setParameter('ref', $ref)
+        ->execute();
+
+        $usedCollaborateurs = [];
+        $usedPostes = [];
+
+        $collabRepo = $this->em->getRepository(Collaborateur::class);
+        $posteRepo  = $this->em->getRepository(EmployePoste::class);
+
+        foreach ($items as $item) {
+            $collaborateurId = (int)($item['collaborateurId'] ?? 0);
+            $employePosteId  = (int)($item['employePosteId'] ?? 0);
+            $duree           = (int)($item['duree'] ?? 0);
+
+            if ($collaborateurId <= 0 || $employePosteId <= 0) {
+                return $this->json(['error' => 'Invalid referenceCollaborateurs item', 'item' => $item], 400);
+            }
+
+            if (in_array($collaborateurId, $usedCollaborateurs, true)) {
+                return $this->json([
+                    'error' => 'Duplicate collaborateurId in payload',
+                    'collaborateurId' => $collaborateurId
+                ], 400);
+            }
+            $usedCollaborateurs[] = $collaborateurId;
+
+            if (in_array($employePosteId, $usedPostes, true)) {
+                return $this->json([
+                    'error' => 'EmployePoste already used in payload',
+                    'employePosteId' => $employePosteId
+                ], 400);
+            }
+            $usedPostes[] = $employePosteId;
+
+            $collab = $collabRepo->find($collaborateurId);
+            $poste  = $posteRepo->find($employePosteId);
+
+            if (!$collab || !$poste) {
+                return $this->json(['error' => 'Collaborateur or EmployePoste not found', 'item' => $item], 404);
+            }
+
+            $rc = new ReferenceCollaborateur();
+            $rc->setReference($ref);
+            $rc->setCollaborateur($collab);
+            $rc->setEmployePoste($poste);
+            $rc->setReferenceCollaborateurDuree(max(0, $duree));
+
+            $this->em->persist($rc);
+        }
+    }
+
 
         $this->em->flush();
 

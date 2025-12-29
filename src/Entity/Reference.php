@@ -316,6 +316,29 @@ class Reference
         return $this;
     }
     public function getAppelOffres(): Collection { return $this->appelOffres; }
+    public function addAppelOffres(AppelOffres $appelOffre): self
+    {
+        if (!$this->appelOffres->contains($appelOffre)) {
+            $this->appelOffres->add($appelOffre);
+
+            if (method_exists($appelOffre, 'addReference')) {
+                $appelOffre->addReference($this);
+            }
+        }
+
+        return $this;
+    }
+
+    public function removeAppelOffres(AppelOffres $appelOffre): self
+    {
+        if ($this->appelOffres->removeElement($appelOffre)) {
+            if (method_exists($appelOffre, 'removeReference')) {
+                $appelOffre->removeReference($this);
+            }
+        }
+
+        return $this;
+    }
     public function addReferenceCaracteristiqueSpeciale(ReferenceCaracteristiqueSpeciale $cs): self
     {
         if (!$this->referenceCaracteristiqueSpeciales->contains($cs)) {
@@ -345,4 +368,24 @@ class Reference
 
         return $this;
     }
+
+    public function addReferenceDocument(ReferenceDocuments $doc): self
+    {
+        if (!$this->referenceDocuments->contains($doc)) {
+            $this->referenceDocuments->add($doc);
+            $doc->setReference($this);
+        }
+        return $this;
+    }
+
+    public function removeReferenceDocument(ReferenceDocuments $doc): self
+    {
+        if ($this->referenceDocuments->removeElement($doc)) {
+            if ($doc->getReference() === $this) {
+                $doc->setReference(null);
+            }
+        }
+        return $this;
+    }
+
 }

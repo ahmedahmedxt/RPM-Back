@@ -24,6 +24,78 @@ class ReferenceCaracteristiqueSpecialeController extends AbstractController
         $this->entityManager = $entityManager;
     }
 
+    #[Route('/getAllPage/referenceCaracteristiqueSpeciale', name: 'get_all_page', methods: ['GET'])]
+    public function getAllPage(
+        Request $request,
+        ReferenceCaracteristiqueSpecialeRepository $repository
+    ): JsonResponse
+    {
+        try {
+            $page = max(1, (int) $request->query->get('page', 1));
+            $size = max(1, (int) $request->query->get('size', 10));
+            $search = trim((string) $request->query->get('search', ''));
+
+            $sortField = $request->query->get(
+                'sortField',
+                'referenceCaracteristiqueSpecialeTitre'
+            );
+
+            $sortDir = strtoupper($request->query->get('sortDir', 'ASC'));
+            $sortDir = in_array($sortDir, ['ASC', 'DESC']) ? $sortDir : 'ASC';
+
+            $qb = $repository->createQueryBuilder('c');
+
+            if ($search !== '') {
+                $qb->andWhere(
+                    $qb->expr()->orX(
+                        'LOWER(c.referenceCaracteristiqueSpecialeTitre) LIKE :search',
+                        'LOWER(c.referenceCaracteristiqueSpecialeDescription) LIKE :search'
+                    )
+                )
+                ->setParameter('search', '%' . mb_strtolower($search) . '%');
+            }
+
+            $countQb = clone $qb;
+            $total = (int) $countQb
+                ->select('COUNT(c.referenceCaracteristiqueSpecialeId)')
+                ->getQuery()
+                ->getSingleScalarResult();
+
+            $qb->orderBy('c.' . $sortField, $sortDir);
+
+            $qb->setFirstResult(($page - 1) * $size)
+            ->setMaxResults($size);
+
+            $items = $qb->getQuery()->getResult();
+
+            $data = [];
+            foreach ($items as $item) {
+                $data[] = [
+                    'referenceCaracteristiqueSpecialeId' =>
+                        $item->getReferenceCaracteristiqueSpecialeId(),
+                    'referenceCaracteristiqueSpecialeTitre' =>
+                        $item->getReferenceCaracteristiqueSpecialeTitre() ?? '',
+                    'referenceCaracteristiqueSpecialeDescription' =>
+                        $item->getReferenceCaracteristiqueSpecialeDescription() ?? '',
+                ];
+            }
+
+            return new JsonResponse([
+                'data' => $data,
+                'total' => $total,
+                'page' => $page,
+                'size' => $size
+            ], Response::HTTP_OK);
+
+        } catch (\Exception $e) {
+            return new JsonResponse([
+                'error' => $e->getMessage(),
+                'data' => [],
+                'total' => 0
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
     #[Route('/getAll/referenceCaracteristiqueSpeciale', name: 'get_all', methods: ['GET'])]
     public function getAll(ReferenceCaracteristiqueSpecialeRepository $repository, TokenStorageInterface $tokenStorage): JsonResponse
     {
