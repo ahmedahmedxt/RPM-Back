@@ -18,94 +18,94 @@ use Symfony\Component\Routing\Annotation\Route;
 
 class AppelOffresController extends AbstractController
 {
-    #[Route('/api/getAll/appelOffres', name: 'api_appel_offres_index', methods: ['GET'])]
-    public function index(Request $request, EntityManagerInterface $em): JsonResponse
-    {
-        try {
-            $page = max(1, (int)$request->query->get('page', 1));
-            $limit = max(1, min(100, (int)$request->query->get('limit', 10)));
-            $sortField = $request->query->get('sortField', 'appelOffresAnnee');
-            $sortDir = strtoupper($request->query->get('sortDir', 'DESC')) === 'ASC' ? 'ASC' : 'DESC';
-            $search = $request->query->get('search', '');
-            $etatFilter = $request->query->get('etat', '');
+   #[Route('/api/getAll/appelOffres', name: 'api_appel_offres_index', methods: ['GET'])]
+public function index(Request $request, EntityManagerInterface $em): JsonResponse
+{
+    try {
+        $page = max(1, (int)$request->query->get('page', 1));
+        $limit = max(1, min(100, (int)$request->query->get('limit', 10)));
+        $sortField = $request->query->get('sortField', 'appelOffresAnnee');
+        $sortDir = strtoupper($request->query->get('sortDir', 'DESC')) === 'ASC' ? 'ASC' : 'DESC';
+        $search = $request->query->get('search', '');
+        $etatFilter = $request->query->get('etat', '');
 
-            $allowedSortFields = [
-                'appelOffresId' => 'a.appelOffresId',
-                'appelOffresNumero' => 'a.appelOffresNumero',
-                'appelOffresObjet' => 'a.appelOffresObjet',
-                'appelOffresDateLimiteRemise' => 'a.appelOffresDateLimiteRemise',
-                'appelOffresAnnee' => 'a.appelOffresAnnee',
-                'appelOffresResultatEtat' => 'a.appelOffresResultatEtat',
-            ];
+        $allowedSortFields = [
+            'appelOffresId' => 'a.appelOffresId',
+            'appelOffresNumero' => 'a.appelOffresNumero',
+            'appelOffresObjet' => 'a.appelOffresObjet',
+            'appelOffresDateLimiteRemise' => 'a.appelOffresDateLimiteRemise',
+            'appelOffresAnnee' => 'a.appelOffresAnnee',
+            'appelOffresResultatEtat' => 'a.appelOffresResultatEtat',
+        ];
 
-            if (!array_key_exists($sortField, $allowedSortFields)) {
-                $sortField = 'appelOffresAnnee';
-            }
-
-            $qb = $em->getRepository(AppelOffres::class)->createQueryBuilder('a');
-
-            if (!empty($search)) {
-                $qb->andWhere('a.appelOffresObjet LIKE :search OR a.appelOffresNumero LIKE :search')
-                   ->setParameter('search', '%' . $search . '%');
-            }
-
-            if (!empty($etatFilter)) {
-                $qb->andWhere('a.appelOffresResultatEtat = :etat')
-                   ->setParameter('etat', $etatFilter);
-            }
-
-            $qbCount = clone $qb;
-            $total = (int)$qbCount->select('COUNT(a.appelOffresId)')->getQuery()->getSingleScalarResult();
-
-            if ($sortField === 'appelOffresAnnee') {
-                $qb->orderBy('a.appelOffresAnnee', 'DESC')
-                   ->addOrderBy('a.appelOffresNumero', 'DESC');
-            } else {
-                $qb->orderBy($allowedSortFields[$sortField], $sortDir);
-            }
-
-            $qb->setFirstResult(($page - 1) * $limit)
-               ->setMaxResults($limit);
-
-            $appels = $qb->getQuery()->getResult();
-            $data = [];
-
-            if ($sortField === 'appelOffresAnnee') {
-                usort($appels, function($a, $b) {
-                    $anneeA = $a->getAppelOffresAnnee() ?? 0;
-                    $anneeB = $b->getAppelOffresAnnee() ?? 0;
-
-                    if ($anneeA !== $anneeB) {
-                        return $anneeB <=> $anneeA;
-                    }
-
-                    $numeroA = (int)($a->getAppelOffresNumero() ?? 0);
-                    $numeroB = (int)($b->getAppelOffresNumero() ?? 0);
-
-                    return $numeroB <=> $numeroA;
-                });
-
-                $appels = array_slice($appels, ($page - 1) * $limit, $limit);
-            }
-
-            foreach ($appels as $appel) {
-                $data[] = $this->serializeAppelOffres($appel);
-            }
-
-            return new JsonResponse([
-                'data' => $data,
-                'total' => $total,
-                'page' => $page,
-                'limit' => $limit
-            ], Response::HTTP_OK);
-        } catch (\Exception $e) {
-            error_log('Erreur dans index: ' . $e->getMessage() . ' - Trace: ' . $e->getTraceAsString());
-            return new JsonResponse([
-                'error' => 'Erreur lors de la récupération des appels d\'offres',
-                'message' => $e->getMessage()
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        if (!array_key_exists($sortField, $allowedSortFields)) {
+            $sortField = 'appelOffresAnnee';
         }
+
+        $qb = $em->getRepository(AppelOffres::class)->createQueryBuilder('a');
+
+        if (!empty($search)) {
+            $qb->andWhere('a.appelOffresObjet LIKE :search OR a.appelOffresNumero LIKE :search')
+               ->setParameter('search', '%' . $search . '%');
+        }
+
+        if (!empty($etatFilter)) {
+            $qb->andWhere('a.appelOffresResultatEtat = :etat')
+               ->setParameter('etat', $etatFilter);
+        }
+
+        $qbCount = clone $qb;
+        $total = (int)$qbCount->select('COUNT(a.appelOffresId)')->getQuery()->getSingleScalarResult();
+
+        if ($sortField === 'appelOffresAnnee') {
+            // Pour le tri par année, on récupère d'abord tous les résultats
+            $appels = $qb->getQuery()->getResult();
+            
+            // On applique le tri personnalisé
+            usort($appels, function($a, $b) {
+                $anneeA = $a->getAppelOffresAnnee() ?? 0;
+                $anneeB = $b->getAppelOffresAnnee() ?? 0;
+
+                if ($anneeA !== $anneeB) {
+                    return $anneeB <=> $anneeA; // Ordre décroissant
+                }
+
+                $numeroA = (int)($a->getAppelOffresNumero() ?? 0);
+                $numeroB = (int)($b->getAppelOffresNumero() ?? 0);
+
+                return $numeroB <=> $numeroA; // Ordre décroissant
+            });
+            
+            // On applique la pagination
+            $appels = array_slice($appels, ($page - 1) * $limit, $limit);
+        } else {
+            // Pour les autres tris, on laisse la base de données gérer le tri et la pagination
+            $qb->orderBy($allowedSortFields[$sortField], $sortDir)
+               ->setFirstResult(($page - 1) * $limit)
+               ->setMaxResults($limit);
+            
+            $appels = $qb->getQuery()->getResult();
+        }
+
+        $data = [];
+        foreach ($appels as $appel) {
+            $data[] = $this->serializeAppelOffres($appel);
+        }
+
+        return new JsonResponse([
+            'data' => $data,
+            'total' => $total,
+            'page' => $page,
+            'limit' => $limit
+        ], Response::HTTP_OK);
+    } catch (\Exception $e) {
+        error_log('Erreur dans index: ' . $e->getMessage() . ' - Trace: ' . $e->getTraceAsString());
+        return new JsonResponse([
+            'error' => 'Erreur lors de la récupération des appels d\'offres',
+            'message' => $e->getMessage()
+        ], Response::HTTP_INTERNAL_SERVER_ERROR);
     }
+}
 
     #[Route('/api/get/appelOffres/{id}', name: 'api_appel_offres_show', methods: ['GET'])]
     public function show(AppelOffres $appelOffres): JsonResponse
