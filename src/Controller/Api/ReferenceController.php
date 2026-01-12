@@ -251,6 +251,13 @@ class ReferenceController extends AbstractController
             'appelOffresId' => $ao->getAppelOffresId(),
             'appelOffresObjet' => $ao->getAppelOffresObjet(),
             'appelOffresAnnee' => $ao->getAppelOffresAnnee(),
+            'appelOffresTypeParticipationLibelle' => $typeParticipation ? [
+                'id'    => $typeParticipation->getParticipationTypeId(),
+                'libelle' =>
+                    method_exists($typeParticipation, 'getParticipationTypeLibelle')
+                        ? $typeParticipation->getParticipationTypeLibelle()
+                        : null,
+            ] : null,
             'appelOffresType' => $type ? [
                 'id'    => $type->getAppelOffresTypeId(),
                 'libelle' =>
