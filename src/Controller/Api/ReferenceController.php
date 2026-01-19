@@ -95,7 +95,6 @@ class ReferenceController extends AbstractController
         ];
     }
 
-
     private function serializeReference(Reference $ref): array
     {
         $pays = $ref->getPays();
@@ -152,7 +151,7 @@ class ReferenceController extends AbstractController
             'lieu'      => $lieuData,
             'devises'   => $devData,
             'categorie' => $catData,
-            
+
             'bailleursFond' => array_map(
                 fn (BailleurFond $b) => [
                     'id'       => $b->getBailleurFondId(),
@@ -189,8 +188,10 @@ class ReferenceController extends AbstractController
                     'short'   => $r->getRoleShort(),
                 ],
                 $ref->getRolesReference()->toArray()
-            ),            
-            'appelOffres' => !empty($appels)   ? $this->serializeAppelOffres($appels[0]) : null,
+            ),
+            'appelOffres' => !empty($appels) ? $this->serializeAppelOffres($appels[0]) : null,
+
+            // NOTE: still serialized here (unchanged) so UI continues to display relations
             'referenceCaracteristiqueSpeciales' => array_map(
                 fn (ReferenceCaracteristiqueSpeciale $cs) => [
                     'id'      => $cs->getReferenceCaracteristiqueSpecialeId(),
@@ -275,33 +276,22 @@ class ReferenceController extends AbstractController
             ] : null,
             'organismeDemandeur' => $org ? [
                 'id' => $org->getOrganismeDemandeurId(),
-
-                'raisonSociale' =>
-                    $org->getOrganismeDemandeurRaisonSociale(),
-
-                'raisonSocialeShort' =>
-                    $org->getOrganismeDemandeurRaisonSocialeShort(),
-
-                'adresse' =>
-                    $org->getOrganismeDemandeurAdresse(),
-
-                'telephone' =>
-                    $org->getOrganismeDemandeurTelephone(),
-
-                'email' =>
-                    $org->getOrganismeDemandeurEmail(),
-
+                'raisonSociale' => $org->getOrganismeDemandeurRaisonSociale(),
+                'raisonSocialeShort' => $org->getOrganismeDemandeurRaisonSocialeShort(),
+                'adresse' => $org->getOrganismeDemandeurAdresse(),
+                'telephone' => $org->getOrganismeDemandeurTelephone(),
+                'email' => $org->getOrganismeDemandeurEmail(),
+                'CoordinateurPrenomNom' => $org->getOrganismeDemandeurCoordinateurPrenomNom(),
+                'CoordinateurEmail' => $org->getOrganismeDemandeurCoordinateurEmail(),
+                'CoordinateurTel' => $org->getOrganismeDemandeurCoordinateurTel(),
+                'logo' => $org->getOrganismeDemandeurLogo(),
                 'secteurActivite' => $secteur ? [
-                    'id' =>
-                        $secteur->getSecteurActiviteId(),
-                    'libelle' =>
-                        $secteur->getSecteurActiviteLibelle(),
+                    'id' => $secteur->getSecteurActiviteId(),
+                    'libelle' => $secteur->getSecteurActiviteLibelle(),
                 ] : null,
                 'NatureOrganismeDemandeur' => $nature ? [
-                    'id' =>
-                        $nature->getNatureOrganismeDemendeurId(),
-                    'libelle' =>
-                        $nature->getNatureOrganismeDemendeurLibelle(),
+                    'id' => $nature->getNatureOrganismeDemendeurId(),
+                    'libelle' => $nature->getNatureOrganismeDemendeurLibelle(),
                 ] : null,
             ] : null,
 
@@ -316,31 +306,35 @@ class ReferenceController extends AbstractController
                 'libelle' => method_exists($typeParticipation, 'getParticipationTypeLibelle') ? $typeParticipation->getParticipationTypeLibelle() : null,
             ] : null,
 
-            'personnelCle' => array_values(array_filter(array_map(
-                function (AppelOffresPersonnelCleAppelOffres $link) {
+            'personnelCle' => (function () use ($ao) {
+                $out = [];
+
+                foreach ($ao->getAppelOffresPersonnelCleAppelOffres()->toArray() as $link) {
+                    /** @var AppelOffresPersonnelCleAppelOffres $link */
                     $pc = $link->getAppelOffresPersonnelCle();
-                    if (!$pc) return null;
+                    if (!$pc) continue;
 
-                    $names = array_map(
-                        fn (Collaborateur $c) =>
-                            trim($c->getCollaborateurPrenom() . ' ' . $c->getCollaborateurNom()),
-                        $pc->getCollaborateurs()->toArray()
-                    );
+                    $poste = trim((string) $pc->getAppelOffresPersonnelCleIntitule());
 
-                    if (empty($names)) return null;
+                    foreach ($pc->getCollaborateurs()->toArray() as $c) {
+                        /** @var Collaborateur $c */
+                        $nom = trim($c->getCollaborateurPrenom() . ' ' . $c->getCollaborateurNom());
+                        if ($nom === '') continue;
 
-                    return implode(', ', $names) . ' : ' . $pc->getAppelOffresPersonnelCleIntitule();
-                },
-                $ao->getAppelOffresPersonnelCleAppelOffres()->toArray()
-            ))),
+                        $out[] = [
+                            'nom'   => $nom,
+                            'poste' => $poste !== '' ? $poste : '—',
+                        ];
+                    }
+                }
+
+                return $out;
+            })(),
 
             'partenairesCount' => $ao->getAppelOffresPartenaires()->count(),
-            
             'personnelCleCount' => $ao->getAppelOffresPersonnelCleAppelOffres()->count(),
         ];
     }
-
-
 
     #[Route('/all', name: 'ref_all', methods: ['GET'])]
     public function getAll(): JsonResponse
@@ -378,9 +372,12 @@ class ReferenceController extends AbstractController
 
         if ($categorieId > 0) {
             $qb->andWhere('IDENTITY(r.categorie) = :catId')
-            ->setParameter('catId', $categorieId);
+               ->setParameter('catId', $categorieId);
 
-            $clientRequestedSort = $request->query->has('sortField') && $request->query->get('sortField') !== null && $request->query->get('sortField') !== '';
+            $clientRequestedSort = $request->query->has('sortField')
+                && $request->query->get('sortField') !== null
+                && $request->query->get('sortField') !== '';
+
             if (!$clientRequestedSort) {
                 $sortField = 'referenceOrdre';
                 $sortDir   = 'ASC';
@@ -397,8 +394,8 @@ class ReferenceController extends AbstractController
         $total = (int) $qbCount->select('COUNT(r.referenceID)')->getQuery()->getSingleScalarResult();
 
         $qb->orderBy('r.' . $sortField, $sortDir)
-        ->setFirstResult(($page - 1) * $size)
-        ->setMaxResults($size);
+           ->setFirstResult(($page - 1) * $size)
+           ->setMaxResults($size);
 
         $refs = $qb->getQuery()->getResult();
 
@@ -408,7 +405,6 @@ class ReferenceController extends AbstractController
             'page'  => $page,
         ]);
     }
-
 
     #[Route('/{id}', name: 'ref_one', methods: ['GET'])]
     public function getOne(int $id): JsonResponse
@@ -491,7 +487,7 @@ class ReferenceController extends AbstractController
     #[Route('/create', name: 'ref_create', methods: ['POST'])]
     public function create(Request $req): JsonResponse
     {
-        $data = json_decode($req->getContent(), true);
+        $data = json_decode($req->getContent(), true) ?? [];
         $ref = new Reference();
 
         $ref->setReferenceTitre($data['referenceTitre'] ?? null);
@@ -514,23 +510,17 @@ class ReferenceController extends AbstractController
 
         if (!empty($data['paysId'])) {
             $pays = $this->em->getRepository(Pays::class)->find($data['paysId']);
-            if ($pays) {
-                $ref->setPays($pays);
-            }
+            if ($pays) $ref->setPays($pays);
         }
 
         if (!empty($data['lieuId'])) {
             $lieu = $this->em->getRepository(Lieu::class)->find($data['lieuId']);
-            if ($lieu) {
-                $ref->setLieu($lieu);
-            }
+            if ($lieu) $ref->setLieu($lieu);
         }
 
         if (!empty($data['devisesId'])) {
             $devise = $this->em->getRepository(Devises::class)->find($data['devisesId']);
-            if ($devise) {
-                $ref->setDevises($devise);
-            }
+            if ($devise) $ref->setDevises($devise);
         }
 
         if (empty($data['categorieId'])) {
@@ -563,112 +553,66 @@ class ReferenceController extends AbstractController
             }
         }
 
+        // keep these relations here (unchanged)
         if (!empty($data['bailleurFondIds']) && is_array($data['bailleurFondIds'])) {
             foreach ($data['bailleurFondIds'] as $bid) {
                 $bf = $this->em->getRepository(BailleurFond::class)->find($bid);
-                if ($bf) {
-                    $ref->addBailleurfond($bf);
-                }
+                if ($bf) $ref->addBailleurfond($bf);
             }
         }
 
         if (!empty($data['environnementDeveloppementIds']) && is_array($data['environnementDeveloppementIds'])) {
             foreach ($data['environnementDeveloppementIds'] as $eid) {
                 $env = $this->em->getRepository(EnvironnementDeveloppement::class)->find($eid);
-                if ($env) {
-                    $ref->addEnvironnementDeveloppement($env);
-                }
+                if ($env) $ref->addEnvironnementDeveloppement($env);
             }
         }
 
         if (!empty($data['technologieIds']) && is_array($data['technologieIds'])) {
             foreach ($data['technologieIds'] as $tid) {
                 $tech = $this->em->getRepository(Technologie::class)->find($tid);
-                if ($tech) {
-                    $ref->addTechnologie($tech);
-                }
+                if ($tech) $ref->addTechnologie($tech);
             }
         }
 
         if (!empty($data['methodologieIds']) && is_array($data['methodologieIds'])) {
             foreach ($data['methodologieIds'] as $mid) {
                 $meth = $this->em->getRepository(Methodologie::class)->find($mid);
-                if ($meth) {
-                    $ref->addMethodologie($meth);
-                }
+                if ($meth) $ref->addMethodologie($meth);
             }
         }
 
         if (!empty($data['roleIds']) && is_array($data['roleIds'])) {
             foreach ($data['roleIds'] as $rid) {
                 $role = $this->em->getRepository(Role::class)->find($rid);
-                if ($role) {
-                    $ref->addRoleReference($role);
-                }
+                if ($role) $ref->addRoleReference($role);
             }
         }
 
         $aoId = (int)($data['appelOffresIds'] ?? 0);
-
         if ($aoId > 0) {
             $ao = $this->em->getRepository(AppelOffres::class)->find($aoId);
-            if ($ao) {
-                $ref->addAppelOffres($ao);
-            }
+            if ($ao) $ref->addAppelOffres($ao);
         }
 
-
-        if (!empty($data['referenceCaracteristiqueSpecialeIds']) && is_array($data['referenceCaracteristiqueSpecialeIds'])) {
-            foreach ($data['referenceCaracteristiqueSpecialeIds'] as $cid) {
-                $cs = $this->em->getRepository(ReferenceCaracteristiqueSpeciale::class)->find($cid);
-                if ($cs) {
-                    $ref->addReferenceCaracteristiqueSpeciale($cs);
-                }
-            }
-        }
+        // CHANGED: removed handling of:
+        // - referenceCaracteristiqueSpecialeIds
+        // - referenceCollaborateurs
+        // These are now managed by separate APIs:
+        // PUT /api/reference/{id}/caracteristiques-speciales
+        // PUT /api/reference/{id}/collaborateurs
 
         $this->em->persist($ref);
-        $items = $data['referenceCollaborateurs'] ?? [];
-        if (!is_array($items)) $items = [];
-            $collabRepository = $this->em->getRepository(Collaborateur::class);
-            $posteRepository  = $this->em->getRepository(EmployePoste::class);
-            foreach ($items as $item) {
-                $collaborateurId = (int)($item['collaborateurId'] ?? 0);
-                $employePosteId  = (int)($item['employePosteId'] ?? 0);
-                $duree           = (int)($item['duree'] ?? 0);
-
-                if ($collaborateurId <= 0 || $employePosteId <= 0) {
-                    return $this->json([
-                        'error' => 'Invalid collaborator payload',
-                        'item'  => $item
-                    ], 400);
-                }
-
-                $collab = $collabRepository->find($collaborateurId);
-                $poste  = $posteRepository->find($employePosteId);
-
-                if (!$collab || !$poste) {
-                    return $this->json([
-                        'error' => 'Collaborateur or EmployePoste not found',
-                        'item'  => $item
-                    ], 404);
-                }
-
-                $rc = new ReferenceCollaborateur();
-                $rc->setReference($ref);
-                $rc->setCollaborateur($collab);
-                $rc->setEmployePoste($poste);
-                $rc->setReferenceCollaborateurDuree(max(0, $duree));
-
-                $this->em->persist($rc);
-            }
-
         $this->em->flush();
 
         return $this->json([
             'success' => true,
             'id'      => $ref->getReferenceID(),
             'data'    => $this->serializeReference($ref),
+            'nextCalls' => [
+                'setCaracteristiquesSpeciales' => '/api/reference/'.$ref->getReferenceID().'/caracteristiques-speciales',
+                'setCollaborateurs' => '/api/reference/'.$ref->getReferenceID().'/collaborateurs',
+            ],
         ]);
     }
 
@@ -676,11 +620,9 @@ class ReferenceController extends AbstractController
     public function update(int $id, Request $req): JsonResponse
     {
         $ref = $this->referenceRepository->find($id);
-        if (!$ref) {
-            return $this->json(['error' => 'Reference not found'], 404);
-        }
+        if (!$ref) return $this->json(['error' => 'Reference not found'], 404);
 
-        $data = json_decode($req->getContent(), true);
+        $data = json_decode($req->getContent(), true) ?? [];
 
         $needRebuildRef = false;
         $oldCategorie = $ref->getCategorie();
@@ -698,91 +640,48 @@ class ReferenceController extends AbstractController
             $needRebuildRef = true;
         }
 
-        if (array_key_exists('referenceTitre', $data)) {
-            $ref->setReferenceTitre($data['referenceTitre']);
-        }
-        if (array_key_exists('referenceLibelle', $data)) {
-            $ref->setReferenceLibelle($data['referenceLibelle']);
-        }
-        if (array_key_exists('referenceUrlFonctionnel', $data)) {
-            $ref->setReferenceUrlFonctionnel($data['referenceUrlFonctionnel']);
-        }
-        if (array_key_exists('referenceDureeExecution', $data)) {
-            $ref->setReferenceDureeExecution($data['referenceDureeExecution']);
-        }
+        if (array_key_exists('referenceTitre', $data)) $ref->setReferenceTitre($data['referenceTitre']);
+        if (array_key_exists('referenceLibelle', $data)) $ref->setReferenceLibelle($data['referenceLibelle']);
+        if (array_key_exists('referenceUrlFonctionnel', $data)) $ref->setReferenceUrlFonctionnel($data['referenceUrlFonctionnel']);
+        if (array_key_exists('referenceDureeExecution', $data)) $ref->setReferenceDureeExecution($data['referenceDureeExecution']);
 
         if (array_key_exists('referenceDateDemarrage', $data)) {
-            $ref->setReferenceDateDemarrage(
-                $data['referenceDateDemarrage'] ? new \DateTime($data['referenceDateDemarrage']) : null
-            );
+            $ref->setReferenceDateDemarrage($data['referenceDateDemarrage'] ? new \DateTime($data['referenceDateDemarrage']) : null);
         }
         if (array_key_exists('referenceDateAchevement', $data)) {
-            $ref->setReferenceDateAchevement(
-                $data['referenceDateAchevement'] ? new \DateTime($data['referenceDateAchevement']) : null
-            );
+            $ref->setReferenceDateAchevement($data['referenceDateAchevement'] ? new \DateTime($data['referenceDateAchevement']) : null);
         }
         if (array_key_exists('referenceDateReceptionProvisoire', $data)) {
-            $ref->setReferenceDateReceptionProvisoire(
-                $data['referenceDateReceptionProvisoire'] ? new \DateTime($data['referenceDateReceptionProvisoire']) : null
-            );
+            $ref->setReferenceDateReceptionProvisoire($data['referenceDateReceptionProvisoire'] ? new \DateTime($data['referenceDateReceptionProvisoire']) : null);
         }
         if (array_key_exists('referenceDateReceptionDefinitive', $data)) {
-            $ref->setReferenceDateReceptionDefinitive(
-                $data['referenceDateReceptionDefinitive'] ? new \DateTime($data['referenceDateReceptionDefinitive']) : null
-            );
+            $ref->setReferenceDateReceptionDefinitive($data['referenceDateReceptionDefinitive'] ? new \DateTime($data['referenceDateReceptionDefinitive']) : null);
         }
 
-        if (array_key_exists('referenceDureeGarantie', $data)) {
-            $ref->setReferenceDureeGarantie($data['referenceDureeGarantie']);
-        }
-        if (array_key_exists('referenceCaracteristiques', $data)) {
-            $ref->setReferenceCaracteristiques($data['referenceCaracteristiques']);
-        }
-        if (array_key_exists('referenceDescription', $data)) {
-            $ref->setReferenceDescription($data['referenceDescription']);
-        }
-        if (array_key_exists('referenceDescriptionServiceEffectivementRendus', $data)) {
-            $ref->setReferenceDescriptionServiceEffectivementRendus($data['referenceDescriptionServiceEffectivementRendus']);
-        }
-        if (array_key_exists('referenceBudget', $data)) {
-            $ref->setReferenceBudget($data['referenceBudget']);
-        }
-        if (array_key_exists('referencePartBudget', $data)) {
-            $ref->setReferencePartBudget($data['referencePartBudget']);
-        }
-        if (array_key_exists('referenceRemarque', $data)) {
-            $ref->setReferenceRemarque($data['referenceRemarque']);
-        }
+        if (array_key_exists('referenceDureeGarantie', $data)) $ref->setReferenceDureeGarantie($data['referenceDureeGarantie']);
+        if (array_key_exists('referenceCaracteristiques', $data)) $ref->setReferenceCaracteristiques($data['referenceCaracteristiques']);
+        if (array_key_exists('referenceDescription', $data)) $ref->setReferenceDescription($data['referenceDescription']);
+        if (array_key_exists('referenceDescriptionServiceEffectivementRendus', $data)) $ref->setReferenceDescriptionServiceEffectivementRendus($data['referenceDescriptionServiceEffectivementRendus']);
+        if (array_key_exists('referenceBudget', $data)) $ref->setReferenceBudget($data['referenceBudget']);
+        if (array_key_exists('referencePartBudget', $data)) $ref->setReferencePartBudget($data['referencePartBudget']);
+        if (array_key_exists('referenceRemarque', $data)) $ref->setReferenceRemarque($data['referenceRemarque']);
 
         if (array_key_exists('paysId', $data)) {
-            $pays = $data['paysId']
-                ? $this->em->getRepository(Pays::class)->find($data['paysId'])
-                : null;
+            $pays = $data['paysId'] ? $this->em->getRepository(Pays::class)->find($data['paysId']) : null;
             $ref->setPays($pays);
         }
-
         if (array_key_exists('lieuId', $data)) {
-            $lieu = $data['lieuId']
-                ? $this->em->getRepository(Lieu::class)->find($data['lieuId'])
-                : null;
+            $lieu = $data['lieuId'] ? $this->em->getRepository(Lieu::class)->find($data['lieuId']) : null;
             $ref->setLieu($lieu);
         }
-
         if (array_key_exists('devisesId', $data)) {
-            $devise = $data['devisesId']
-                ? $this->em->getRepository(Devises::class)->find($data['devisesId'])
-                : null;
+            $devise = $data['devisesId'] ? $this->em->getRepository(Devises::class)->find($data['devisesId']) : null;
             $ref->setDevises($devise);
         }
 
         if (array_key_exists('categorieId', $data)) {
-            $cat = $data['categorieId']
-                ? $this->em->getRepository(Categorie::class)->find($data['categorieId'])
-                : null;
-
-            if (!$cat) {
-                return $this->json(['error' => 'Invalid categorieId'], 400);
-            }
+            $cat = $data['categorieId'] ? $this->em->getRepository(Categorie::class)->find($data['categorieId']) : null;
+            if (!$cat) return $this->json(['error' => 'Invalid categorieId'], 400);
 
             if ($oldCategorie && $cat->getId() !== $oldCategorie->getId()) {
                 if (!array_key_exists('referenceOrdre', $data) && method_exists($ref, 'setReferenceOrdre')) {
@@ -800,9 +699,7 @@ class ReferenceController extends AbstractController
             if (is_array($data['bailleurFondIds'])) {
                 foreach ($data['bailleurFondIds'] as $bid) {
                     $bf = $this->em->getRepository(BailleurFond::class)->find($bid);
-                    if ($bf) {
-                        $ref->addBailleurfond($bf);
-                    }
+                    if ($bf) $ref->addBailleurfond($bf);
                 }
             }
         }
@@ -812,9 +709,7 @@ class ReferenceController extends AbstractController
             if (is_array($data['environnementDeveloppementIds'])) {
                 foreach ($data['environnementDeveloppementIds'] as $eid) {
                     $env = $this->em->getRepository(EnvironnementDeveloppement::class)->find($eid);
-                    if ($env) {
-                        $ref->addEnvironnementDeveloppement($env);
-                    }
+                    if ($env) $ref->addEnvironnementDeveloppement($env);
                 }
             }
         }
@@ -824,9 +719,7 @@ class ReferenceController extends AbstractController
             if (is_array($data['technologieIds'])) {
                 foreach ($data['technologieIds'] as $tid) {
                     $tech = $this->em->getRepository(Technologie::class)->find($tid);
-                    if ($tech) {
-                        $ref->addTechnologie($tech);
-                    }
+                    if ($tech) $ref->addTechnologie($tech);
                 }
             }
         }
@@ -836,9 +729,7 @@ class ReferenceController extends AbstractController
             if (is_array($data['methodologieIds'])) {
                 foreach ($data['methodologieIds'] as $mid) {
                     $meth = $this->em->getRepository(Methodologie::class)->find($mid);
-                    if ($meth) {
-                        $ref->addMethodologie($meth);
-                    }
+                    if ($meth) $ref->addMethodologie($meth);
                 }
             }
         }
@@ -848,24 +739,14 @@ class ReferenceController extends AbstractController
             if (is_array($data['roleIds'])) {
                 foreach ($data['roleIds'] as $rid) {
                     $role = $this->em->getRepository(Role::class)->find($rid);
-                    if ($role) {
-                        $ref->addRoleReference($role);
-                    }
+                    if ($role) $ref->addRoleReference($role);
                 }
             }
         }
 
-        if (array_key_exists('referenceCaracteristiqueSpecialeIds', $data)) {
-            $ref->getReferenceCaracteristiqueSpeciales()->clear();
-            if (is_array($data['referenceCaracteristiqueSpecialeIds'])) {
-                foreach ($data['referenceCaracteristiqueSpecialeIds'] as $cid) {
-                    $cs = $this->em->getRepository(ReferenceCaracteristiqueSpeciale::class)->find($cid);
-                    if ($cs) {
-                        $ref->addReferenceCaracteristiqueSpeciale($cs);
-                    }
-                }
-            }
-        }
+        // CHANGED: removed handling of referenceCaracteristiqueSpecialeIds
+        // CHANGED: removed handling of referenceCollaborateurs
+        // Now done via dedicated APIs.
 
         if ($needRebuildRef && method_exists($ref, 'rebuildReferenceRefFromCategorieShort')) {
             $cat = $ref->getCategorie();
@@ -877,65 +758,6 @@ class ReferenceController extends AbstractController
                 }
             }
         }
-
-        if (array_key_exists('referenceCollaborateurs', $data)) {
-        $items = $data['referenceCollaborateurs'];
-        if (!is_array($items)) $items = [];
-
-        $this->em->createQuery(
-            'DELETE FROM App\Entity\ReferenceCollaborateur rc WHERE rc.reference = :ref'
-        )
-        ->setParameter('ref', $ref)
-        ->execute();
-
-        $usedCollaborateurs = [];
-        $usedPostes = [];
-
-        $collabRepo = $this->em->getRepository(Collaborateur::class);
-        $posteRepo  = $this->em->getRepository(EmployePoste::class);
-
-        foreach ($items as $item) {
-            $collaborateurId = (int)($item['collaborateurId'] ?? 0);
-            $employePosteId  = (int)($item['employePosteId'] ?? 0);
-            $duree           = (int)($item['duree'] ?? 0);
-
-            if ($collaborateurId <= 0 || $employePosteId <= 0) {
-                return $this->json(['error' => 'Invalid referenceCollaborateurs item', 'item' => $item], 400);
-            }
-
-            if (in_array($collaborateurId, $usedCollaborateurs, true)) {
-                return $this->json([
-                    'error' => 'Duplicate collaborateurId in payload',
-                    'collaborateurId' => $collaborateurId
-                ], 400);
-            }
-            $usedCollaborateurs[] = $collaborateurId;
-
-            if (in_array($employePosteId, $usedPostes, true)) {
-                return $this->json([
-                    'error' => 'EmployePoste already used in payload',
-                    'employePosteId' => $employePosteId
-                ], 400);
-            }
-            $usedPostes[] = $employePosteId;
-
-            $collab = $collabRepo->find($collaborateurId);
-            $poste  = $posteRepo->find($employePosteId);
-
-            if (!$collab || !$poste) {
-                return $this->json(['error' => 'Collaborateur or EmployePoste not found', 'item' => $item], 404);
-            }
-
-            $rc = new ReferenceCollaborateur();
-            $rc->setReference($ref);
-            $rc->setCollaborateur($collab);
-            $rc->setEmployePoste($poste);
-            $rc->setReferenceCollaborateurDuree(max(0, $duree));
-
-            $this->em->persist($rc);
-        }
-    }
-
 
         $this->em->flush();
 
@@ -1097,7 +919,6 @@ class ReferenceController extends AbstractController
             return $this->json(['success' => false, 'error' => $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
-
 
     #[Route('/delete/{id}', name: 'ref_delete', methods: ['DELETE'])]
     public function delete(int $id): JsonResponse
