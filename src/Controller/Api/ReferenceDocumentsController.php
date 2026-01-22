@@ -5,18 +5,16 @@ namespace App\Controller\Api;
 use App\Entity\Reference;
 use App\Entity\ReferenceDocuments;
 use App\Entity\TypeDocument;
+use Doctrine\ORM\EntityManagerInterface;
+use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
-use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\Security\Core\Security;
-use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
-use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\String\Slugger\SluggerInterface;
 
 class ReferenceDocumentsController extends AbstractController
@@ -25,48 +23,68 @@ class ReferenceDocumentsController extends AbstractController
     public function create(Request $request, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
     {
         //$this->checkToken($tokenStorage);
-        $requestData = json_decode($request->getContent(), true);
 
-        // Vérifier si le lieu existe déjà
-        $existingReference = $entityManager->getRepository(ReferenceDocuments::class)->findOneBy([
-            'referenceDocumentsLibelle' => $requestData['referenceDocumentsLibelle'],
-            'reference' => $requestData['referenceID']
-        ]);
-        if ($existingReference) {
-            return new JsonResponse(['message' => 'Ce reference document existe déjà.'], Response::HTTP_CONFLICT);
+        $requestData = json_decode($request->getContent(), true) ?? [];
+
+        $referenceId = (int)($requestData['referenceId']
+            ?? $requestData['referenceID']
+            ?? $requestData['reference_id']
+            ?? 0);
+
+        $libelle = trim((string)($requestData['referenceDocumentsLibelle'] ?? ''));
+        $typeDocumentId = (int)($requestData['typeDocumentId'] ?? 0);
+
+        if ($referenceId <= 0) {
+            return new JsonResponse(['message' => 'referenceId is required'], Response::HTTP_BAD_REQUEST);
         }
-        // Créer une nouvelle instance de Lieu
-        $ref = new ReferenceDocuments();
-        $ref->setReferenceDocumentsLibelle($requestData['referenceDocumentsLibelle']);
-
-        // Récupérer l'objet Pays en fonction de l'ID fourni dans la requête
-        $docType = $entityManager->getRepository(TypeDocument::class)->find($requestData['typeDocumentId']);
-
-        // Vérifier si le continent existe
-        if (!$docType) {
-            return new JsonResponse(['message' => 'Type document non trouvé.'], Response::HTTP_NOT_FOUND);
+        if ($typeDocumentId <= 0) {
+            return new JsonResponse(['message' => 'typeDocumentId is required'], Response::HTTP_BAD_REQUEST);
+        }
+        if ($libelle === '') {
+            return new JsonResponse(['message' => 'referenceDocumentsLibelle is required'], Response::HTTP_BAD_REQUEST);
         }
 
-        // Affecter le pays au lieu
-        $ref->setTypeDocument($docType);
-
-        // Récupérer l'objet Pays en fonction de l'ID fourni dans la requête
-        $reference = $entityManager->getRepository(Reference::class)->find($requestData['referenceID']);
-
-        // Vérifier si le continent existe
+        $reference = $entityManager->getRepository(Reference::class)->find($referenceId);
         if (!$reference) {
             return new JsonResponse(['message' => 'Reference non trouvé.'], Response::HTTP_NOT_FOUND);
         }
 
-        // Affecter le pays au lieu
-        $ref->setReference($reference);
+        $docType = $entityManager->getRepository(TypeDocument::class)->find($typeDocumentId);
+        if (!$docType) {
+            return new JsonResponse(['message' => 'Type document non trouvé.'], Response::HTTP_NOT_FOUND);
+        }
 
-        // Persister l'entité dans la base de données
-        $entityManager->persist($ref);
+        $existingReference = $entityManager->getRepository(ReferenceDocuments::class)->findOneBy([
+            'referenceDocumentsLibelle' => $libelle,
+            'reference' => $reference
+        ]);
+        if ($existingReference) {
+            return new JsonResponse(['message' => 'Ce reference document existe déjà.'], Response::HTTP_CONFLICT);
+        }
+
+        $refDoc = new ReferenceDocuments();
+        $refDoc->setReferenceDocumentsLibelle($libelle);
+        $refDoc->setTypeDocument($docType);
+        $refDoc->setReference($reference);
+
+        if (array_key_exists('referenceDocumentsCommentaire', $requestData)) {
+            $refDoc->setReferenceDocumentsCommentaire($requestData['referenceDocumentsCommentaire']);
+        }
+
+        $entityManager->persist($refDoc);
         $entityManager->flush();
 
-        // Retourner une réponse JSON avec un message de succès
-        return new JsonResponse(['message' => 'Reference document créé avec succès'], Response::HTTP_CREATED);
+        return new JsonResponse([
+            'message' => 'Reference document créé avec succès',
+            'referenceDocumentsId' => $refDoc->getReferenceDocumentsId(),
+            'referenceDocumentsLibelle' => $refDoc->getReferenceDocumentsLibelle(),
+            'referenceDocumentsCommentaire' => $refDoc->getReferenceDocumentsCommentaire(),
+            'referenceID' => $reference?->getReferenceID(),
+            'typeDocument' => [
+                'typeDocumentId' => $docType->getTypeDocumentId(),
+                'typeDocumentLibelle' => $docType->getTypeDocumentLibelle(),
+            ],
+        ], Response::HTTP_CREATED);
     }
 
     #[Route('/api/get/ref-documents/{id}', name: 'api_reference_document_show', methods: ['GET'])]
@@ -90,13 +108,11 @@ class ReferenceDocumentsController extends AbstractController
         return new JsonResponse($data, Response::HTTP_OK);
     }
 
-
     #[Route('/api/getAll/ref-documents', name: 'api_get_all_reference_documents', methods: ['GET'])]
     public function getAll(EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
     {
         //$this->checkToken($tokenStorage);
 
-        // Récupérer les references documents triés par nom
         $repo = $entityManager->getRepository(ReferenceDocuments::class);
         $ref = $repo->findBy([], ['referenceDocumentsId' => 'ASC']);
 
@@ -120,7 +136,8 @@ class ReferenceDocumentsController extends AbstractController
     }
 
     #[Route('/api/put/ref-documents/{id}', name: 'api_reference_documents_update', methods: ['PUT'])]
-    public function update(Request $request,ReferenceDocuments $referenceDocuments,EntityManagerInterface $entityManager): JsonResponse {
+    public function update(Request $request, ReferenceDocuments $referenceDocuments, EntityManagerInterface $entityManager): JsonResponse
+    {
         $requestData = json_decode($request->getContent(), true) ?? [];
 
         if (array_key_exists('referenceDocumentsLibelle', $requestData)) {
@@ -139,12 +156,15 @@ class ReferenceDocumentsController extends AbstractController
             $referenceDocuments->setTypeDocument($typeDocument);
         }
 
-        if (array_key_exists('referenceID', $requestData)) {
-            $reference = $entityManager->getRepository(Reference::class)->find($requestData['referenceID']);
-            if (!$reference) {
-                return new JsonResponse(['message' => 'Reference non trouvée.'], Response::HTTP_NOT_FOUND);
+        if (array_key_exists('referenceId', $requestData) || array_key_exists('referenceID', $requestData)) {
+            $referenceId = (int)($requestData['referenceId'] ?? $requestData['referenceID'] ?? 0);
+            if ($referenceId > 0) {
+                $reference = $entityManager->getRepository(Reference::class)->find($referenceId);
+                if (!$reference) {
+                    return new JsonResponse(['message' => 'Reference non trouvée.'], Response::HTTP_NOT_FOUND);
+                }
+                $referenceDocuments->setReference($reference);
             }
-            $referenceDocuments->setReference($reference);
         }
 
         $entityManager->flush();
@@ -200,24 +220,17 @@ class ReferenceDocumentsController extends AbstractController
         return new JsonResponse(['message' => 'Fichier remplacé avec succès'], Response::HTTP_OK);
     }
 
-
     public function checkToken(TokenStorageInterface $tokenStorage): void
     {
-        // Récupérer le token d'authentification de Symfony
         $token = $tokenStorage->getToken();
-
-        // Vérifier si le token d'authentification est présent et est de type TokenInterface
         if (!$token instanceof TokenInterface) {
             throw new AccessDeniedHttpException('Token d\'authentification manquant ou invalide');
         }
-
     }
 
     #[Route('/api/delete/ref-documents/{id}', name: 'api_reference_documents_delete', methods: ['DELETE'])]
-    public function delete(ReferenceDocuments $referenceDocuments,EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
+    public function delete(ReferenceDocuments $referenceDocuments, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
     {
-
-        // Supprimer le pays
         $entityManager->remove($referenceDocuments);
         $entityManager->flush();
 

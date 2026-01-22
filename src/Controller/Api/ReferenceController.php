@@ -111,10 +111,10 @@ class ReferenceController extends AbstractController
 
         $dev = $ref->getDevises();
         $devData = $dev ? [
-            'id'      => $dev->getDevisesId(),
-            'libelle' => $dev->getDevisesLibelle(),
+            'id'       => $dev->getDevisesId(),
+            'libelle'  => $dev->getDevisesLibelle(),
             'acronyme' => $dev->getDevisesAcronyme(),
-            'symbole' => $dev->getDeviseSymbole(),
+            'symbole'  => $dev->getDeviseSymbole(),
         ] : null;
 
         $cat = $ref->getCategorie();
@@ -127,25 +127,25 @@ class ReferenceController extends AbstractController
         $appels = $ref->getAppelOffres()->toArray();
 
         return [
-            'referenceID'   => $ref->getReferenceID(),
-            'referenceRef'  => $ref->getReferenceRef(),
+            'referenceID'    => $ref->getReferenceID(),
+            'referenceRef'   => $ref->getReferenceRef(),
             'referenceOrdre' => $ref->getReferenceOrdre(),
 
-            'referenceTitre' => $ref->getReferenceTitre(),
-            'referenceLibelle' => $ref->getReferenceLibelle(),
-            'referenceUrlFonctionnel' => $ref->getReferenceUrlFonctionnel(),
-            'referenceDureeExecution' => $ref->getReferenceDureeExecution(),
-            'referenceDateDemarrage' => $ref->getReferenceDateDemarrage()?->format('Y-m-d'),
-            'referenceDateAchevement' => $ref->getReferenceDateAchevement()?->format('Y-m-d'),
-            'referenceDateReceptionProvisoire' => $ref->getReferenceDateReceptionProvisoire()?->format('Y-m-d'),
-            'referenceDateReceptionDefinitive' => $ref->getReferenceDateReceptionDefinitive()?->format('Y-m-d'),
-            'referenceDureeGarantie' => $ref->getReferenceDureeGarantie(),
-            'referenceCaracteristiques' => $ref->getReferenceCaracteristiques(),
-            'referenceDescription' => $ref->getReferenceDescription(),
+            'referenceTitre'                         => $ref->getReferenceTitre(),
+            'referenceLibelle'                       => $ref->getReferenceLibelle(),
+            'referenceUrlFonctionnel'                => $ref->getReferenceUrlFonctionnel(),
+            'referenceDureeExecution'                => $ref->getReferenceDureeExecution(),
+            'referenceDateDemarrage'                 => $ref->getReferenceDateDemarrage()?->format('Y-m-d'),
+            'referenceDateAchevement'                => $ref->getReferenceDateAchevement()?->format('Y-m-d'),
+            'referenceDateReceptionProvisoire'       => $ref->getReferenceDateReceptionProvisoire()?->format('Y-m-d'),
+            'referenceDateReceptionDefinitive'       => $ref->getReferenceDateReceptionDefinitive()?->format('Y-m-d'),
+            'referenceDureeGarantie'                 => $ref->getReferenceDureeGarantie(),
+            'referenceCaracteristiques'              => $ref->getReferenceCaracteristiques(),
+            'referenceDescription'                   => $ref->getReferenceDescription(),
             'referenceDescriptionServiceEffectivementRendus' => $ref->getReferenceDescriptionServiceEffectivementRendus(),
-            'referenceBudget' => $ref->getReferenceBudget(),
-            'referencePartBudget' => $ref->getReferencePartBudget(),
-            'referenceRemarque' => $ref->getReferenceRemarque(),
+            'referenceBudget'                        => $ref->getReferenceBudget(),
+            'referencePartBudget'                    => $ref->getReferencePartBudget(),
+            'referenceRemarque'                      => $ref->getReferenceRemarque(),
 
             'pays'      => $paysData,
             'lieu'      => $lieuData,
@@ -162,8 +162,8 @@ class ReferenceController extends AbstractController
             ),
             'environnementsDeveloppement' => array_map(
                 fn (EnvironnementDeveloppement $env) => [
-                    'id'       => $env->getEnvironnementDeveloppementId(),
-                    'libelle'  => $env->getEnvironnementDeveloppementLibelle(),
+                    'id'      => $env->getEnvironnementDeveloppementId(),
+                    'libelle' => $env->getEnvironnementDeveloppementLibelle(),
                 ],
                 $ref->getEnvironnementsDeveloppement()->toArray()
             ),
@@ -189,17 +189,18 @@ class ReferenceController extends AbstractController
                 ],
                 $ref->getRolesReference()->toArray()
             ),
+
             'appelOffres' => !empty($appels) ? $this->serializeAppelOffres($appels[0]) : null,
 
-            // NOTE: still serialized here (unchanged) so UI continues to display relations
             'referenceCaracteristiqueSpeciales' => array_map(
                 fn (ReferenceCaracteristiqueSpeciale $cs) => [
-                    'id'      => $cs->getReferenceCaracteristiqueSpecialeId(),
-                    'libelle' => $cs->getReferenceCaracteristiqueSpecialeTitre(),
+                    'id'          => $cs->getReferenceCaracteristiqueSpecialeId(),
+                    'libelle'     => $cs->getReferenceCaracteristiqueSpecialeTitre(),
                     'description' => $cs->getReferenceCaracteristiqueSpecialeDescription(),
                 ],
                 $ref->getReferenceCaracteristiqueSpeciales()->toArray()
             ),
+
             'referenceDocuments' => array_map(
                 fn (ReferenceDocuments $doc) => [
                     'referenceDocumentsId' => $doc->getReferenceDocumentsId(),
@@ -214,21 +215,22 @@ class ReferenceController extends AbstractController
                 ],
                 $ref->getReferenceDocuments()->toArray()
             ),
+
             'referenceCollaborateurs' => array_map(
                 fn (ReferenceCollaborateur $rc) => [
-                    'id' => $rc->getId(),
+                    'id'    => $rc->getId(),
                     'duree' => $rc->getReferenceCollaborateurDuree(),
 
                     'collaborateur' => $rc->getCollaborateur() ? [
-                        'id' => $rc->getCollaborateur()->getCollaborateurId(),
-                        'nom' => $rc->getCollaborateur()->getCollaborateurNom(),
-                        'prenom' => $rc->getCollaborateur()->getCollaborateurPrenom(),
-                        'email' => $rc->getCollaborateur()->getCollaborateurEmail1(),
+                        'id'        => $rc->getCollaborateur()->getCollaborateurId(),
+                        'nom'       => $rc->getCollaborateur()->getCollaborateurNom(),
+                        'prenom'    => $rc->getCollaborateur()->getCollaborateurPrenom(),
+                        'email'     => $rc->getCollaborateur()->getCollaborateurEmail1(),
                         'telephone' => $rc->getCollaborateur()->getCollaborateurTelephone1(),
                     ] : null,
 
                     'employePoste' => $rc->getEmployePoste() ? [
-                        'id' => $rc->getEmployePoste()->getEmployePosteId(),
+                        'id'      => $rc->getEmployePoste()->getEmployePosteId(),
                         'libelle' => $rc->getEmployePoste()->getEmployePosteLibelle(),
                     ] : null,
                 ],
@@ -239,70 +241,73 @@ class ReferenceController extends AbstractController
 
     private function serializeAppelOffres(AppelOffres $ao): array
     {
-        $type = $ao->getAppelOffresTypeId();
-        $pays = $ao->getAppelOffresPaysId();
-        $org = $ao->getAppelOffresOrganismeDemandeurId();
-        $devise = $ao->getAppelOffresDevisesId();
-        $deviseCaution = $ao->getAppelOffresCautionBancaireDeviseId();
+        $type             = $ao->getAppelOffresTypeId();
+        $pays             = $ao->getAppelOffresPaysId();
+        $org              = $ao->getAppelOffresOrganismeDemandeurId();
+        $devise           = $ao->getAppelOffresDevisesId();
+        $deviseCaution    = $ao->getAppelOffresCautionBancaireDeviseId();
         $typeParticipation = $ao->getAppelOffresTypeParticipationId();
-        $secteur = $org?->getSecteurActivite();
-        $nature = $org?->getNatureOrganismeDemendeur();
+        $secteur          = $org?->getSecteurActivite();
+        $nature           = $org?->getNatureOrganismeDemendeur();
 
         return [
-            'appelOffresId' => $ao->getAppelOffresId(),
+            'appelOffresId'    => $ao->getAppelOffresId(),
             'appelOffresObjet' => $ao->getAppelOffresObjet(),
             'appelOffresAnnee' => $ao->getAppelOffresAnnee(),
+
             'appelOffresTypeParticipationLibelle' => $typeParticipation ? [
-                'id'    => $typeParticipation->getParticipationTypeId(),
-                'libelle' =>
-                    method_exists($typeParticipation, 'getParticipationTypeLibelle')
-                        ? $typeParticipation->getParticipationTypeLibelle()
-                        : null,
+                'id'      => $typeParticipation->getParticipationTypeId(),
+                'libelle' => method_exists($typeParticipation, 'getParticipationTypeLibelle')
+                    ? $typeParticipation->getParticipationTypeLibelle()
+                    : null,
             ] : null,
+
             'appelOffresType' => $type ? [
-                'id'    => $type->getAppelOffresTypeId(),
-                'libelle' =>
-                    method_exists($type, 'getAppelOffresTypeLibelle')
-                        ? $type->getAppelOffresTypeLibelle()
-                        : null,
-                'short' =>
-                    method_exists($type, 'getAppelOffresTypeShort')
-                        ? $type->getAppelOffresTypeShort()
-                        : null,
+                'id'      => $type->getAppelOffresTypeId(),
+                'libelle' => method_exists($type, 'getAppelOffresTypeLibelle')
+                    ? $type->getAppelOffresTypeLibelle()
+                    : null,
+                'short'   => method_exists($type, 'getAppelOffresTypeShort')
+                    ? $type->getAppelOffresTypeShort()
+                    : null,
             ] : null,
+
             'pays' => $pays ? [
-                'id' => method_exists($pays, 'getPaysId') ? $pays->getPaysId() : null,
+                'id'      => method_exists($pays, 'getPaysId') ? $pays->getPaysId() : null,
                 'libelle' => method_exists($pays, 'getPaysLibelle') ? $pays->getPaysLibelle() : null,
             ] : null,
+
             'organismeDemandeur' => $org ? [
-                'id' => $org->getOrganismeDemandeurId(),
-                'raisonSociale' => $org->getOrganismeDemandeurRaisonSociale(),
+                'id'               => $org->getOrganismeDemandeurId(),
+                'raisonSociale'    => $org->getOrganismeDemandeurRaisonSociale(),
                 'raisonSocialeShort' => $org->getOrganismeDemandeurRaisonSocialeShort(),
-                'adresse' => $org->getOrganismeDemandeurAdresse(),
-                'telephone' => $org->getOrganismeDemandeurTelephone(),
-                'email' => $org->getOrganismeDemandeurEmail(),
+                'adresse'          => $org->getOrganismeDemandeurAdresse(),
+                'telephone'        => $org->getOrganismeDemandeurTelephone(),
+                'email'            => $org->getOrganismeDemandeurEmail(),
                 'CoordinateurPrenomNom' => $org->getOrganismeDemandeurCoordinateurPrenomNom(),
-                'CoordinateurEmail' => $org->getOrganismeDemandeurCoordinateurEmail(),
-                'CoordinateurTel' => $org->getOrganismeDemandeurCoordinateurTel(),
-                'logo' => $org->getOrganismeDemandeurLogo(),
+                'CoordinateurEmail'     => $org->getOrganismeDemandeurCoordinateurEmail(),
+                'CoordinateurTel'       => $org->getOrganismeDemandeurCoordinateurTel(),
+                'logo'             => $org->getOrganismeDemandeurLogo(),
+
                 'secteurActivite' => $secteur ? [
-                    'id' => $secteur->getSecteurActiviteId(),
+                    'id'      => $secteur->getSecteurActiviteId(),
                     'libelle' => $secteur->getSecteurActiviteLibelle(),
                 ] : null,
+
                 'NatureOrganismeDemandeur' => $nature ? [
-                    'id' => $nature->getNatureOrganismeDemendeurId(),
+                    'id'      => $nature->getNatureOrganismeDemendeurId(),
                     'libelle' => $nature->getNatureOrganismeDemendeurLibelle(),
                 ] : null,
             ] : null,
 
             'devises' => $devise ? [
-                'id' => method_exists($devise, 'getDevisesId') ? $devise->getDevisesId() : null,
+                'id'      => method_exists($devise, 'getDevisesId') ? $devise->getDevisesId() : null,
                 'libelle' => method_exists($devise, 'getDevisesLibelle') ? $devise->getDevisesLibelle() : null,
-                'code' => method_exists($devise, 'getDevisesCode') ? $devise->getDevisesCode() : null,
+                'code'    => method_exists($devise, 'getDevisesCode') ? $devise->getDevisesCode() : null,
             ] : null,
 
             'typeParticipation' => $typeParticipation ? [
-                'id' => method_exists($typeParticipation, 'getParticipationTypeId') ? $typeParticipation->getParticipationTypeId() : null,
+                'id'      => method_exists($typeParticipation, 'getParticipationTypeId') ? $typeParticipation->getParticipationTypeId() : null,
                 'libelle' => method_exists($typeParticipation, 'getParticipationTypeLibelle') ? $typeParticipation->getParticipationTypeLibelle() : null,
             ] : null,
 
@@ -331,8 +336,8 @@ class ReferenceController extends AbstractController
                 return $out;
             })(),
 
-            'partenairesCount' => $ao->getAppelOffresPartenaires()->count(),
-            'personnelCleCount' => $ao->getAppelOffresPersonnelCleAppelOffres()->count(),
+            'partenairesCount'   => $ao->getAppelOffresPartenaires()->count(),
+            'personnelCleCount'  => $ao->getAppelOffresPersonnelCleAppelOffres()->count(),
         ];
     }
 
@@ -394,8 +399,8 @@ class ReferenceController extends AbstractController
         $total = (int) $qbCount->select('COUNT(r.referenceID)')->getQuery()->getSingleScalarResult();
 
         $qb->orderBy('r.' . $sortField, $sortDir)
-           ->setFirstResult(($page - 1) * $size)
-           ->setMaxResults($size);
+            ->setFirstResult(($page - 1) * $size)
+            ->setMaxResults($size);
 
         $refs = $qb->getQuery()->getResult();
 
@@ -553,7 +558,6 @@ class ReferenceController extends AbstractController
             }
         }
 
-        // keep these relations here (unchanged)
         if (!empty($data['bailleurFondIds']) && is_array($data['bailleurFondIds'])) {
             foreach ($data['bailleurFondIds'] as $bid) {
                 $bf = $this->em->getRepository(BailleurFond::class)->find($bid);
@@ -595,13 +599,6 @@ class ReferenceController extends AbstractController
             if ($ao) $ref->addAppelOffres($ao);
         }
 
-        // CHANGED: removed handling of:
-        // - referenceCaracteristiqueSpecialeIds
-        // - referenceCollaborateurs
-        // These are now managed by separate APIs:
-        // PUT /api/reference/{id}/caracteristiques-speciales
-        // PUT /api/reference/{id}/collaborateurs
-
         $this->em->persist($ref);
         $this->em->flush();
 
@@ -609,10 +606,6 @@ class ReferenceController extends AbstractController
             'success' => true,
             'id'      => $ref->getReferenceID(),
             'data'    => $this->serializeReference($ref),
-            'nextCalls' => [
-                'setCaracteristiquesSpeciales' => '/api/reference/'.$ref->getReferenceID().'/caracteristiques-speciales',
-                'setCollaborateurs' => '/api/reference/'.$ref->getReferenceID().'/collaborateurs',
-            ],
         ]);
     }
 
@@ -620,7 +613,9 @@ class ReferenceController extends AbstractController
     public function update(int $id, Request $req): JsonResponse
     {
         $ref = $this->referenceRepository->find($id);
-        if (!$ref) return $this->json(['error' => 'Reference not found'], 404);
+        if (!$ref) {
+            return $this->json(['error' => 'Reference not found'], 404);
+        }
 
         $data = json_decode($req->getContent(), true) ?? [];
 
@@ -670,10 +665,12 @@ class ReferenceController extends AbstractController
             $pays = $data['paysId'] ? $this->em->getRepository(Pays::class)->find($data['paysId']) : null;
             $ref->setPays($pays);
         }
+
         if (array_key_exists('lieuId', $data)) {
             $lieu = $data['lieuId'] ? $this->em->getRepository(Lieu::class)->find($data['lieuId']) : null;
             $ref->setLieu($lieu);
         }
+
         if (array_key_exists('devisesId', $data)) {
             $devise = $data['devisesId'] ? $this->em->getRepository(Devises::class)->find($data['devisesId']) : null;
             $ref->setDevises($devise);
@@ -681,7 +678,10 @@ class ReferenceController extends AbstractController
 
         if (array_key_exists('categorieId', $data)) {
             $cat = $data['categorieId'] ? $this->em->getRepository(Categorie::class)->find($data['categorieId']) : null;
-            if (!$cat) return $this->json(['error' => 'Invalid categorieId'], 400);
+
+            if (!$cat) {
+                return $this->json(['error' => 'Invalid categorieId'], 400);
+            }
 
             if ($oldCategorie && $cat->getId() !== $oldCategorie->getId()) {
                 if (!array_key_exists('referenceOrdre', $data) && method_exists($ref, 'setReferenceOrdre')) {
@@ -744,10 +744,6 @@ class ReferenceController extends AbstractController
             }
         }
 
-        // CHANGED: removed handling of referenceCaracteristiqueSpecialeIds
-        // CHANGED: removed handling of referenceCollaborateurs
-        // Now done via dedicated APIs.
-
         if ($needRebuildRef && method_exists($ref, 'rebuildReferenceRefFromCategorieShort')) {
             $cat = $ref->getCategorie();
             if ($cat) {
@@ -765,6 +761,132 @@ class ReferenceController extends AbstractController
             'success' => true,
             'data'    => $this->serializeReference($ref),
         ]);
+    }
+
+    #[Route('/{id}/caracteristiques-speciales', name: 'ref_cs_replace', methods: ['PUT'])]
+    public function replaceCaracteristiquesSpeciales(int $id, Request $req): JsonResponse
+    {
+        $ref = $this->referenceRepository->find($id);
+        if (!$ref) return $this->json(['error' => 'Reference not found'], 404);
+
+        $data = json_decode($req->getContent(), true) ?? [];
+        $ids = $data['ids'] ?? [];
+        if (!is_array($ids)) $ids = [];
+
+        $repo = $this->em->getRepository(ReferenceCaracteristiqueSpeciale::class);
+
+        $ref->getReferenceCaracteristiqueSpeciales()->clear();
+
+        foreach ($ids as $csId) {
+            $csId = (int) $csId;
+            if ($csId <= 0) continue;
+
+            $cs = $repo->find($csId);
+            if (!$cs) {
+                return $this->json(['error' => 'Invalid referenceCaracteristiqueSpecialeId', 'id' => $csId], 400);
+            }
+            $ref->addReferenceCaracteristiqueSpeciale($cs);
+        }
+
+        $this->em->flush();
+        return $this->json(['success' => true]);
+    }
+
+    #[Route('/{id}/caracteristiques-speciales/{csId}', name: 'ref_cs_attach', methods: ['POST'])]
+    public function attachCaracteristiqueSpeciale(int $id, int $csId): JsonResponse
+    {
+        $ref = $this->referenceRepository->find($id);
+        if (!$ref) return $this->json(['error' => 'Reference not found'], 404);
+
+        $cs = $this->em->getRepository(ReferenceCaracteristiqueSpeciale::class)->find($csId);
+        if (!$cs) return $this->json(['error' => 'Caracteristique not found'], 404);
+
+        $ref->addReferenceCaracteristiqueSpeciale($cs);
+        $this->em->flush();
+
+        return $this->json(['success' => true]);
+    }
+
+    #[Route('/{id}/caracteristiques-speciales/{csId}', name: 'ref_cs_detach', methods: ['DELETE'])]
+    public function detachCaracteristiqueSpeciale(int $id, int $csId): JsonResponse
+    {
+        $ref = $this->referenceRepository->find($id);
+        if (!$ref) return $this->json(['error' => 'Reference not found'], 404);
+
+        $cs = $this->em->getRepository(ReferenceCaracteristiqueSpeciale::class)->find($csId);
+        if (!$cs) return $this->json(['error' => 'Caracteristique not found'], 404);
+
+        $ref->removeReferenceCaracteristiqueSpeciale($cs);
+        $this->em->flush();
+
+        return $this->json(['success' => true]);
+    }
+
+    #[Route('/{id}/collaborateurs', name: 'ref_collab_replace', methods: ['PUT'])]
+    public function replaceReferenceCollaborateurs(int $id, Request $req): JsonResponse
+    {
+        $ref = $this->referenceRepository->find($id);
+        if (!$ref) return $this->json(['error' => 'Reference not found'], 404);
+
+        $data = json_decode($req->getContent(), true) ?? [];
+        $items = $data['items'] ?? [];
+        if (!is_array($items)) $items = [];
+
+        $this->em->createQuery(
+            'DELETE FROM App\Entity\ReferenceCollaborateur rc WHERE rc.reference = :ref'
+        )
+        ->setParameter('ref', $ref)
+        ->execute();
+
+        $collabRepo = $this->em->getRepository(Collaborateur::class);
+        $posteRepo  = $this->em->getRepository(EmployePoste::class);
+
+        $usedCollaborateurs = [];
+        $usedPostes = [];
+
+        foreach ($items as $item) {
+            $collaborateurId = (int)($item['collaborateurId'] ?? 0);
+            $employePosteId  = (int)($item['employePosteId'] ?? 0);
+            $duree           = (int)($item['duree'] ?? 0);
+
+            if ($collaborateurId <= 0 || $employePosteId <= 0) {
+                return $this->json(['error' => 'Invalid referenceCollaborateurs item', 'item' => $item], 400);
+            }
+
+            if (in_array($collaborateurId, $usedCollaborateurs, true)) {
+                return $this->json([
+                    'error' => 'Duplicate collaborateurId in payload',
+                    'collaborateurId' => $collaborateurId
+                ], 400);
+            }
+            $usedCollaborateurs[] = $collaborateurId;
+
+            if (in_array($employePosteId, $usedPostes, true)) {
+                return $this->json([
+                    'error' => 'EmployePoste already used in payload',
+                    'employePosteId' => $employePosteId
+                ], 400);
+            }
+            $usedPostes[] = $employePosteId;
+
+            $collab = $collabRepo->find($collaborateurId);
+            $poste  = $posteRepo->find($employePosteId);
+
+            if (!$collab || !$poste) {
+                return $this->json(['error' => 'Collaborateur or EmployePoste not found', 'item' => $item], 404);
+            }
+
+            $rc = new ReferenceCollaborateur();
+            $rc->setReference($ref);
+            $rc->setCollaborateur($collab);
+            $rc->setEmployePoste($poste);
+            $rc->setReferenceCollaborateurDuree(max(0, $duree));
+
+            $this->em->persist($rc);
+        }
+
+        $this->em->flush();
+        return $this->json(['success' => true]);
     }
 
     #[Route('/reorder', name: 'ref_reorder', methods: ['POST'])]
@@ -907,10 +1029,10 @@ class ReferenceController extends AbstractController
                 'position' => $position,
                 'catId'    => $catId,
                 'affected' => [
-                    'phaseA' => $affectedA,
-                    'phaseB' => $affectedB,
-                    'tmpRef' => $affectedTmp,
-                    'finalRef' => $affectedFinal,
+                    'phaseA'    => $affectedA,
+                    'phaseB'    => $affectedB,
+                    'tmpRef'    => $affectedTmp,
+                    'finalRef'  => $affectedFinal,
                 ],
             ]);
 

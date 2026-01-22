@@ -121,7 +121,7 @@ class OrganismeDemandeurController extends AbstractController
         $limit = max(1, min(100, (int)$request->query->get('limit', 10)));
         $offset = ($page - 1) * $limit;
 
-        $sortField = $request->query->get('sortField', 'organismeDemandeurRaisonSociale');
+        $sortField = $request->query->get('sortField', 'organismeDemandeurId');
         $sortDir = strtoupper($request->query->get('sortDir', 'ASC')) === 'DESC' ? 'DESC' : 'ASC';
         $search = trim((string)$request->query->get('search', ''));
 
