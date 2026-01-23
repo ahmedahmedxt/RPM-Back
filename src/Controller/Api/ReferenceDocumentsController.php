@@ -22,54 +22,49 @@ class ReferenceDocumentsController extends AbstractController
     #[Route('/api/create/ref-documents', name: 'api_reference_document_create', methods: ['POST'])]
     public function create(Request $request, EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        //$this->checkToken($tokenStorage);
-
         $requestData = json_decode($request->getContent(), true) ?? [];
 
-        $referenceId = (int)($requestData['referenceId']
-            ?? $requestData['referenceID']
-            ?? $requestData['reference_id']
-            ?? 0);
-
-        $libelle = trim((string)($requestData['referenceDocumentsLibelle'] ?? ''));
+        $referenceId = (int)($requestData['referenceId'] ?? $requestData['referenceID'] ?? $requestData['reference_id'] ?? 0);
         $typeDocumentId = (int)($requestData['typeDocumentId'] ?? 0);
 
-        if ($referenceId <= 0) {
-            return new JsonResponse(['message' => 'referenceId is required'], Response::HTTP_BAD_REQUEST);
-        }
-        if ($typeDocumentId <= 0) {
-            return new JsonResponse(['message' => 'typeDocumentId is required'], Response::HTTP_BAD_REQUEST);
-        }
-        if ($libelle === '') {
-            return new JsonResponse(['message' => 'referenceDocumentsLibelle is required'], Response::HTTP_BAD_REQUEST);
-        }
+        $libelle = trim((string)($requestData['referenceDocumentsLibelle'] ?? ''));
+        $objet = trim((string)($requestData['referenceDocumentsObjet'] ?? ''));
+        $commentaire = (string)($requestData['referenceDocumentsCommentaire'] ?? '');
+        $commentaire = trim($commentaire);
+        if (mb_strlen($commentaire) > 255) $commentaire = mb_substr($commentaire, 0, 255);
+
+        if ($referenceId <= 0) return new JsonResponse(['message' => 'referenceId is required'], Response::HTTP_BAD_REQUEST);
+        if ($typeDocumentId <= 0) return new JsonResponse(['message' => 'typeDocumentId is required'], Response::HTTP_BAD_REQUEST);
+        if ($libelle === '') return new JsonResponse(['message' => 'referenceDocumentsLibelle is required'], Response::HTTP_BAD_REQUEST);
 
         $reference = $entityManager->getRepository(Reference::class)->find($referenceId);
-        if (!$reference) {
-            return new JsonResponse(['message' => 'Reference non trouvé.'], Response::HTTP_NOT_FOUND);
-        }
+        if (!$reference) return new JsonResponse(['message' => 'Reference non trouvé.'], Response::HTTP_NOT_FOUND);
 
         $docType = $entityManager->getRepository(TypeDocument::class)->find($typeDocumentId);
-        if (!$docType) {
-            return new JsonResponse(['message' => 'Type document non trouvé.'], Response::HTTP_NOT_FOUND);
+        if (!$docType) return new JsonResponse(['message' => 'Type document non trouvé.'], Response::HTTP_NOT_FOUND);
+
+        // ✅ 1 seul document par type pour chaque référence
+        $existingSameType = $entityManager->getRepository(ReferenceDocuments::class)->findOneBy([
+            'reference' => $reference,
+            'typeDocument' => $docType
+        ]);
+        if ($existingSameType) {
+            return new JsonResponse([
+                'message' => 'Un document existe déjà pour ce type. (1 seul fichier par type et par référence)'
+            ], Response::HTTP_CONFLICT);
         }
 
-        $existingReference = $entityManager->getRepository(ReferenceDocuments::class)->findOneBy([
-            'referenceDocumentsLibelle' => $libelle,
-            'reference' => $reference
-        ]);
-        if ($existingReference) {
-            return new JsonResponse(['message' => 'Ce reference document existe déjà.'], Response::HTTP_CONFLICT);
-        }
+        // ✅ objet auto = type libellé si vide
+        if ($objet === '') $objet = (string)$docType->getTypeDocumentLibelle();
+        if (mb_strlen($objet) > 255) $objet = mb_substr($objet, 0, 255);
 
         $refDoc = new ReferenceDocuments();
         $refDoc->setReferenceDocumentsLibelle($libelle);
+        $refDoc->setReferenceDocumentsObjet($objet);
+        $refDoc->setReferenceDocumentsCommentaire($commentaire ?: null);
         $refDoc->setTypeDocument($docType);
         $refDoc->setReference($reference);
-
-        if (array_key_exists('referenceDocumentsCommentaire', $requestData)) {
-            $refDoc->setReferenceDocumentsCommentaire($requestData['referenceDocumentsCommentaire']);
-        }
+        $refDoc->setReferenceDocumentsDate(new \DateTimeImmutable('today'));
 
         $entityManager->persist($refDoc);
         $entityManager->flush();
@@ -78,6 +73,8 @@ class ReferenceDocumentsController extends AbstractController
             'message' => 'Reference document créé avec succès',
             'referenceDocumentsId' => $refDoc->getReferenceDocumentsId(),
             'referenceDocumentsLibelle' => $refDoc->getReferenceDocumentsLibelle(),
+            'referenceDocumentsObjet' => $refDoc->getReferenceDocumentsObjet(),
+            'referenceDocumentsDate' => $refDoc->getReferenceDocumentsDate()?->format('Y-m-d'),
             'referenceDocumentsCommentaire' => $refDoc->getReferenceDocumentsCommentaire(),
             'referenceID' => $reference?->getReferenceID(),
             'typeDocument' => [
@@ -93,46 +90,44 @@ class ReferenceDocumentsController extends AbstractController
         $type = $referenceDocuments->getTypeDocument();
         $ref  = $referenceDocuments->getReference();
 
-        $data = [
+        return new JsonResponse([
             'referenceDocumentsId' => $referenceDocuments->getReferenceDocumentsId(),
             'referenceDocumentsLibelle' => $referenceDocuments->getReferenceDocumentsLibelle(),
+            'referenceDocumentsObjet' => $referenceDocuments->getReferenceDocumentsObjet(),
             'referenceDocumentPath' => $referenceDocuments->getReferenceDocumentPath(),
+            'referenceDocumentsDate' => $referenceDocuments->getReferenceDocumentsDate()?->format('Y-m-d'),
             'referenceDocumentsCommentaire' => $referenceDocuments->getReferenceDocumentsCommentaire(),
             'referenceID' => $ref?->getReferenceID(),
             'typeDocument' => $type ? [
                 'typeDocumentId' => $type->getTypeDocumentId(),
                 'typeDocumentLibelle' => $type->getTypeDocumentLibelle(),
             ] : null,
-        ];
-
-        return new JsonResponse($data, Response::HTTP_OK);
+        ], Response::HTTP_OK);
     }
 
     #[Route('/api/getAll/ref-documents', name: 'api_get_all_reference_documents', methods: ['GET'])]
     public function getAll(EntityManagerInterface $entityManager, TokenStorageInterface $tokenStorage): JsonResponse
     {
-        //$this->checkToken($tokenStorage);
-
         $repo = $entityManager->getRepository(ReferenceDocuments::class);
-        $ref = $repo->findBy([], ['referenceDocumentsId' => 'ASC']);
+        $rows = $repo->findBy([], ['referenceDocumentsId' => 'ASC']);
 
-        $refData = [];
-        foreach ($ref as $refItem) {
-            $reference = $refItem->getReference();
-            $typeDoc = $refItem->getTypeDocument();
-
-            $referenceLibelle = ($reference) ? $reference->getReferenceLibelle() : 'Reference non spécifié';
-            $typeDocLibelle = ($typeDoc) ? $typeDoc->getTypeDocumentLibelle() : 'Type de document non spécifié';
-
-            $refData[] = [
-                'referenceDocumentsId' => $refItem->getReferenceDocumentsId(),
-                'referenceDocumentsLibelle' => $refItem->getReferenceDocumentsLibelle(),
-                'referenceLibelle' => $referenceLibelle,
-                'typeDocLibelle' => $typeDocLibelle,
+        $data = [];
+        foreach ($rows as $d) {
+            $data[] = [
+                'referenceDocumentsId' => $d->getReferenceDocumentsId(),
+                'referenceDocumentsLibelle' => $d->getReferenceDocumentsLibelle(),
+                'referenceDocumentsObjet' => $d->getReferenceDocumentsObjet(),
+                'referenceDocumentsDate' => $d->getReferenceDocumentsDate()?->format('Y-m-d'),
+                'referenceDocumentsCommentaire' => $d->getReferenceDocumentsCommentaire(),
+                'referenceID' => $d->getReference()?->getReferenceID(),
+                'typeDocument' => $d->getTypeDocument() ? [
+                    'typeDocumentId' => $d->getTypeDocument()->getTypeDocumentId(),
+                    'typeDocumentLibelle' => $d->getTypeDocument()->getTypeDocumentLibelle(),
+                ] : null,
             ];
         }
 
-        return new JsonResponse($refData, Response::HTTP_OK);
+        return new JsonResponse($data, Response::HTTP_OK);
     }
 
     #[Route('/api/put/ref-documents/{id}', name: 'api_reference_documents_update', methods: ['PUT'])]
@@ -141,34 +136,44 @@ class ReferenceDocumentsController extends AbstractController
         $requestData = json_decode($request->getContent(), true) ?? [];
 
         if (array_key_exists('referenceDocumentsLibelle', $requestData)) {
-            $referenceDocuments->setReferenceDocumentsLibelle($requestData['referenceDocumentsLibelle']);
+            $referenceDocuments->setReferenceDocumentsLibelle(trim((string)$requestData['referenceDocumentsLibelle']));
+        }
+
+        if (array_key_exists('referenceDocumentsObjet', $requestData)) {
+            $objet = trim((string)$requestData['referenceDocumentsObjet']);
+            if (mb_strlen($objet) > 255) $objet = mb_substr($objet, 0, 255);
+            $referenceDocuments->setReferenceDocumentsObjet($objet ?: null);
         }
 
         if (array_key_exists('referenceDocumentsCommentaire', $requestData)) {
-            $referenceDocuments->setReferenceDocumentsCommentaire($requestData['referenceDocumentsCommentaire']);
+            $comm = trim((string)$requestData['referenceDocumentsCommentaire']);
+            if (mb_strlen($comm) > 255) $comm = mb_substr($comm, 0, 255);
+            $referenceDocuments->setReferenceDocumentsCommentaire($comm ?: null);
         }
 
         if (array_key_exists('typeDocumentId', $requestData)) {
-            $typeDocument = $entityManager->getRepository(TypeDocument::class)->find($requestData['typeDocumentId']);
-            if (!$typeDocument) {
-                return new JsonResponse(['message' => 'Type document non trouvé.'], Response::HTTP_NOT_FOUND);
-            }
-            $referenceDocuments->setTypeDocument($typeDocument);
-        }
+            $newType = $entityManager->getRepository(TypeDocument::class)->find((int)$requestData['typeDocumentId']);
+            if (!$newType) return new JsonResponse(['message' => 'Type document non trouvé.'], Response::HTTP_NOT_FOUND);
 
-        if (array_key_exists('referenceId', $requestData) || array_key_exists('referenceID', $requestData)) {
-            $referenceId = (int)($requestData['referenceId'] ?? $requestData['referenceID'] ?? 0);
-            if ($referenceId > 0) {
-                $reference = $entityManager->getRepository(Reference::class)->find($referenceId);
-                if (!$reference) {
-                    return new JsonResponse(['message' => 'Reference non trouvée.'], Response::HTTP_NOT_FOUND);
-                }
-                $referenceDocuments->setReference($reference);
+            // ✅ Interdire duplication si on change de type
+            $ref = $referenceDocuments->getReference();
+            $existingSameType = $entityManager->getRepository(ReferenceDocuments::class)->findOneBy([
+                'reference' => $ref,
+                'typeDocument' => $newType
+            ]);
+            if ($existingSameType && $existingSameType->getReferenceDocumentsId() !== $referenceDocuments->getReferenceDocumentsId()) {
+                return new JsonResponse(['message' => 'Un document existe déjà pour ce type (sur cette référence).'], Response::HTTP_CONFLICT);
+            }
+
+            $referenceDocuments->setTypeDocument($newType);
+
+            // si objet vide => auto
+            if (!$referenceDocuments->getReferenceDocumentsObjet()) {
+                $referenceDocuments->setReferenceDocumentsObjet((string)$newType->getTypeDocumentLibelle());
             }
         }
 
         $entityManager->flush();
-
         return new JsonResponse(['message' => 'Reference document mis à jour avec succès'], Response::HTTP_OK);
     }
 
@@ -176,7 +181,9 @@ class ReferenceDocumentsController extends AbstractController
     public function replaceFile(Request $request, ReferenceDocuments $referenceDocuments, EntityManagerInterface $entityManager, SluggerInterface $slugger): JsonResponse
     {
         $file = $request->files->get('file');
-
+        if (!$file->isValid()) {
+            return new JsonResponse(['message' => 'Upload invalide.'], Response::HTTP_BAD_REQUEST);
+        }
         if (!$file) {
             return new JsonResponse([
                 'message' => 'Fichier manquant (field: file).',
@@ -186,21 +193,34 @@ class ReferenceDocumentsController extends AbstractController
         }
 
         $typeDocumentId = $request->request->get('typeDocumentId');
-        $commentaire = $request->request->get('referenceDocumentsCommentaire');
-        if ($commentaire === null) {
-            $commentaire = $request->request->get('commentaire');
-        }
+        $commentaire = $request->request->get('referenceDocumentsCommentaire') ?? $request->request->get('commentaire');
 
         if ($typeDocumentId) {
-            $typeDocument = $entityManager->getRepository(TypeDocument::class)->find($typeDocumentId);
-            if (!$typeDocument) {
-                return new JsonResponse(['message' => 'Type document non trouvé.'], Response::HTTP_NOT_FOUND);
+            $typeDocument = $entityManager->getRepository(TypeDocument::class)->find((int)$typeDocumentId);
+            if (!$typeDocument) return new JsonResponse(['message' => 'Type document non trouvé.'], Response::HTTP_NOT_FOUND);
+
+            // ✅ Interdire duplication si on change de type via upload
+            $ref = $referenceDocuments->getReference();
+            $existingSameType = $entityManager->getRepository(ReferenceDocuments::class)->findOneBy([
+                'reference' => $ref,
+                'typeDocument' => $typeDocument
+            ]);
+            if ($existingSameType && $existingSameType->getReferenceDocumentsId() !== $referenceDocuments->getReferenceDocumentsId()) {
+                return new JsonResponse(['message' => 'Un document existe déjà pour ce type (sur cette référence).'], Response::HTTP_CONFLICT);
             }
+
             $referenceDocuments->setTypeDocument($typeDocument);
+
+            // objet auto si vide
+            if (!$referenceDocuments->getReferenceDocumentsObjet()) {
+                $referenceDocuments->setReferenceDocumentsObjet((string)$typeDocument->getTypeDocumentLibelle());
+            }
         }
 
         if ($commentaire !== null) {
-            $referenceDocuments->setReferenceDocumentsCommentaire($commentaire);
+            $comm = trim((string)$commentaire);
+            if (mb_strlen($comm) > 255) $comm = mb_substr($comm, 0, 255);
+            $referenceDocuments->setReferenceDocumentsCommentaire($comm ?: null);
         }
 
         $uploadDir = $this->getParameter('kernel.project_dir') . '/public/uploads/reference';
@@ -208,12 +228,22 @@ class ReferenceDocumentsController extends AbstractController
 
         $originalFilename = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
         $safeFilename = $slugger->slug($originalFilename);
-        $newFilename = $safeFilename . '-' . uniqid() . '.' . $file->guessExtension();
+        $originalName = $file->getClientOriginalName();
+        $originalExt = strtolower((string) pathinfo($originalName, PATHINFO_EXTENSION));
+
+        $guessedExt = strtolower((string) $file->guessExtension()); 
+        $ext = $guessedExt ?: ($originalExt ?: 'bin');             
+
+        $originalFilename = pathinfo($originalName, PATHINFO_FILENAME);
+        $safeFilename = $slugger->slug($originalFilename);
+
+        $newFilename = sprintf('%s-%s.%s', $safeFilename, uniqid(), $ext);
 
         $file->move($uploadDir, $newFilename);
 
         $referenceDocuments->setReferenceDocumentsLibelle($file->getClientOriginalName());
         $referenceDocuments->setReferenceDocumentPath('/uploads/reference/' . $newFilename);
+        $referenceDocuments->setReferenceDocumentsDate(new \DateTimeImmutable('today'));
 
         $entityManager->flush();
 

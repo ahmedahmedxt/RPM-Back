@@ -208,6 +208,7 @@ class ReferenceController extends AbstractController
                     'path'                 => $doc->getReferenceDocumentPath(),
                     'date'                 => $doc->getReferenceDocumentsDate()?->format('Y-m-d'),
                     'commentaire'          => $doc->getReferenceDocumentsCommentaire(),
+                    'objet'                => $doc->getReferenceDocumentsObjet(),
                     'typeDocument'         => $doc->getTypeDocument() ? [
                         'typeDocumentId'      => $doc->getTypeDocument()->getTypeDocumentId(),
                         'typeDocumentLibelle' => $doc->getTypeDocument()->getTypeDocumentLibelle(),
