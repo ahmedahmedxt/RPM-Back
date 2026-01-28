@@ -19,7 +19,7 @@ class AppelOffresPersonnelCle
     #[ORM\Column(type: "string", length: 254, nullable: true, name: "appelOffresPersonnelCleIntitule")]
     private ?string $appelOffresPersonnelCleIntitule = null;
 
-    #[ORM\Column(type: "string", length: 254, nullable: true, name: "appelOffresPersonnelCleDescription")]
+    #[ORM\Column(type: "string", length: 1024, nullable: true, name: "appelOffresPersonnelCleDescription")]
     private ?string $appelOffresPersonnelCleDescription = null;
 
     #[ORM\Column(type: "string", length: 254, nullable: true, name: "appelOffresPersonnelCleNiveauEtudeMin")]
