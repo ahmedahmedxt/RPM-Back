@@ -402,8 +402,12 @@ public function update(Request $request, AppelOffres $appel, EntityManagerInterf
         try {
             $data = json_decode($request->getContent(), true) ?? [];
 
-            $participation = isset($data['appelOffresParticipation']) ? (int)$data['appelOffresParticipation'] : 0;
-            $appel->setAppelOffresParticipation($participation);
+            if (array_key_exists('appelOffresParticipation', $data)) {
+                $participation = (int)$data['appelOffresParticipation'];
+                $appel->setAppelOffresParticipation($participation);
+            } else {
+                $participation = (int)$appel->getAppelOffresParticipation();
+            }
 
             if (array_key_exists('appelOffresTypeParticipationId', $data)) {
                 $participationType = !empty($data['appelOffresTypeParticipationId'])
@@ -412,25 +416,68 @@ public function update(Request $request, AppelOffres $appel, EntityManagerInterf
                 $appel->setAppelOffresTypeParticipationId($participationType);
             }
 
-            if (array_key_exists('appelOffresDateParticipation', $data)) {
-                $dateParticipation = !empty($data['appelOffresDateParticipation'])
-                    ? new \DateTime($data['appelOffresDateParticipation'])
-                    : null;
-                $appel->setAppelOffresDateParticipation($dateParticipation);
-            } else {
-                $dateParticipation = $appel->getAppelOffresDateParticipation();
+            if ($participation !== 1) {
+                $appel->setAppelOffresDateParticipation(null);
+                $appel->setAppelOffresNumeroDevisParticipation(null);
+                $appel->setAppelOffresTypeParticipationId(null);
+            }
+            $em->flush();
+
+            return new JsonResponse([
+                'message' => 'Participation mise à jour avec succès',
+                'data' => $this->serializeAppelOffres($appel)
+            ], Response::HTTP_OK);
+
+        } catch (\Exception $e) {
+            return new JsonResponse([
+                'error' => 'Erreur lors de la mise à jour de la participation',
+                'message' => $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    #[Route('/api/update/appelOffres/{id}/sousmission-date', name: 'api_appel_offres_update_sousmission_date', methods: ['PUT'])]
+    public function updateSousmissionDate(Request $request, AppelOffres $appel, EntityManagerInterface $em): JsonResponse
+    {
+        try {
+            $data = json_decode($request->getContent(), true) ?? [];
+
+            if (!array_key_exists('appelOffresDateParticipation', $data)) {
+                return new JsonResponse([
+                    'error' => 'appelOffresDateParticipation est requis'
+                ], Response::HTTP_BAD_REQUEST);
             }
 
-            if ($participation === 1 && $dateParticipation) {
+            $dateParticipation = !empty($data['appelOffresDateParticipation'])
+                ? new \DateTime($data['appelOffresDateParticipation'])
+                : null;
+
+            $dateLimite = $appel->getAppelOffresDateLimiteRemise(); 
+            if ($dateParticipation && $dateLimite) {
+                $dp = (clone $dateParticipation)->setTime(0, 0, 0);
+                $dl = (clone $dateLimite)->setTime(0, 0, 0);
+
+                if ($dp > $dl) {
+                    return new JsonResponse([
+                        'error' => 'Date invalide',
+                        'message' => 'La date de sous-mission ne peut pas dépasser la date limite de remise.'
+                    ], Response::HTTP_BAD_REQUEST);
+                }
+            }
+
+            $appel->setAppelOffresDateParticipation($dateParticipation);
+
+            if ($appel->getAppelOffresParticipation() === 1 && $dateParticipation) {
                 $anneeParticipation = (int)$dateParticipation->format('Y');
                 $connection = $em->getConnection();
 
                 if (empty($appel->getAppelOffresNumeroDevisParticipation())) {
+
                     $sqlParticipation = 'SELECT MAX(appelOffresNumeroDevisParticipation) as maxDevisParticipation 
-                                         FROM appel_offres 
-                                         WHERE YEAR(appelOffresDateParticipation) = :anneeParticipation 
-                                         AND appelOffresNumeroDevisParticipation IS NOT NULL
-                                         AND appelOffresId != :currentId';
+                                        FROM appel_offres 
+                                        WHERE YEAR(appelOffresDateParticipation) = :anneeParticipation 
+                                        AND appelOffresNumeroDevisParticipation IS NOT NULL
+                                        AND appelOffresId != :currentId';
 
                     $stmtParticipation = $connection->prepare($sqlParticipation);
                     $resultParticipation = $stmtParticipation->executeQuery([
@@ -442,11 +489,13 @@ public function update(Request $request, AppelOffres $appel, EntityManagerInterf
                     $nouveauDevisParticipation = ($maxDevisParticipation ? (int)$maxDevisParticipation : 0) + 1;
 
                     $sqlCheckParticipation = 'SELECT COUNT(*) as count 
-                                              FROM appel_offres 
-                                              WHERE YEAR(appelOffresDateParticipation) = :anneeParticipation 
-                                              AND appelOffresNumeroDevisParticipation = :devisParticipation
-                                              AND appelOffresId != :currentId';
+                                            FROM appel_offres 
+                                            WHERE YEAR(appelOffresDateParticipation) = :anneeParticipation 
+                                            AND appelOffresNumeroDevisParticipation = :devisParticipation
+                                            AND appelOffresId != :currentId';
+
                     $stmtCheckParticipation = $connection->prepare($sqlCheckParticipation);
+
                     $resultCheckParticipation = $stmtCheckParticipation->executeQuery([
                         'anneeParticipation' => $anneeParticipation,
                         'devisParticipation' => $nouveauDevisParticipation,
@@ -466,6 +515,7 @@ public function update(Request $request, AppelOffres $appel, EntityManagerInterf
 
                     $appel->setAppelOffresNumeroDevisParticipation($nouveauDevisParticipation);
                 }
+
             } else {
                 $appel->setAppelOffresNumeroDevisParticipation(null);
             }
@@ -473,17 +523,18 @@ public function update(Request $request, AppelOffres $appel, EntityManagerInterf
             $em->flush();
 
             return new JsonResponse([
-                'message' => 'Participation mise à jour avec succès',
+                'message' => 'Date de sous-mission mise à jour avec succès',
                 'data' => $this->serializeAppelOffres($appel)
             ], Response::HTTP_OK);
 
         } catch (\Exception $e) {
             return new JsonResponse([
-                'error' => 'Erreur lors de la mise à jour de la participation',
+                'error' => 'Erreur lors de la mise à jour de la date de sous-mission',
                 'message' => $e->getMessage()
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
+
 
     #[Route('/api/update/appelOffres/{id}/resultat', name: 'api_appel_offres_update_resultat', methods: ['PUT'])]
     public function updateResultat(Request $request, AppelOffres $appel, EntityManagerInterface $em): JsonResponse
