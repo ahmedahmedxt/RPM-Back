@@ -15,7 +15,6 @@ use App\Entity\Role;
 use App\Entity\AppelOffres;
 use App\Entity\ReferenceCaracteristiqueSpeciale;
 use App\Entity\ReferenceDocuments;
-use App\Entity\ReferenceCollaborateur;
 use App\Entity\Collaborateur;
 use App\Entity\EmployePoste;
 use App\Entity\TypeDocument;
@@ -215,27 +214,6 @@ class ReferenceController extends AbstractController
                     ] : null,
                 ],
                 $ref->getReferenceDocuments()->toArray()
-            ),
-
-            'referenceCollaborateurs' => array_map(
-                fn (ReferenceCollaborateur $rc) => [
-                    'id'    => $rc->getId(),
-                    'duree' => $rc->getReferenceCollaborateurDuree(),
-
-                    'collaborateur' => $rc->getCollaborateur() ? [
-                        'id'        => $rc->getCollaborateur()->getCollaborateurId(),
-                        'nom'       => $rc->getCollaborateur()->getCollaborateurNom(),
-                        'prenom'    => $rc->getCollaborateur()->getCollaborateurPrenom(),
-                        'email'     => $rc->getCollaborateur()->getCollaborateurEmail1(),
-                        'telephone' => $rc->getCollaborateur()->getCollaborateurTelephone1(),
-                    ] : null,
-
-                    'employePoste' => $rc->getEmployePoste() ? [
-                        'id'      => $rc->getEmployePoste()->getEmployePosteId(),
-                        'libelle' => $rc->getEmployePoste()->getEmployePosteLibelle(),
-                    ] : null,
-                ],
-                $ref->getReferenceCollaborateurs()->toArray()
             ),
         ];
     }
@@ -820,73 +798,6 @@ class ReferenceController extends AbstractController
         $ref->removeReferenceCaracteristiqueSpeciale($cs);
         $this->em->flush();
 
-        return $this->json(['success' => true]);
-    }
-
-    #[Route('/{id}/collaborateurs', name: 'ref_collab_replace', methods: ['PUT'])]
-    public function replaceReferenceCollaborateurs(int $id, Request $req): JsonResponse
-    {
-        $ref = $this->referenceRepository->find($id);
-        if (!$ref) return $this->json(['error' => 'Reference not found'], 404);
-
-        $data = json_decode($req->getContent(), true) ?? [];
-        $items = $data['items'] ?? [];
-        if (!is_array($items)) $items = [];
-
-        $this->em->createQuery(
-            'DELETE FROM App\Entity\ReferenceCollaborateur rc WHERE rc.reference = :ref'
-        )
-        ->setParameter('ref', $ref)
-        ->execute();
-
-        $collabRepo = $this->em->getRepository(Collaborateur::class);
-        $posteRepo  = $this->em->getRepository(EmployePoste::class);
-
-        $usedCollaborateurs = [];
-        $usedPostes = [];
-
-        foreach ($items as $item) {
-            $collaborateurId = (int)($item['collaborateurId'] ?? 0);
-            $employePosteId  = (int)($item['employePosteId'] ?? 0);
-            $duree           = (int)($item['duree'] ?? 0);
-
-            if ($collaborateurId <= 0 || $employePosteId <= 0) {
-                return $this->json(['error' => 'Invalid referenceCollaborateurs item', 'item' => $item], 400);
-            }
-
-            if (in_array($collaborateurId, $usedCollaborateurs, true)) {
-                return $this->json([
-                    'error' => 'Duplicate collaborateurId in payload',
-                    'collaborateurId' => $collaborateurId
-                ], 400);
-            }
-            $usedCollaborateurs[] = $collaborateurId;
-
-            if (in_array($employePosteId, $usedPostes, true)) {
-                return $this->json([
-                    'error' => 'EmployePoste already used in payload',
-                    'employePosteId' => $employePosteId
-                ], 400);
-            }
-            $usedPostes[] = $employePosteId;
-
-            $collab = $collabRepo->find($collaborateurId);
-            $poste  = $posteRepo->find($employePosteId);
-
-            if (!$collab || !$poste) {
-                return $this->json(['error' => 'Collaborateur or EmployePoste not found', 'item' => $item], 404);
-            }
-
-            $rc = new ReferenceCollaborateur();
-            $rc->setReference($ref);
-            $rc->setCollaborateur($collab);
-            $rc->setEmployePoste($poste);
-            $rc->setReferenceCollaborateurDuree(max(0, $duree));
-
-            $this->em->persist($rc);
-        }
-
-        $this->em->flush();
         return $this->json(['success' => true]);
     }
 

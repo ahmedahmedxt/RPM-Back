@@ -93,14 +93,6 @@ class Reference
     )]
     private Collection $referenceDocuments;
 
-    #[ORM\OneToMany(
-        targetEntity: ReferenceCollaborateur::class,
-        mappedBy: "reference",
-        cascade: ["persist", "remove"],
-        orphanRemoval: true
-    )]
-    private Collection $referenceCollaborateurs;
-
     #[ORM\ManyToMany(targetEntity: BailleurFond::class, inversedBy: "references")]
     #[ORM\JoinTable(name: "reference_bailleurfond")]
     #[ORM\JoinColumn(name: "reference_id", referencedColumnName: "referenceID")]
@@ -146,7 +138,6 @@ class Reference
     public function __construct()
     {
         $this->referenceDocuments = new ArrayCollection();
-        $this->referenceCollaborateurs = new ArrayCollection();
         $this->bailleurfonds = new ArrayCollection();
         $this->environnementsDeveloppement = new ArrayCollection();
         $this->technologies = new ArrayCollection();
@@ -234,7 +225,6 @@ class Reference
     }
 
     public function getReferenceDocuments(): Collection { return $this->referenceDocuments; }
-    public function getReferenceCollaborateurs(): Collection { return $this->referenceCollaborateurs; }
 
     public function getBailleurfonds(): Collection { return $this->bailleurfonds; }
 
